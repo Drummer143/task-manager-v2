@@ -1,7 +1,11 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { raw } from '../tokens';
+import { useMediaQuery } from '../hooks';
 import { Resizer } from './Resizer';
 import styles from './AppShell.module.css';
+
+const SIDEBAR_COLLAPSE_QUERY = `(max-width: ${raw['breakpoint-sidebar-collapse']}px)`;
+const PANEL_OVERLAY_QUERY = `(max-width: ${raw['breakpoint-panel-overlay']}px)`;
 
 export interface AppShellProps {
   /** Sidebar slot: space switcher, page tree, favorites, inbox. */
@@ -43,23 +47,28 @@ export function AppShell({
   panelWidth = raw['panel-width'],
   onPanelWidthChange,
 }: AppShellProps) {
-  const sidebarStyle: CSSProperties | undefined = sidebarCollapsed
-    ? undefined
-    : { width: sidebarWidth };
+  // Responsive rules (spec 07): below 1100px the sidebar is forced to the icon
+  // rail; below 900px the panel overlays the canvas instead of compressing it.
+  // These override, but never mutate, the controlled props.
+  const forceCollapsed = useMediaQuery(SIDEBAR_COLLAPSE_QUERY);
+  const panelOverlay = useMediaQuery(PANEL_OVERLAY_QUERY);
+
+  const collapsed = sidebarCollapsed || forceCollapsed;
+  const isOverlay = panel != null && panelOverlay;
+
+  const sidebarStyle: CSSProperties | undefined = collapsed ? undefined : { width: sidebarWidth };
 
   return (
     <div className={styles.shell}>
       <aside
-        className={
-          sidebarCollapsed ? `${styles.sidebar} ${styles.sidebarCollapsed}` : styles.sidebar
-        }
+        className={collapsed ? `${styles.sidebar} ${styles.sidebarCollapsed}` : styles.sidebar}
         style={sidebarStyle}
       >
         <div className={styles.sidebarNav}>{sidebar}</div>
         {status == null ? null : <div className={styles.status}>{status}</div>}
       </aside>
 
-      {!sidebarCollapsed && onSidebarWidthChange != null && (
+      {!collapsed && onSidebarWidthChange != null && (
         <Resizer
           value={sidebarWidth}
           min={raw['sidebar-width-min']}
@@ -74,7 +83,7 @@ export function AppShell({
         <div className={styles.canvas}>{children}</div>
       </div>
 
-      {panel != null && onPanelWidthChange != null && (
+      {!isOverlay && panel != null && onPanelWidthChange != null && (
         <Resizer
           value={panelWidth}
           min={raw['panel-width-min']}
@@ -86,7 +95,10 @@ export function AppShell({
       )}
 
       {panel == null ? null : (
-        <aside className={styles.panel} style={{ width: panelWidth }}>
+        <aside
+          className={isOverlay ? `${styles.panel} ${styles.panelOverlay}` : styles.panel}
+          style={{ width: panelWidth }}
+        >
           {panel}
         </aside>
       )}

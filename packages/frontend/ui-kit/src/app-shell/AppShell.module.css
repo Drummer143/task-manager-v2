@@ -5,6 +5,7 @@
  */
 
 .shell {
+	position: relative;
 	display: flex;
 	height: 100%;
 	overflow: hidden;
@@ -86,4 +87,16 @@
 	min-height: 0;
 	background: var(--bg-raised);
 	border-left: var(--border-width) solid var(--border-hairline);
+}
+
+/* Below the panel-overlay breakpoint: float over the canvas instead of
+   compressing it (there is no width left to give). */
+.panelOverlay {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	z-index: var(--z-layer);
+	max-width: 100%;
+	box-shadow: var(--shadow-modal);
 }

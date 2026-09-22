@@ -46,3 +46,38 @@ test('shows a resize handle only when its change handler is present', () => {
   );
   expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).toBeNull();
 });
+
+test('forces the collapsed sidebar and the panel overlay on a narrow viewport', () => {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: true,
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+
+  try {
+    render(
+      <AppShell
+        sidebar={null}
+        header={null}
+        panel={<div>PANEL</div>}
+        onSidebarWidthChange={() => undefined}
+        onPanelWidthChange={() => undefined}
+      >
+        <div>CANVAS</div>
+      </AppShell>
+    );
+
+    // Forced collapse → no sidebar handle; panel overlays → no panel handle.
+    expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).toBeNull();
+    expect(screen.queryByRole('separator', { name: 'Resize panel' })).toBeNull();
+    screen.getByText('PANEL');
+  } finally {
+    window.matchMedia = original;
+  }
+});
