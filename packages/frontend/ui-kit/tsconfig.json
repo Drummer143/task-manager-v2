@@ -4,6 +4,7 @@
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "strict": true,
+    "lib": ["es2022", "dom", "dom.iterable"],
     "types": ["vite/client", "vitest"]
   },
   "files": [],
@@ -14,6 +15,9 @@
     },
     {
       "path": "./tsconfig.spec.json"
+    },
+    {
+      "path": "./tsconfig.storybook.json"
     }
   ],
   "extends": "../../../tsconfig.base.json"

@@ -150,8 +150,12 @@
    ───────────────────────────────────────────────────────────── */
 :root {
 	--sidebar-width: 260px;
+	--sidebar-width-min: 200px;
+	--sidebar-width-max: 420px;
 	--sidebar-collapsed: 48px;
 	--panel-width: 420px;
+	--panel-width-min: 360px;
+	--panel-width-max: 640px;
 	--canvas-header-height: 48px;
 	--statusbar-height: 24px;
 	--column-width: 288px;

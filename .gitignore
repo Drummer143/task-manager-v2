@@ -4,6 +4,7 @@
 dist
 tmp
 out-tsc
+*.tsbuildinfo
 
 # dependencies
 node_modules
@@ -52,3 +53,5 @@ test-output
 .nx/polygraph
 .nx/self-healing
 .nx/migrate-runs
+
+storybook-static
