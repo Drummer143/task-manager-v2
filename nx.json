@@ -110,5 +110,6 @@
         "unitTestRunner": "vitest"
       }
     }
-  }
+  },
+  "analytics": false
 }

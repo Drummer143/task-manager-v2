@@ -16,6 +16,9 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@org/source"]
+    "customConditions": ["@task-manager-v2/source"],
+    "paths": {
+      "@task-manager-v2/ui-kit": ["./packages/frontend/ui-kit/src/index.ts"]
+    }
   }
 }
