@@ -2,7 +2,12 @@
   "name": "@task-manager-v2/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "tokens:build": "node packages/frontend/ui-kit/tools/generate-tokens.mjs",
+    "check:tokens": "node packages/frontend/ui-kit/tools/generate-tokens.mjs --check",
+    "check:literals": "node tools/check-no-literals.mjs",
+    "check:ds": "pnpm run check:tokens && pnpm run check:literals"
+  },
   "private": true,
   "dependencies": {
     "react": "19.0.0",

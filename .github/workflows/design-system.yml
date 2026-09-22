@@ -1,0 +1,18 @@
+name: Design system checks
+
+on:
+  pull_request:
+
+jobs:
+  design-system:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Pure-Node guards, no dependency install needed. Mirror `pnpm run check:ds`.
+      - name: Token sync (tokens.css -> generated)
+        run: node packages/frontend/ui-kit/tools/generate-tokens.mjs --check
+      - name: Literal guard (no hardcoded colors/px/ms/z-index)
+        run: node tools/check-no-literals.mjs
