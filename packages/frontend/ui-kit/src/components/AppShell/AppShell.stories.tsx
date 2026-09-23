@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useState } from 'react';
 import { AppShell } from './AppShell';
 import type { AppShellProps } from './AppShell';
-import { cssVar, raw } from '../tokens';
+import { cssVar, raw } from '../../tokens';
 
 /**
  * Demo slots. Not part of the kit — they only fill AppShell so its geometry is

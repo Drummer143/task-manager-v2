@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { raw } from '../tokens';
-import { useMediaQuery } from '../hooks';
+import { raw } from '../../tokens';
+import { useMediaQuery } from '../../hooks';
 import { Resizer } from './Resizer';
 import styles from './AppShell.module.css';
 
@@ -31,9 +31,10 @@ export interface AppShellProps {
 }
 
 /**
- * AppShell lays out the four regions (sidebar / canvas header / canvas / task
- * panel) plus the status bar. It is pure geometry: controlled widths in, slots
- * out. It knows nothing about routing, data or focus — those plug in later.
+ * AppShell lays out the four areas (sidebar / canvas header / canvas / task
+ * panel) plus the status bar. It is geometry: controlled widths in, slots out.
+ * Tabulation is native (DOM order) — the keyboard model is hotkeys + palette,
+ * not designed Tab navigation. AppShell knows nothing about routing or data.
  */
 export function AppShell({
   sidebar,
