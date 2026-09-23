@@ -1,0 +1,11 @@
+/*
+ * LayerHost — the single mount point for overlays. Fixed, above content, at the
+ * layer z-index. Content positions itself within; a scrim is a content concern.
+ */
+.layerHost {
+	position: fixed;
+	inset: 0;
+	z-index: var(--z-layer);
+	display: grid;
+	place-items: center;
+}
