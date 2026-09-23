@@ -1,5 +1,5 @@
 import type { ComponentPropsWithRef } from 'react';
-import { Fragment, useMemo } from 'react';
+import React, { Fragment, useMemo } from 'react';
 import { cx, detectPlatform } from '../../utils';
 import { formatKeys, toInlineText, toSpokenText } from './formatKeys';
 import styles from './Kbd.module.css';
@@ -23,7 +23,7 @@ export interface KbdProps extends Omit<ComponentPropsWithRef<'kbd'>, 'children'>
   variant?: KbdVariant;
 }
 
-export function Kbd({ keys, variant = 'key', className, ...rest }: KbdProps) {
+export const Kbd: React.FC<KbdProps> = ({ keys, variant = 'key', className, ...rest }) => {
   const platform = useMemo(detectPlatform, []);
   const steps = useMemo(() => formatKeys(keys, platform), [keys, platform]);
 
@@ -51,6 +51,6 @@ export function Kbd({ keys, variant = 'key', className, ...rest }: KbdProps) {
       )}
     </kbd>
   );
-}
+};
 
 export default Kbd;

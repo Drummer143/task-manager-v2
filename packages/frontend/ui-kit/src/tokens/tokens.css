@@ -95,6 +95,7 @@
 	--border-hairline: color-mix(in srgb, var(--c-n-1000) 14%, transparent);
 	--border-strong:   color-mix(in srgb, var(--c-n-1000) 30%, transparent);
 	--border-accent:   var(--c-accent);
+	--border-danger:   var(--c-danger-500);
 	--focus-ring:      var(--c-accent);
 
 	--state-overdue:  var(--c-danger-500);
@@ -130,6 +131,7 @@
 	--border-hairline: color-mix(in srgb, var(--c-n-50) 20%, transparent);
 	--border-strong:   color-mix(in srgb, var(--c-n-50) 40%, transparent);
 	--border-accent:   var(--c-accent-400);
+	--border-danger:   var(--c-danger-300);
 	--focus-ring:      var(--c-accent-400);
 
 	--kbd-bg: transparent;
@@ -226,8 +228,18 @@
 	--kbd-size: 18px;
 	--kbd-font-size: 11px;
 
-	--undo-window: 8000ms;
+	/* Spinner */
+	--spin-duration: 700ms;
+	--spinner-size-xs: 12px;
+	--spinner-size-sm: 16px;
+	--spinner-size-md: 20px;
+	--spinner-size-lg: 24px;
+	--spinner-stroke-thin: 1.5px;
+	--spinner-stroke-thick: 2px;
 	--spinner-delay: 200ms;
+	--spinner-min: 400ms;
+
+	--undo-window: 8000ms;
 	--tooltip-delay: 400ms;
 	--highlight-remote: 400ms;
 	--drag-threshold: 4px;
@@ -275,6 +287,8 @@
 		--dur-layer: 80ms;
 		--dur-panel: 80ms;
 		--dur-move:  0ms;
+
+		--spin-duration: 1600ms;
 	}
 }
 

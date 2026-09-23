@@ -1,3 +1,4 @@
+import React from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { raw } from '../../tokens';
 import { useMediaQuery } from '../../hooks';
@@ -36,7 +37,7 @@ export interface AppShellProps {
  * Tabulation is native (DOM order) — the keyboard model is hotkeys + palette,
  * not designed Tab navigation. AppShell knows nothing about routing or data.
  */
-export function AppShell({
+export const AppShell: React.FC<AppShellProps> = ({
   sidebar,
   header,
   children,
@@ -47,7 +48,7 @@ export function AppShell({
   onSidebarWidthChange,
   panelWidth = raw['panel-width'],
   onPanelWidthChange,
-}: AppShellProps) {
+}) => {
   // Responsive rules (spec 07): below 1100px the sidebar is forced to the icon
   // rail; below 900px the panel overlays the canvas instead of compressing it.
   // These override, but never mutate, the controlled props.
@@ -105,6 +106,6 @@ export function AppShell({
       )}
     </div>
   );
-}
+};
 
 export default AppShell;

@@ -1,5 +1,5 @@
 import type { ComponentPropsWithRef, ReactNode, Ref } from 'react';
-import { cloneElement, createContext, isValidElement, useContext, useMemo } from 'react';
+import React, { cloneElement, createContext, isValidElement, useContext, useMemo } from 'react';
 import { composeRefs, cx } from '../../utils';
 
 /**
@@ -34,7 +34,7 @@ type ChildProps = { className?: string; ref?: Ref<unknown> } & Record<string, un
  * Sets `data-surface` on the DOM and the tone in context. Written by a few kit
  * places (Tooltip, UndoToast, SelectionBar), almost never by hand.
  */
-export function Surface({ tone, asChild = false, className, children, ref, ...rest }: SurfaceProps) {
+export const Surface: React.FC<SurfaceProps> = ({ tone, asChild = false, className, children, ref, ...rest }) => {
   const parent = useSurface();
   const slotChild = asChild && isValidElement<ChildProps>(children) ? children : null;
   const childRef = slotChild?.props.ref;
@@ -63,6 +63,6 @@ export function Surface({ tone, asChild = false, className, children, ref, ...re
   }
 
   return <SurfaceContext.Provider value={tone}>{content}</SurfaceContext.Provider>;
-}
+};
 
 export default Surface;

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import React, { useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import styles from './AppShell.module.css';
 
@@ -17,14 +17,14 @@ export interface ResizerProps {
  * A vertical drag handle between two regions. Mouse/pointer only for now;
  * keyboard resize (arrow keys on the separator) belongs to the keyboard layer.
  */
-export function Resizer({
+export const Resizer: React.FC<ResizerProps> = ({
   value,
   min,
   max,
   onChange,
   invert = false,
   'aria-label': ariaLabel,
-}: ResizerProps) {
+}) => {
   const start = useRef<{ x: number; base: number } | null>(null);
 
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
@@ -63,6 +63,6 @@ export function Resizer({
       onPointerUp={handlePointerUp}
     />
   );
-}
+};
 
 export default Resizer;
