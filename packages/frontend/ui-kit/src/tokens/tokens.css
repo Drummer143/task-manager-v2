@@ -50,10 +50,30 @@
 
 /* ─────────────────────────────────────────────────────────────
    Layer 2 — semantics. This is the theme.
+
+   Two sets of values — LIGHT and DARK. Themes and surfaces only pick a set:
+     • theme   — data-theme on the root, for the whole app;
+     • surface — data-surface on a place (Tooltip, UndoToast, SelectionBar),
+                 for its subtree. Relative to the theme: `inverse` is the
+                 opposite set, `default` resets to the theme's own set.
+   Components never know which set is active — they read semantics only.
+
+   A token that references another (--kbd-bg: var(--bg-raised)) resolves where
+   it is declared, so every such token is listed in BOTH sets.
+
+   Dark theme, when its palette is ready: complete the DARK set with the tokens
+   it does not cover yet (canvas, sunken, selected, soft fills, states,
+   shadows), then add `[data-theme='dark']` to its selector list.
+   Surface selectors for the dark theme are already in place.
    ───────────────────────────────────────────────────────────── */
+
+/* LIGHT set */
 :root,
-[data-theme='light'] {
+[data-theme='light'],
+[data-surface='default'],
+[data-theme='dark'] [data-surface='inverse'] {
 	--bg-canvas:      var(--c-n-100);
+	--bg-surface:     var(--c-n-0);
 	--bg-raised:      var(--c-n-0);
 	--bg-sunken:      var(--c-n-150);
 	--bg-hover:       color-mix(in srgb, var(--c-n-1000) 5%, transparent);
@@ -87,6 +107,39 @@
 	--shadow-raised:  0 1px 2px color-mix(in srgb, var(--c-n-900) 14%, transparent);
 	--shadow-overlay: 0 3px 10px color-mix(in srgb, var(--c-n-900) 16%, transparent);
 	--shadow-modal:   0 12px 32px color-mix(in srgb, var(--c-n-900) 22%, transparent);
+
+	--kbd-bg: var(--bg-raised);
+}
+
+/* DARK set. Today: inverse surfaces. Tomorrow: also the dark theme (see above). */
+[data-surface='inverse'],
+[data-theme='dark'] [data-surface='default'] {
+	--bg-surface:      var(--c-n-900);
+	--bg-raised:       color-mix(in srgb, var(--c-n-50) 6%, transparent);
+	--bg-hover:        color-mix(in srgb, var(--c-n-50) 8%, transparent);
+	--bg-active:       color-mix(in srgb, var(--c-n-50) 14%, transparent);
+
+	--text-primary:    var(--c-n-50);
+	--text-secondary:  var(--c-n-300);
+	--text-muted:      var(--c-n-400);
+	--text-disabled:   var(--c-n-600);
+	--text-inverse:    var(--c-n-1000);
+	--text-accent:     var(--c-accent-300);
+	--text-danger:     var(--c-danger-300);
+
+	--border-hairline: color-mix(in srgb, var(--c-n-50) 20%, transparent);
+	--border-strong:   color-mix(in srgb, var(--c-n-50) 40%, transparent);
+	--border-accent:   var(--c-accent-400);
+	--focus-ring:      var(--c-accent-400);
+
+	--kbd-bg: transparent;
+}
+
+/* A surface paints itself. :where() keeps specificity at zero, so a place's own
+   class (a menu's --bg-raised, say) always wins over this default. */
+:where([data-surface]) {
+	background: var(--bg-surface);
+	color: var(--text-primary);
 }
 
 /* ─── Typography ─── */
@@ -168,6 +221,10 @@
 
 	--palette-width: 560px;
 	--palette-row: 36px;
+
+	/* Kbd keycap. Its color (--kbd-bg) lives in the semantic sets above. */
+	--kbd-size: 18px;
+	--kbd-font-size: 11px;
 
 	--undo-window: 8000ms;
 	--spinner-delay: 200ms;

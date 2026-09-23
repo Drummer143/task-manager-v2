@@ -1,0 +1,54 @@
+/* Kbd — shows a key notation. Reads semantic and its own component tokens only,
+   so an inverse surface recolors it without a prop. */
+
+.root {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--sp-1);
+	font-family: inherit;
+	font-size: inherit;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+/* ─── key: bordered keycaps (cheat sheet, tooltip, palette, prose) ─── */
+.cap {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: var(--kbd-size);
+	height: var(--kbd-size);
+	padding: 0 var(--sp-2);
+	border: var(--border-width) solid var(--border-strong);
+	border-bottom-width: var(--border-width-strong);
+	border-radius: var(--radius-xs);
+	background: var(--kbd-bg);
+	color: var(--text-secondary);
+	font-family: var(--font-mono);
+	font-size: var(--kbd-font-size);
+	line-height: 1;
+}
+
+.then {
+	color: inherit;
+	font-family: var(--font-ui);
+}
+
+/* ─── inline: plain muted text (inside a button, menu item, field) ─── */
+.inline {
+	color: var(--text-muted);
+	font-size: var(--kbd-font-size);
+	font-variant-numeric: var(--num-tabular);
+}
+
+.srOnly {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}

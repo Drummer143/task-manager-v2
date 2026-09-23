@@ -7,6 +7,7 @@
 
 $tokens: (
   'bg-canvas': var(--bg-canvas),
+  'bg-surface': var(--bg-surface),
   'bg-raised': var(--bg-raised),
   'bg-sunken': var(--bg-sunken),
   'bg-hover': var(--bg-hover),
@@ -36,6 +37,7 @@ $tokens: (
   'shadow-raised': var(--shadow-raised),
   'shadow-overlay': var(--shadow-overlay),
   'shadow-modal': var(--shadow-modal),
+  'kbd-bg': var(--kbd-bg),
   'font-ui': var(--font-ui),
   'font-mono': var(--font-mono),
   'num-tabular': var(--num-tabular),
@@ -100,6 +102,8 @@ $tokens: (
   'avatar-md': var(--avatar-md),
   'palette-width': var(--palette-width),
   'palette-row': var(--palette-row),
+  'kbd-size': var(--kbd-size),
+  'kbd-font-size': var(--kbd-font-size),
   'undo-window': var(--undo-window),
   'spinner-delay': var(--spinner-delay),
   'tooltip-delay': var(--tooltip-delay),
@@ -175,6 +179,8 @@ $tokens-raw: (
   'avatar-md': 28,
   'palette-width': 560,
   'palette-row': 36,
+  'kbd-size': 18,
+  'kbd-font-size': 11,
   'undo-window': 8000,
   'spinner-delay': 200,
   'tooltip-delay': 400,

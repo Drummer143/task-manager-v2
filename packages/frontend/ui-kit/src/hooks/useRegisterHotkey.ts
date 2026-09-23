@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { getHotkeyCombinationString, useHotkeysStore, type HotkeyConfig } from '../hotkeys';
+import { getHotkeyCombinationString, HotkeyHandlerConfig, useHotkeysStore } from '../hotkeys';
 
 /**
  * Registers a hotkey for the lifetime of the component. The registry key is
@@ -8,7 +8,7 @@ import { getHotkeyCombinationString, useHotkeysStore, type HotkeyConfig } from '
  *
  * Memoize `config` (or its identity) to avoid re-registering every render.
  */
-export const useRegisterHotkey = (config: HotkeyConfig) =>
+export const useRegisterHotkey = (config: HotkeyHandlerConfig) =>
   useEffect(
     () =>
       useHotkeysStore

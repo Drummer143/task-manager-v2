@@ -1,6 +1,6 @@
 export type HotkeyCallback = (event: KeyboardEvent) => void;
 
-export interface HotkeyConfigConfig {
+export interface HotkeyConfig {
     key: string;
 
     shift?: boolean;
@@ -9,9 +9,9 @@ export interface HotkeyConfigConfig {
     meta?: boolean;
 }
 
-export interface HotkeyConfig extends HotkeyConfigConfig {
+export interface HotkeyHandlerConfig extends HotkeyConfig {
   callback: HotkeyCallback;
   description: string;
 
-  chord?: HotkeyConfigConfig;
+  chord?: HotkeyConfig;
 }

@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { HotkeyConfig, HotkeyCallback } from './types';
+import { HotkeyHandlerConfig, HotkeyCallback } from './types';
 import { HOTKEY_KEY_SEPARATOR } from './constants';
 
 interface HotkeysState {
-  hotkeys: Record<string, HotkeyConfig[]>;
+  hotkeys: Record<string, HotkeyHandlerConfig[]>;
 
   /**
    * The armed chord prefix (e.g. `g`), or null when no chord is pending.
@@ -11,9 +11,9 @@ interface HotkeysState {
    */
   activeChord: string | null;
 
-  registerHotkey: (key: string | string[], config: HotkeyConfig) => () => void;
+  registerHotkey: (key: string | string[], config: HotkeyHandlerConfig) => () => void;
 
-  unregisterHotkey: (key: string | string[], config?: HotkeyConfig) => void;
+  unregisterHotkey: (key: string | string[], config?: HotkeyHandlerConfig) => void;
 
   getHotkeyHandler: (key: string | string[]) => HotkeyCallback | undefined;
 

@@ -1,9 +1,9 @@
 import { HOTKEY_KEY_SEPARATOR, HOTKEY_SEQUENCE_SEPARATOR } from './constants';
-import { HotkeyConfig, HotkeyConfigConfig } from './types';
+import { HotkeyHandlerConfig, HotkeyConfig } from './types';
 
 const applyLayerKeys = (
   keys: string[],
-  layerKeys: Omit<HotkeyConfigConfig, 'key'>,
+  layerKeys: Omit<HotkeyConfig, 'key'>,
 ) => {
   if (layerKeys.ctrl) {
     keys.push('Control');
@@ -27,7 +27,7 @@ export const combineKeys = (keys: string[]) =>
   [...keys].sort().join(HOTKEY_KEY_SEPARATOR);
 
 /** One step (modifiers + key) → its normalized combo string. */
-const stepToString = (step: HotkeyConfigConfig) => {
+const stepToString = (step: HotkeyConfig) => {
   const keys: string[] = [];
 
   applyLayerKeys(keys, {
@@ -66,7 +66,7 @@ export const getEventHotkeyString = (event: KeyboardEvent) =>
  * `accord-step > final-step` — steps are sorted internally but their order in
  * the sequence is preserved.
  */
-export const getHotkeyCombinationString = (config: HotkeyConfig) => {
+export const getHotkeyCombinationString = (config: HotkeyHandlerConfig) => {
   const finalStep = stepToString(config);
 
   if (config.chord) {

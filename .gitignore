@@ -5,6 +5,7 @@ dist
 tmp
 out-tsc
 *.tsbuildinfo
+debug-storybook.log
 
 # dependencies
 node_modules
