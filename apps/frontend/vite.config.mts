@@ -47,6 +47,13 @@ export default defineConfig(() => ({
         'src/main.tsx',
       ],
       reporter: ['text', 'html', 'lcov'],
+      // Current level, rounded down. Raise when coverage grows; never lower silently.
+      thresholds: {
+        statements: 87,
+        branches: 94,
+        functions: 80,
+        lines: 86,
+      },
     },
   },
 }));
