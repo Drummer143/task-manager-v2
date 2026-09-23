@@ -8,7 +8,6 @@ import { cssVar, raw } from '../../tokens';
 const SIZES: SpinnerSize[] = ['xs', 'sm', 'md', 'lg'];
 const VARIANTS: SpinnerVariant[] = ['accent', 'neutral', 'danger'];
 
-/* Demo scaffolding only — lays spinners out like the design stand. */
 const stand: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'max-content repeat(4, max-content)',
@@ -26,7 +25,6 @@ const row: CSSProperties = {
   gap: `${cssVar('sp-4')} ${cssVar('sp-6')}`,
 };
 
-/** A spinner leading a line of text, as in list rows. */
 const textRow: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -38,7 +36,6 @@ function Caption({ children }: { children: ReactNode }) {
   return <span style={{ color: cssVar('text-muted'), fontSize: cssVar('type-meta') }}>{children}</span>;
 }
 
-/** Button does not exist yet — the spinner takes the icon's place, as in the spec. */
 function MockButton({ children, primary }: { children: ReactNode; primary?: boolean }) {
   return (
     <span
@@ -60,7 +57,6 @@ function MockButton({ children, primary }: { children: ReactNode; primary?: bool
   );
 }
 
-/** Sizes × tones, and the spinner in its real places. Reads semantics only. */
 function StandContent() {
   return (
     <>
@@ -132,7 +128,6 @@ type Story = StoryObj<typeof Spinner>;
 
 export const Default: Story = {};
 
-/** Every size in every tone, plus the spinner in a button and in text rows. */
 export const Gallery: Story = {
   parameters: { layout: 'fullscreen' },
   render: () => (
@@ -142,10 +137,6 @@ export const Gallery: Story = {
   ),
 };
 
-/**
- * On a dark surface the tones take light steps (accent-400, danger-300,
- * neutral near-white). No prop — the inverse surface swaps the tokens.
- */
 export const OnInverseSurface: Story = {
   parameters: { layout: 'fullscreen' },
   render: () => (
@@ -155,11 +146,6 @@ export const OnInverseSurface: Story = {
   ),
 };
 
-/**
- * prefers-reduced-motion slows the turn to 1600 ms instead of stopping it —
- * a still ring would look frozen. Simulated here by overriding --spin-duration,
- * exactly what tokens.css does under the media query.
- */
 export const ReducedMotion: Story = {
   render: (args) => (
     <div style={row}>
@@ -179,10 +165,6 @@ export const ReducedMotion: Story = {
   ),
 };
 
-/**
- * Slowed down for the eye: delay 1 s, minimum 5 s, the request lasts 2 s — you
- * can watch every phase of useDelayedFlag. Real timings: see LiveTimings.
- */
 export const WithDelay: Story = {
   args: {
     label: 'Loading',
@@ -245,11 +227,6 @@ const REQUESTS = [
   { name: 'Slow', ms: 1500 },
 ];
 
-/**
- * Real timings from tokens (delay 200 ms, minimum 400 ms), like the design's
- * live stand. Fast never shows a spinner; Medium shows it past the request's
- * end to reach the minimum; Slow hides it as soon as the request is done.
- */
 export const LiveTimings: Story = {
   render: (args) => {
     const [busy, setBusy] = useState(false);
@@ -258,13 +235,12 @@ export const LiveTimings: Story = {
 
     const request = useRef<{ name: string; ms: number } | null>(null);
     const shownAt = useRef<number | null>(null);
-    /** Did the spinner appear during the current request? */
+
     const wasShown = useRef(false);
     const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
     useEffect(() => () => clearTimeout(timer.current), []);
 
-    // Spinner appeared / disappeared → measure how long it was on screen.
     useEffect(() => {
       if (visible) {
         shownAt.current = performance.now();
@@ -276,7 +252,6 @@ export const LiveTimings: Story = {
       }
     }, [visible]);
 
-    // Request finished and the spinner never showed up.
     useEffect(() => {
       if (!busy && !visible && !wasShown.current && request.current) {
         setLog(`${request.current.name} · ${request.current.ms} ms request → no spinner at all`);

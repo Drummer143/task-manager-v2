@@ -38,6 +38,15 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: '../../coverage/apps/frontend',
       provider: 'v8' as const,
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.{spec,test}.{ts,tsx}',
+        'src/**/*.stories.{ts,tsx}',
+        'src/**/index.ts',
+        'src/**/*.d.ts',
+        'src/main.tsx',
+      ],
+      reporter: ['text', 'html', 'lcov'],
     },
   },
 }));

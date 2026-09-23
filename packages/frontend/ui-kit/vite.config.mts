@@ -56,6 +56,15 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: '../../../coverage/packages/frontend/ui-kit',
       provider: 'v8' as const,
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.{spec,test}.{ts,tsx}',
+        'src/**/*.stories.{ts,tsx}',
+        'src/**/index.ts',
+        'src/**/*.generated.*',
+        'src/**/*.d.ts',
+      ],
+      reporter: ['text', 'html', 'lcov'],
     },
   },
 }));
