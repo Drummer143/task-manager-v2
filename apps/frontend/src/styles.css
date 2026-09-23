@@ -1,0 +1,6 @@
+/* Global app shell needs a full-height root; theme comes from the token layer. */
+html,
+body,
+#root {
+  height: 100%;
+}
