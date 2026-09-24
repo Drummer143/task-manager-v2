@@ -15,3 +15,5 @@ export type { KbdProps, KbdVariant } from './components/Kbd';
 
 export * from './components/Spinner';
 
+export * from './components/Progress';
+

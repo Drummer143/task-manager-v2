@@ -27,7 +27,6 @@ const GEOMETRY: Record<SpinnerSize, { box: number; stroke: number }> = {
 };
 
 const Spinner: React.FC<SpinnerProps> = ({
-  ref,
   size = 'sm',
   label = 'Loading',
   variant = 'neutral',
@@ -41,14 +40,16 @@ const Spinner: React.FC<SpinnerProps> = ({
   return (
     <span
       role="status"
+
       aria-label={label}
+
       className={cx(
         styles.root,
         styles[variant],
         styles[size],
         className,
       )}
-      ref={ref}
+
       {...props}
     >
       <svg aria-hidden="true" viewBox={`0 0 ${box} ${box}`}>
