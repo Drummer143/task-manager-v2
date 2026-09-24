@@ -1,1 +1,1 @@
-export { useCursorStore, useCursor, type CursorState } from './store';
+export { useCursorStore, type CursorState } from './store';

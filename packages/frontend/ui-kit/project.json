@@ -6,13 +6,21 @@
   "tags": [],
   "// targets": "to see all targets run: nx show project ui-kit --web",
   "targets": {
+    "storybook": {
+      "options": {
+        "args": ["--port=6006"]
+      }
+    },
     "generate-tokens": {
       "executor": "nx:run-commands",
       "options": {
         "cwd": "packages/frontend/ui-kit",
         "command": "node tools/generate-tokens.mjs"
       },
-      "inputs": ["{projectRoot}/src/tokens/tokens.css", "{projectRoot}/tools/generate-tokens.mjs"],
+      "inputs": [
+        "{projectRoot}/src/tokens/tokens.css",
+        "{projectRoot}/tools/generate-tokens.mjs"
+      ],
       "outputs": [
         "{projectRoot}/src/tokens/tokens.generated.ts",
         "{projectRoot}/src/tokens/tokens.generated.scss"
