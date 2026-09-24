@@ -33,8 +33,13 @@
     transition: transform var(--progress-transition) var(--ease-out);
   }
 
+  /* A rollback jumps: sliding back would read as progress being lost. */
+  .root[data-indeterminate='false'][data-shrinking] > & {
+    transition: none;
+  }
+
   .root[data-indeterminate='true'] > & {
-    width: 33%;
+    width: 30%;
 
     animation: progress-run var(--progress-run) ease-in-out infinite;
   }

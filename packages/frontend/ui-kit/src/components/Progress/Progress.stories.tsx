@@ -88,7 +88,10 @@ export const Determinate: Story = {
   },
 };
 
-/** The value grows in steps; each step animates over --progress-transition. */
+/**
+ * Growth animates over --progress-transition; the rollback after 100% jumps to
+ * 0 without sliding back, so progress never seems to be lost.
+ */
 export const WithValue: Story = {
   render: (args) => {
     const [progressValue, setProgressValue] = useState(args.value ?? 0);
@@ -104,7 +107,7 @@ export const WithValue: Story = {
         <Progress {...args} value={progressValue} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: cssVar('sp-4') }}>
-          {/* Wraps to 0 only after reaching 100, so the full bar is visible too. */}
+          {/* Wraps to 0 only after reaching 100 — watch the rollback jump. */}
           <button
             type="button"
             onClick={() => setProgressValue((prev) => (prev >= 1 ? 0 : Math.min(1, Math.round((prev + 0.2) * 100) / 100)))}
@@ -206,7 +209,7 @@ export const InContext: Story = {
         <span id="attachment-name">report-q3.pdf</span>
         {/* In a flex row the parent gives the bar its share of the width. */}
         <div style={{ flex: 1 }}>
-          <Progress aria-labelledby="attachment-name" aria-label={undefined} value={0.62} />
+          <Progress aria-labelledby="attachment-name" value={0.62} />
         </div>
         <Caption>{percent(0.62)}</Caption>
       </div>

@@ -269,7 +269,9 @@
   --progress-height: 2px;
   --progress-run: 1200ms;
   --progress-breath: 0ms;
-  --progress-transition: 200ms;
+  /* The bar's own token, bound to the shared motion scale: reduced motion
+     zeroes --dur-move, and this follows. */
+  --progress-transition: var(--dur-move);
 
   --undo-window: 8000ms;
   --tooltip-delay: 400ms;
@@ -323,7 +325,6 @@
     --spin-duration: 1600ms;
 
     --progress-breath: 2000ms;
-    --progress-transition: 0ms;
   }
 }
 

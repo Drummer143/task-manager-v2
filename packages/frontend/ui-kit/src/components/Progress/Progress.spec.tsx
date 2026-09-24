@@ -5,20 +5,29 @@ import { raw } from '../../tokens';
 import Progress, { type ProgressProps } from './Progress';
 import styles from './Progress.module.scss';
 
-const renderNow = (props: ProgressProps = {}) => render(<Progress delay={0} {...props} />);
+/** Everything but the name, which the helper fills in unless a test sets it. */
+type BaseProps = Omit<ProgressProps, 'label' | 'aria-labelledby'>;
+
+/** No delay — these tests are about the contract, not the timing (see "delay" below). */
+const renderNow = ({ label = 'Loading', ...props }: BaseProps & { label?: string } = {}) =>
+  render(<Progress delay={0} {...props} label={label} />);
 
 const bar = () => screen.getByRole('progressbar');
 const thumb = () => bar().firstElementChild as HTMLElement;
 const drawnValue = () => bar().style.getPropertyValue('--progress-value');
 
 describe('Progress · accessibility', () => {
-  it('is a progressbar with a default label', () => {
-    renderNow();
+  it('requires a name — label or aria-labelledby — at the type level', () => {
+    // @ts-expect-error — neither label nor aria-labelledby
+    const unnamed = <Progress value={0.5} />;
+    // @ts-expect-error — both at once
+    const doubled = <Progress label="Uploading" aria-labelledby="file" value={0.5} />;
 
-    screen.getByRole('progressbar', { name: 'Loading' });
+    expect(unnamed).toBeTruthy();
+    expect(doubled).toBeTruthy();
   });
 
-  it('uses a specific label when given', () => {
+  it('is a progressbar named by its label', () => {
     renderNow({ label: 'Uploading attachment' });
 
     screen.getByRole('progressbar', { name: 'Uploading attachment' });
@@ -93,6 +102,15 @@ describe('Progress · determinate', () => {
     expect(bar().getAttribute('aria-valuenow')).toBe(announced);
   });
 
+  it.each([NaN, Infinity, -Infinity])('treats %f as "size unknown", never as a full bar', (value) => {
+    // loaded / total with total = 0 gives NaN before the server sends a size.
+    renderNow({ value });
+
+    expect(bar().getAttribute('data-indeterminate')).toBe('true');
+    expect(bar().hasAttribute('aria-valuenow')).toBe(false);
+    expect(drawnValue()).toBe('');
+  });
+
   it('draws the length through the value variable, never through an inline width', () => {
     renderNow({ value: 0.5 });
 
@@ -122,11 +140,58 @@ describe('Progress · switching modes', () => {
   it('drops the value attributes when it goes back to indeterminate', () => {
     const { rerender } = renderNow({ value: 0.3 });
 
-    rerender(<Progress delay={0} />);
+    rerender(<Progress delay={0} label="Loading" />);
 
     expect(bar().getAttribute('data-indeterminate')).toBe('true');
     expect(bar().hasAttribute('aria-valuenow')).toBe(false);
     expect(drawnValue()).toBe('');
+  });
+});
+
+describe('Progress · rollback', () => {
+  const shrinking = () => bar().hasAttribute('data-shrinking');
+
+  it('animates growth — no rollback marker', () => {
+    const { rerender } = renderNow({ value: 0.2 });
+
+    rerender(<Progress delay={0} label="Loading" value={0.8} />);
+
+    expect(shrinking()).toBe(false);
+  });
+
+  it('marks a decrease so it jumps instead of sliding back', () => {
+    const { rerender } = renderNow({ value: 0.8 });
+
+    rerender(<Progress delay={0} label="Loading" value={0.2} />);
+
+    expect(shrinking()).toBe(true);
+    expect(drawnValue()).toBe('0.2');
+  });
+
+  it('animates again once the value grows after a rollback', () => {
+    const { rerender } = renderNow({ value: 1 });
+
+    rerender(<Progress delay={0} label="Loading" value={0} />);
+    rerender(<Progress delay={0} label="Loading" value={0.2} />);
+
+    expect(shrinking()).toBe(false);
+  });
+
+  it('keeps the marker while the value holds after a rollback', () => {
+    const { rerender } = renderNow({ value: 0.8 });
+
+    rerender(<Progress delay={0} label="Loading" value={0.2} />);
+    rerender(<Progress delay={0} label="Loading" value={0.2} />);
+
+    expect(shrinking()).toBe(true);
+  });
+
+  it('is not a rollback when the size becomes unknown', () => {
+    const { rerender } = renderNow({ value: 0.8 });
+
+    rerender(<Progress delay={0} label="Loading" />);
+
+    expect(shrinking()).toBe(false);
   });
 });
 
@@ -147,7 +212,7 @@ describe('Progress · delay', () => {
   const root = () => screen.getByTestId('progress');
 
   it('holds its place but draws and announces nothing until the default delay passes', () => {
-    render(<Progress data-testid="progress" />);
+    render(<Progress data-testid="progress" label="Loading" />);
 
     expect(root().classList.contains(styles.pending)).toBe(true);
     expect(root().getAttribute('aria-hidden')).toBe('true');
@@ -163,7 +228,7 @@ describe('Progress · delay', () => {
   });
 
   it('honors a custom delay', () => {
-    render(<Progress data-testid="progress" delay={500} />);
+    render(<Progress data-testid="progress" label="Loading" delay={500} />);
 
     advance(499);
     expect(root().classList.contains(styles.pending)).toBe(true);
@@ -173,22 +238,22 @@ describe('Progress · delay', () => {
   });
 
   it('shows at once with delay 0', () => {
-    render(<Progress data-testid="progress" delay={0} />);
+    render(<Progress data-testid="progress" label="Loading" delay={0} />);
 
     expect(root().classList.contains(styles.pending)).toBe(false);
   });
 
   it('does not restart the delay when the size becomes known', () => {
-    const { rerender } = render(<Progress data-testid="progress" />);
+    const { rerender } = render(<Progress data-testid="progress" label="Loading" />);
 
     advance(raw['spinner-delay']);
-    rerender(<Progress data-testid="progress" value={0.2} />);
+    rerender(<Progress data-testid="progress" label="Loading" value={0.2} />);
 
     expect(root().classList.contains(styles.pending)).toBe(false);
   });
 
   it('never fires after unmount during the delay', () => {
-    const { unmount } = render(<Progress data-testid="progress" />);
+    const { unmount } = render(<Progress data-testid="progress" label="Loading" />);
 
     advance(100);
     unmount();
@@ -213,7 +278,7 @@ describe('Progress · DOM contract', () => {
     render(
       <>
         <span id="upload-label">Uploading report.pdf</span>
-        <Progress delay={0} aria-labelledby="upload-label" aria-label={undefined} value={0.2} />
+        <Progress delay={0} aria-labelledby="upload-label" value={0.2} />
       </>,
     );
 
