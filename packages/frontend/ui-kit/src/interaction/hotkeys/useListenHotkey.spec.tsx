@@ -1,9 +1,9 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { useListenHotkey } from './useListenHotkey';
-import { getHotkeyCombinationString, useHotkeysStore, type HotkeyConfig } from '../hotkeys';
+import { getHotkeyCombinationString, HotkeyHandlerConfig, useHotkeysStore } from '../hotkeys';
 
-const register = (config: HotkeyConfig) =>
+const register = (config: HotkeyHandlerConfig) =>
   useHotkeysStore.getState().registerHotkey(getHotkeyCombinationString(config), config);
 
 const keydown = (init: KeyboardEventInit) =>

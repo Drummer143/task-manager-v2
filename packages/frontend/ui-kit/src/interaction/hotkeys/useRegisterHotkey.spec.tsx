@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { useRegisterHotkey } from './useRegisterHotkey';
-import { useHotkeysStore } from '../hotkeys/store';
+import { useHotkeysStore } from './store';
 
 beforeEach(() => {
   useHotkeysStore.setState({ hotkeys: {} });

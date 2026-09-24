@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
-import { getHotkeyCombinationString, HotkeyHandlerConfig, useHotkeysStore } from '../hotkeys';
+import { HotkeyHandlerConfig } from './types';
+import { useHotkeysStore } from './store';
+import { getHotkeyCombinationString } from './helpers';
 
 /**
  * Registers a hotkey for the lifetime of the component. The registry key is

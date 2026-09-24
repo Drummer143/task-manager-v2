@@ -1,13 +1,8 @@
 import { useEffect } from 'react';
-import {
-  getChordPrefixes,
-  getEventHotkeyString,
-  HOTKEY_CHORD_WINDOW_MS,
-  IDLE_CHORD_STATE,
-  reduceChord,
-  useHotkeysStore,
-  type ChordState,
-} from '../hotkeys';
+import { ChordState, getChordPrefixes, IDLE_CHORD_STATE, reduceChord } from './chords';
+import { useHotkeysStore } from './store';
+import { getEventHotkeyString } from './helpers';
+import { HOTKEY_CHORD_WINDOW_MS } from './constants';
 
 let listersCount = 0;
 let chordState: ChordState = IDLE_CHORD_STATE;

@@ -16,6 +16,3 @@ export const useCursorStore = create<CursorState>((set) => ({
   setCursor: (id) => set({ cursor: id }),
   clearCursor: () => set({ cursor: null }),
 }));
-
-/** Convenience hook: `{ cursor, setCursor, clearCursor }`, reactive to changes. */
-export const useCursor = () => useCursorStore();
