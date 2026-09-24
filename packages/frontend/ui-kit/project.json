@@ -8,7 +8,7 @@
   "targets": {
     "storybook": {
       "options": {
-        "args": ["--port=6006"]
+        "args": ["--port=6006", "--no-open"]
       }
     },
     "generate-tokens": {
