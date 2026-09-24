@@ -58,7 +58,7 @@
                  opposite set, `default` resets to the theme's own set.
    Components never know which set is active — they read semantics only.
 
-   A token that references another (--kbd-bg: var(--bg-raised)) resolves where
+   A token that references another (e.g. var(--bg-raised)) resolves where
    it is declared, so every such token is listed in BOTH sets.
 
    Dark theme, when its palette is ready: complete the DARK set with the tokens
@@ -109,7 +109,9 @@
 	--shadow-overlay: 0 3px 10px color-mix(in srgb, var(--c-n-900) 16%, transparent);
 	--shadow-modal:   0 12px 32px color-mix(in srgb, var(--c-n-900) 22%, transparent);
 
-	--kbd-bg: var(--bg-raised);
+	--kbd-bg:     var(--c-n-0);
+	--kbd-border: color-mix(in srgb, var(--c-n-1000) 20%, transparent);
+	--kbd-fg:     var(--c-n-700);
 }
 
 /* DARK set. Today: inverse surfaces. Tomorrow: also the dark theme (see above). */
@@ -134,7 +136,9 @@
 	--border-danger:   var(--c-danger-300);
 	--focus-ring:      var(--c-accent-400);
 
-	--kbd-bg: transparent;
+	--kbd-bg:     transparent;
+	--kbd-border: color-mix(in srgb, var(--c-n-50) 30%, transparent);
+	--kbd-fg:     var(--c-n-300);
 }
 
 /* A surface paints itself. :where() keeps specificity at zero, so a place's own
@@ -224,9 +228,13 @@
 	--palette-width: 560px;
 	--palette-row: 36px;
 
-	/* Kbd keycap. Its color (--kbd-bg) lives in the semantic sets above. */
+	/* Kbd keycap. Its colors (--kbd-bg/-border/-fg) live in the semantic sets above. */
 	--kbd-size: 18px;
 	--kbd-font-size: 11px;
+
+	/* Visually hidden text for screen readers: a 1 px box, the smallest one every
+	   reader still announces (0 is skipped by some). */
+	--visually-hidden-size: 1px;
 
 	/* Spinner */
 	--spin-duration: 700ms;

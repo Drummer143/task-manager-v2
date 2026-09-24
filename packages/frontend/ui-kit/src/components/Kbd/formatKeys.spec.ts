@@ -67,9 +67,13 @@ describe('toInlineText', () => {
     expect(toInlineText(formatKeys('mod+shift+c', 'other'))).toBe('CtrlShiftC');
   });
 
-  it('separates sequence steps with ›', () => {
-    expect(toInlineText(formatKeys('g b', 'mac'))).toBe('G›B');
-    expect(toInlineText(formatKeys('mod+k s', 'mac'))).toBe('⌘K›S');
+  it('separates sequence steps with › framed by narrow no-break spaces', () => {
+    expect(toInlineText(formatKeys('g b', 'mac'))).toBe('G › B');
+    expect(toInlineText(formatKeys('mod+k s', 'mac'))).toBe('⌘K › S');
+  });
+
+  it('never uses a plain space as the sequence separator', () => {
+    expect(toInlineText(formatKeys('g b', 'mac'))).not.toContain(' ');
   });
 
   it('renders a single key as is', () => {

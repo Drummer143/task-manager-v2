@@ -59,10 +59,10 @@ describe('Kbd · inline variant', () => {
     expect(root.querySelector('[aria-hidden="true"]')?.textContent).toBe('⌘⇧C');
   });
 
-  it('writes a sequence with › between the steps', () => {
+  it('writes a sequence with a narrow › between the steps', () => {
     const { container } = render(<Kbd keys="g b" variant="inline" />);
 
-    expect(container.querySelector('[aria-hidden="true"]')?.textContent).toBe('G›B');
+    expect(container.querySelector('[aria-hidden="true"]')?.textContent).toBe('G › B');
   });
 
   it('joins combo keys without a separator on every platform', () => {

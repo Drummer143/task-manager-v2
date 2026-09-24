@@ -54,10 +54,13 @@ describe('semantic sets', () => {
     expect(referencing.filter((name) => !dark.tokens.has(name))).toEqual([]);
   });
 
-  it('only the sets define --kbd-bg, and inverse keycaps are transparent', () => {
-    const owners = blocks.filter((block) => block.tokens.has('--kbd-bg'));
+  it.each(['--kbd-bg', '--kbd-border', '--kbd-fg'])('only the sets define %s', (name) => {
+    const owners = blocks.filter((block) => block.tokens.has(name));
 
     expect(owners).toEqual([light, dark]);
+  });
+
+  it('inverse keycaps are transparent', () => {
     expect(dark.tokens.get('--kbd-bg')).toBe('transparent');
   });
 });

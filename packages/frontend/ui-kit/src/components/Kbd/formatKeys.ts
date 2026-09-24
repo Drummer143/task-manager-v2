@@ -109,13 +109,17 @@ const formatKey = (key: string, platform: KeyPlatform): FormattedKey => {
 export const formatKeys = (keys: string, platform: KeyPlatform): FormattedStep[] =>
   parseKeys(keys).map((step) => step.map((key) => formatKey(key, platform)));
 
-/** Between the steps of a sequence in inline text (`G›B`). */
-export const INLINE_SEQUENCE_SEPARATOR = '›';
+/**
+ * Between the steps of a sequence in inline text: `›` framed by narrow no-break
+ * spaces (U+202F) — reads as `G › B`, stays light, never wraps. A plain space is
+ * not a separator: `G B` reads as one combo.
+ */
+export const INLINE_SEQUENCE_SEPARATOR = ' › ';
 
 /** Inline text of one step: keys joined without a separator (`⌘⇧C`, `CtrlK`). */
 export const stepToInlineText = (step: FormattedStep) => step.map((key) => key.label).join('');
 
-/** Inline text of the whole notation: `C`, `⌘K`, `G›B`, `⌘K›S`. */
+/** Inline text of the whole notation: `C`, `⌘K`, `G › B`, `⌘K › S`. */
 export const toInlineText = (steps: FormattedStep[]) =>
   steps.map(stepToInlineText).join(INLINE_SEQUENCE_SEPARATOR);
 

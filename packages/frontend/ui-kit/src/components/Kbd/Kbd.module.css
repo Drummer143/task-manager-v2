@@ -19,11 +19,11 @@
 	min-width: var(--kbd-size);
 	height: var(--kbd-size);
 	padding: 0 var(--sp-2);
-	border: var(--border-width) solid var(--border-strong);
+	border: var(--border-width) solid var(--kbd-border);
 	border-bottom-width: var(--border-width-strong);
 	border-radius: var(--radius-xs);
 	background: var(--kbd-bg);
-	color: var(--text-secondary);
+	color: var(--kbd-fg);
 	font-family: var(--font-mono);
 	font-size: var(--kbd-font-size);
 	line-height: 1;
@@ -43,9 +43,9 @@
 
 .srOnly {
 	position: absolute;
-	width: 1px;
-	height: 1px;
-	margin: -1px;
+	width: var(--visually-hidden-size);
+	height: var(--visually-hidden-size);
+	margin: calc(var(--visually-hidden-size) * -1);
 	padding: 0;
 	overflow: hidden;
 	clip: rect(0 0 0 0);
