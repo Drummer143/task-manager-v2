@@ -1,0 +1,132 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: var(--radius-sm);
+  transition-property: background-color, border-color;
+  transition-duration: var(--dur-state);
+  transition-timing-function: var(--ease-out);
+  text-decoration: none;
+  line-height: 1;
+  font-family: var(--font-ui);
+  white-space: nowrap;
+
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  &:not(:disabled, [aria-disabled='true']) {
+    cursor: pointer;
+  }
+
+  /* variants */
+  &.primary {
+    border: var(--border-width) solid var(--border-accent);
+    color: var(--text-accent);
+    background: transparent;
+
+    &:not(:disabled, [aria-disabled='true'], [aria-busy='true']) {
+      &:hover {
+        background-color: var(--bg-accent-hover);
+      }
+
+      &:active,
+      &[aria-expanded='true'] {
+        border-color: var(--border-accent-strong);
+        background-color: var(--bg-accent-active);
+      }
+    }
+  }
+
+  &.secondary {
+    border: var(--border-width) solid var(--border-hairline);
+    color: var(--text-primary);
+    background-color: var(--bg-raised);
+
+    &:not(:disabled, [aria-disabled='true'], [aria-busy='true']) {
+      &:hover {
+        border-color: var(--border-strong);
+      }
+
+      &:active,
+      &[aria-expanded='true'] {
+        background-color: var(--bg-active);
+      }
+    }
+  }
+
+  &.ghost {
+    border: none;
+    background-color: transparent;
+    color: var(--text-primary);
+
+    &:not(:disabled, [aria-disabled='true'], [aria-busy='true']) {
+      &:hover {
+        background-color: var(--bg-hover);
+      }
+
+      &:active,
+      &[aria-expanded='true'] {
+        background-color: var(--bg-active);
+      }
+    }
+  }
+
+  &.danger {
+    border: var(--border-width) solid var(--border-danger);
+    color: var(--text-danger);
+    background-color: transparent;
+
+    &:not(:disabled, [aria-disabled='true'], [aria-busy='true']) {
+      &:hover {
+        background-color: var(--bg-danger-hover);
+      }
+
+      &:active,
+      &[aria-expanded='true'] {
+        background-color: var(--bg-danger-active);
+      }
+    }
+  }
+
+  &:active {
+    transition: none;
+  }
+
+  /* sizes */
+  &.md {
+    height: var(--control-height);
+
+    gap: var(--button-gap);
+
+    padding-inline: var(--button-pad-x);
+
+    font-size: var(--type-body);
+  }
+
+  &.sm {
+    height: var(--control-height-sm);
+
+    gap: var(--button-gap-sm);
+
+    padding-inline: var(--button-pad-x-sm);
+
+    font-size: var(--type-meta);
+  }
+
+  // IconButton: a square of the control's own side (spec). After the sizes, in
+  // this same file, so it wins over their horizontal padding by order alone.
+  &.iconOnly {
+    aspect-ratio: 1;
+    padding-inline: 0;
+  }
+}
+
+.reasonWrapper {
+  display: inline-flex;
+  border-radius: var(--radius-sm);
+}

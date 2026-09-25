@@ -23,7 +23,16 @@ const ROOTS = ['apps', 'packages/frontend'];
 
 const EXT = new Set(['.css', '.scss', '.ts', '.tsx']);
 // Directories that are never scanned. `tokens` is where literals are legal.
-const SKIP_DIR = new Set(['node_modules', 'dist', 'coverage', '.nx', '.git', 'tokens']);
+const SKIP_DIR = new Set([
+  'node_modules',
+  'dist',
+  'coverage',
+  '.nx',
+  '.git',
+  'tokens',
+  'storybook-static',
+  '.storybook',
+]);
 // Files that are never scanned: generated output and tests/stories.
 const SKIP_FILE = /\.(generated|spec|test|stories)\./;
 
@@ -82,7 +91,9 @@ if (violations.length) {
   for (const v of violations) {
     console.error(`  ${v.file}:${v.line}  [${v.rule}]  ${v.text}`);
   }
-  console.error('\n  Replace the value with a layer 2/3 token, or add a token to tokens.css.');
+  console.error(
+    '\n  Replace the value with a layer 2/3 token, or add a token to tokens.css.',
+  );
   process.exit(1);
 }
 console.log(`ok no literals in components (${files.length} files scanned)`);

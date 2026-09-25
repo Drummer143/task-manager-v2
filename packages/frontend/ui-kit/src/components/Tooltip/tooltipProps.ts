@@ -11,8 +11,6 @@ import type { TooltipPlacement } from './types';
 interface TooltipOptions {
   /** Kbd notation shown after the text (`'c'`, `'mod+k'`). */
   keys?: string;
-  /** Why the trigger is disabled; shown instead of the text. */
-  reason?: string;
   /** Preferred side; flips to the opposite one at the window edge. Default `top`. */
   placement?: TooltipPlacement;
   /** Hover delay override, ms. Default `--tooltip-delay`. */
@@ -21,12 +19,16 @@ interface TooltipOptions {
 
 export type TooltipInfo = TooltipOptions &
   (
-    | { text: string; overflow?: false }
+    | { text: string; overflow?: false; reason?: never }
     /** Only when the element's own text is truncated; `text` defaults to that text. */
-    | { text?: string; overflow: true }
+    | { text?: string; overflow: true; reason?: never }
+    /** Disabled trigger: the reason is always shown, instead of any text. */
+    | { reason: string; text?: string; overflow?: never }
   );
 
-type TooltipAttributes = { [name: `data-tooltip${string}`]: string | number | undefined };
+type TooltipAttributes = {
+  [name: `data-tooltip${string}`]: string | number | undefined;
+};
 
 /**
  * Attributes that make an element a tooltip trigger. Spread them onto the DOM

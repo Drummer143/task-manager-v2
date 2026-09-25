@@ -52,6 +52,8 @@ export const TOKENS = [
   'bg-selected',
   'bg-accent-soft',
   'bg-danger-soft',
+  'bg-danger-hover',
+  'bg-danger-active',
   'bg-scrim',
   'text-primary',
   'text-secondary',
@@ -79,6 +81,9 @@ export const TOKENS = [
   'kbd-border',
   'kbd-fg',
   'bg-track',
+  'bg-accent-hover',
+  'bg-accent-active',
+  'border-accent-strong',
   'num-tabular',
   'type-display',
   'lh-display',
@@ -164,6 +169,8 @@ export const TOKENS = [
   'tooltip-pad-y',
   'tooltip-pad-x',
   'tooltip-group-window',
+  'button-gap',
+  'button-gap-sm',
   'undo-window',
   'tooltip-delay',
   'highlight-remote',
@@ -177,6 +184,8 @@ export const TOKENS = [
   'card-gap',
   'cell-padding-x',
   'hit-min',
+  'button-pad-x',
+  'button-pad-x-sm',
 ] as const;
 /** Token names of layers 2-3. Primitives (--c-*) are excluded on purpose: a component never sees them. */
 export type TokenName = (typeof TOKENS)[number];
@@ -194,6 +203,8 @@ export const token = {
   'bg-selected': 'var(--bg-selected)',
   'bg-accent-soft': 'var(--bg-accent-soft)',
   'bg-danger-soft': 'var(--bg-danger-soft)',
+  'bg-danger-hover': 'var(--bg-danger-hover)',
+  'bg-danger-active': 'var(--bg-danger-active)',
   'bg-scrim': 'var(--bg-scrim)',
   'text-primary': 'var(--text-primary)',
   'text-secondary': 'var(--text-secondary)',
@@ -221,6 +232,9 @@ export const token = {
   'kbd-border': 'var(--kbd-border)',
   'kbd-fg': 'var(--kbd-fg)',
   'bg-track': 'var(--bg-track)',
+  'bg-accent-hover': 'var(--bg-accent-hover)',
+  'bg-accent-active': 'var(--bg-accent-active)',
+  'border-accent-strong': 'var(--border-accent-strong)',
   'num-tabular': 'var(--num-tabular)',
   'type-display': 'var(--type-display)',
   'lh-display': 'var(--lh-display)',
@@ -306,6 +320,8 @@ export const token = {
   'tooltip-pad-y': 'var(--tooltip-pad-y)',
   'tooltip-pad-x': 'var(--tooltip-pad-x)',
   'tooltip-group-window': 'var(--tooltip-group-window)',
+  'button-gap': 'var(--button-gap)',
+  'button-gap-sm': 'var(--button-gap-sm)',
   'undo-window': 'var(--undo-window)',
   'tooltip-delay': 'var(--tooltip-delay)',
   'highlight-remote': 'var(--highlight-remote)',
@@ -319,6 +335,8 @@ export const token = {
   'card-gap': 'var(--card-gap)',
   'cell-padding-x': 'var(--cell-padding-x)',
   'hit-min': 'var(--hit-min)',
+  'button-pad-x': 'var(--button-pad-x)',
+  'button-pad-x-sm': 'var(--button-pad-x-sm)',
 } as const satisfies Record<TokenName, string>;
 
 /** Scalar values (px/ms/unitless) from the base :root — for JS logic. */
@@ -414,6 +432,8 @@ export const raw = {
   'card-gap': 8,
   'cell-padding-x': 8,
   'hit-min': 36,
+  'button-pad-x': 12,
+  'button-pad-x-sm': 8,
 } as const;
 export type RawTokenName = keyof typeof raw;
 
@@ -510,4 +530,6 @@ export const rawUnit = {
   'card-gap': 'px',
   'cell-padding-x': 'px',
   'hit-min': 'px',
+  'button-pad-x': 'px',
+  'button-pad-x-sm': 'px',
 } as const satisfies Record<RawTokenName, 'px' | 'ms' | 'none'>;
