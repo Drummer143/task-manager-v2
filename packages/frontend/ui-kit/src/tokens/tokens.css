@@ -129,6 +129,10 @@
 
   --border-accent: var(--c-accent);
   --border-accent-strong: var(--c-accent-400);
+
+  /* Input */
+  --bg-selection: color-mix(in srgb, var(--c-accent) 25%, transparent);
+  --text-placeholder: var(--c-n-500);
 }
 
 /* DARK set. Today: inverse surfaces. Tomorrow: also the dark theme (see above). */
@@ -166,6 +170,13 @@
 
   --border-accent: var(--c-accent-400);
   --border-accent-strong: var(--c-accent-300);
+
+  /* Input: inline cell states on a dark surface */
+  --bg-accent-soft: color-mix(in srgb, var(--c-accent-400) 18%, transparent);
+  --bg-danger-soft: color-mix(in srgb, var(--c-danger-300) 16%, transparent);
+  --state-pending: var(--c-n-400);
+  --bg-selection: color-mix(in srgb, var(--c-accent-400) 35%, transparent);
+  --text-placeholder: var(--c-n-500);
 }
 
 /* A surface paints itself. :where() keeps specificity at zero, so a place's own
@@ -308,9 +319,23 @@
      sliding along a toolbar (spec: 300 ms without hover). */
   --tooltip-group-window: 300ms;
 
+  /* Any disabled control: the whole element is dimmed, its colors stay (spec 00). */
+  --disabled-opacity: 0.45;
+
   /* Button */
   --button-gap: var(--sp-3);
   --button-gap-sm: var(--sp-2);
+
+  /* Input */
+  --input-state: var(--dur-state) var(--ease-out);
+  --input-gap: var(--sp-2);
+  /* Textarea grows with its text up to this many lines, then scrolls. */
+  --textarea-max-rows: 12;
+  /* The "saving" dot of an inline cell. */
+  --pending-dot-size: 6px;
+  /* Someone else's edit: the tint fades over --highlight-remote. Reduced
+     motion holds it for the same time and drops it without the fade. */
+  --highlight-remote-easing: linear;
 
   --undo-window: 8000ms;
   --tooltip-delay: 400ms;
@@ -336,6 +361,9 @@
   /* Button */
   --button-pad-x: 12px;
   --button-pad-x-sm: 8px;
+
+  /* Input */
+  --input-pad-x: 8px;
 }
 [data-density='compact'] {
   --row-height: 28px;
@@ -349,6 +377,9 @@
   /* Button */
   --button-pad-x: 8px;
   --button-pad-x-sm: 4px;
+
+  /* Input */
+  --input-pad-x: 4px;
 }
 [data-density='comfortable'] {
   --row-height: 44px;
@@ -362,6 +393,9 @@
   /* Button */
   --button-pad-x: 16px;
   --button-pad-x-sm: 12px;
+
+  /* Input */
+  --input-pad-x: 12px;
 }
 
 /* ─── Reduced motion ─── */
@@ -376,6 +410,7 @@
     --spin-duration: 1600ms;
 
     --progress-breath: 2000ms;
+    --highlight-remote-easing: steps(1, end);
   }
 }
 

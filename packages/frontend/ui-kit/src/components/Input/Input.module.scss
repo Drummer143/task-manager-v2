@@ -1,0 +1,111 @@
+/* Field and Textarea: one frame, one set of tokens (spec 04). */
+
+.fieldRoot {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--input-gap);
+
+  min-height: var(--control-height);
+  padding-inline: var(--input-pad-x);
+
+  border: var(--border-width) solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-raised);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+
+  transition: border-color var(--input-state);
+  cursor: text;
+
+  &:hover:not([data-disabled]) {
+    border-color: var(--border-strong);
+  }
+
+  // The frame answers the caret; the ring is the kit's focus ring (instant).
+  &:focus-within {
+    border-color: var(--border-accent);
+    outline: var(--border-width-strong) solid var(--focus-ring);
+    outline-offset: var(--focus-offset);
+    transition: none;
+  }
+
+  &[data-invalid] {
+    border-color: var(--border-danger);
+    transition: none;
+  }
+
+  &[data-disabled] {
+    opacity: var(--disabled-opacity);
+    cursor: default;
+  }
+}
+
+.multiline {
+  align-items: stretch;
+  padding-block: var(--sp-2);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  resize: none;
+
+  // The frame carries focus; a second ring on the bare input would double it.
+  &:focus-visible {
+    outline: none;
+  }
+
+  &::placeholder {
+    color: var(--text-placeholder);
+    opacity: 1;
+  }
+
+  &::selection {
+    background-color: var(--bg-selection);
+  }
+
+  [data-disabled] > & {
+    cursor: default;
+  }
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  color: var(--text-muted);
+
+  > svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.keys {
+  flex: none;
+}
+
+.error {
+  margin-top: var(--sp-2);
+  color: var(--text-danger);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}

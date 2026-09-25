@@ -4,6 +4,8 @@ export * from './hooks';
 export * from './interaction/cursor';
 export * from './interaction/escape';
 export * from './interaction/layers';
+export * from './router';
+export * from './messages';
 
 export * from './components/AppShell';
 
@@ -18,6 +20,8 @@ export * from './components/Spinner';
 export * from './components/Progress';
 
 export * from './components/Button';
+
+export * from './components/Input';
 
 export { TooltipHost, tooltipProps } from './components/Tooltip';
 export type { TooltipInfo, TooltipPlacement } from './components/Tooltip';

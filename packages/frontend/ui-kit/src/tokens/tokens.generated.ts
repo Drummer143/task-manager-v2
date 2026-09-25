@@ -84,6 +84,8 @@ export const TOKENS = [
   'bg-accent-hover',
   'bg-accent-active',
   'border-accent-strong',
+  'bg-selection',
+  'text-placeholder',
   'num-tabular',
   'type-display',
   'lh-display',
@@ -170,8 +172,14 @@ export const TOKENS = [
   'tooltip-pad-y',
   'tooltip-pad-x',
   'tooltip-group-window',
+  'disabled-opacity',
   'button-gap',
   'button-gap-sm',
+  'input-state',
+  'input-gap',
+  'textarea-max-rows',
+  'pending-dot-size',
+  'highlight-remote-easing',
   'undo-window',
   'tooltip-delay',
   'highlight-remote',
@@ -187,6 +195,7 @@ export const TOKENS = [
   'hit-min',
   'button-pad-x',
   'button-pad-x-sm',
+  'input-pad-x',
 ] as const;
 /** Token names of layers 2-3. Primitives (--c-*) are excluded on purpose: a component never sees them. */
 export type TokenName = (typeof TOKENS)[number];
@@ -236,6 +245,8 @@ export const token = {
   'bg-accent-hover': 'var(--bg-accent-hover)',
   'bg-accent-active': 'var(--bg-accent-active)',
   'border-accent-strong': 'var(--border-accent-strong)',
+  'bg-selection': 'var(--bg-selection)',
+  'text-placeholder': 'var(--text-placeholder)',
   'num-tabular': 'var(--num-tabular)',
   'type-display': 'var(--type-display)',
   'lh-display': 'var(--lh-display)',
@@ -322,8 +333,14 @@ export const token = {
   'tooltip-pad-y': 'var(--tooltip-pad-y)',
   'tooltip-pad-x': 'var(--tooltip-pad-x)',
   'tooltip-group-window': 'var(--tooltip-group-window)',
+  'disabled-opacity': 'var(--disabled-opacity)',
   'button-gap': 'var(--button-gap)',
   'button-gap-sm': 'var(--button-gap-sm)',
+  'input-state': 'var(--input-state)',
+  'input-gap': 'var(--input-gap)',
+  'textarea-max-rows': 'var(--textarea-max-rows)',
+  'pending-dot-size': 'var(--pending-dot-size)',
+  'highlight-remote-easing': 'var(--highlight-remote-easing)',
   'undo-window': 'var(--undo-window)',
   'tooltip-delay': 'var(--tooltip-delay)',
   'highlight-remote': 'var(--highlight-remote)',
@@ -339,6 +356,7 @@ export const token = {
   'hit-min': 'var(--hit-min)',
   'button-pad-x': 'var(--button-pad-x)',
   'button-pad-x-sm': 'var(--button-pad-x-sm)',
+  'input-pad-x': 'var(--input-pad-x)',
 } as const satisfies Record<TokenName, string>;
 
 /** Scalar values (px/ms/unitless) from the base :root — for JS logic. */
@@ -422,6 +440,9 @@ export const raw = {
   'tooltip-max-width': 240,
   'tooltip-offset': 6,
   'tooltip-group-window': 300,
+  'disabled-opacity': 0.45,
+  'textarea-max-rows': 12,
+  'pending-dot-size': 6,
   'undo-window': 8000,
   'tooltip-delay': 400,
   'highlight-remote': 400,
@@ -437,6 +458,7 @@ export const raw = {
   'hit-min': 36,
   'button-pad-x': 12,
   'button-pad-x-sm': 8,
+  'input-pad-x': 8,
 } as const;
 export type RawTokenName = keyof typeof raw;
 
@@ -521,6 +543,9 @@ export const rawUnit = {
   'tooltip-max-width': 'px',
   'tooltip-offset': 'px',
   'tooltip-group-window': 'ms',
+  'disabled-opacity': 'none',
+  'textarea-max-rows': 'none',
+  'pending-dot-size': 'px',
   'undo-window': 'ms',
   'tooltip-delay': 'ms',
   'highlight-remote': 'ms',
@@ -536,4 +561,5 @@ export const rawUnit = {
   'hit-min': 'px',
   'button-pad-x': 'px',
   'button-pad-x-sm': 'px',
+  'input-pad-x': 'px',
 } as const satisfies Record<RawTokenName, 'px' | 'ms' | 'none'>;

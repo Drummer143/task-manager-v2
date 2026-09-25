@@ -16,7 +16,7 @@
 
   // aria-disabled, not :disabled — the kit never sets the native attribute (spec 10).
   &[aria-disabled='true'] {
-    opacity: 0.45;
+    opacity: var(--disabled-opacity);
     cursor: default;
   }
 
