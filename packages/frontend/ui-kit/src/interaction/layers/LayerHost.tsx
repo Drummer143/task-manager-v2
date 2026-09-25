@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { useLayerStore } from './store';
 import { useEscapeStack } from '../escape';
+import { useSingleInstance } from '../../hooks/useSingleInstance';
 import styles from './LayerHost.module.css';
 
 /**
@@ -9,6 +10,8 @@ import styles from './LayerHost.module.css';
  */
 export const LayerHost: React.FC = () => {
   const layer = useLayerStore((state) => state.layer);
+  // One slot for the whole app: a second host would render the layer twice.
+  const primary = useSingleInstance('LayerHost');
   const closeLayer = useLayerStore((state) => state.closeLayer);
 
   const handleEscape = useCallback(() => {
@@ -16,9 +19,9 @@ export const LayerHost: React.FC = () => {
     return true;
   }, [closeLayer]);
 
-  useEscapeStack(handleEscape, layer !== null);
+  useEscapeStack(handleEscape, primary && layer !== null);
 
-  if (layer === null) {
+  if (!primary || layer === null) {
     return null;
   }
 

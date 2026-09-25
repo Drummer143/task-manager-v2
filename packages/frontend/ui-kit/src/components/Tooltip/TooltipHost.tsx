@@ -8,6 +8,7 @@ import { TRIGGER_SELECTOR, WATCHED_ATTRIBUTES } from './constants';
 import { isKeyboardFocus } from './isKeyboardFocus';
 import { placeTooltip } from './placeTooltip';
 import { readTrigger } from './readTrigger';
+import { useSingleInstance } from '../../hooks/useSingleInstance';
 import type { TooltipContent } from './types';
 
 type Source = 'hover' | 'focus';
@@ -38,8 +39,14 @@ const isSilenced = (trigger: Element) => trigger.getAttribute('aria-expanded') =
 export const TooltipHost: React.FC = () => {
   const [view, setView] = useState<View | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
+  // A second host (a story decorator next to the global one) stays inert.
+  const primary = useSingleInstance('TooltipHost');
 
   useEffect(() => {
+    if (!primary) {
+      return;
+    }
+
     /** What is shown (or waiting for its delay) and why. */
     let active: { trigger: Element; source: Source } | null = null;
     let visible = false;
@@ -247,8 +254,9 @@ export const TooltipHost: React.FC = () => {
       document.removeEventListener('keydown', handleKeyDown, capture);
       document.removeEventListener('scroll', handleViewportChange, passiveCapture);
       window.removeEventListener('resize', handleViewportChange);
+      setView(null);
     };
-  }, []);
+  }, [primary]);
 
   // Before paint: two reads (trigger rect, tooltip size), then one write.
   useLayoutEffect(() => {
@@ -273,7 +281,7 @@ export const TooltipHost: React.FC = () => {
     tooltip.dataset.placement = placement;
   }, [view]);
 
-  if (!view) {
+  if (!primary || !view) {
     return null;
   }
 

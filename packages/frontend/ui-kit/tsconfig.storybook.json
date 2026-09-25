@@ -23,7 +23,8 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     ".storybook/*.js",
-    ".storybook/*.ts"
+    ".storybook/*.ts",
+    ".storybook/*.tsx"
   ],
   "files": [
     "../../../node_modules/@nx/react/typings/styled-jsx.d.ts",

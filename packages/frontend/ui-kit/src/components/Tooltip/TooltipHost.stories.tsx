@@ -4,11 +4,11 @@ import TooltipHost from './TooltipHost';
 import { tooltipProps } from './tooltipProps';
 import { Surface } from '../Surface';
 import { cssVar, raw } from '../../tokens';
-import { useEscapeStack, useListenEscape } from '../../interaction/escape';
+import { useEscapeStack } from '../../interaction/escape';
 
 /*
- * Test bench for the tooltip host. One <TooltipHost /> is mounted by the
- * decorator; every trigger below is a plain element with tooltipProps()
+ * Test bench for the tooltip host. The one <TooltipHost /> comes from KitRoot
+ * (the global decorator in .storybook/preview.tsx) — never mount a second one; every trigger below is a plain element with tooltipProps()
  * attributes — no tooltip component per trigger. Each story says what to check.
  *
  * Button / IconButton do not exist yet, so they are mocked here. The mocks put
@@ -105,14 +105,6 @@ function TaskToolbar() {
 const meta: Meta<typeof TooltipHost> = {
   title: 'Primitives/Tooltip',
   component: TooltipHost,
-  decorators: [
-    (Story) => (
-      <>
-        <TooltipHost />
-        <Story />
-      </>
-    ),
-  ],
   parameters: { layout: 'fullscreen' },
 };
 
@@ -277,7 +269,6 @@ export const Scroll: Story = {
 
 export const EscapeLadder: Story = {
   render: () => {
-    useListenEscape();
     const [panelOpen, setPanelOpen] = useState(true);
     const closePanel = useCallback(() => {
       setPanelOpen(false);
