@@ -1,0 +1,50 @@
+.stack {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: top;
+}
+
+/* Each face overlaps the previous one; the ring is the surface color, not white. */
+.face {
+  // All positioned, so DOM order decides who is on top: a face is positioned
+  // (for its photo), and a static counter would sink under the last face.
+  position: relative;
+  box-shadow: 0 0 0 var(--border-width-strong) var(--bg-surface);
+
+  & + & {
+    margin-inline-start: var(--avatar-overlap);
+  }
+}
+
+.counter {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--sp-1);
+
+  border-radius: var(--radius-full);
+  // Opaque on both surfaces: it overlaps the last face.
+  background-color: var(--avatar-bg-1);
+  color: var(--avatar-fg);
+  font-family: var(--font-ui);
+  font-size: var(--type-meta);
+  line-height: 1;
+  font-variant-numeric: var(--num-tabular);
+}
+
+/* The counter is as big as the faces. */
+.xs {
+  min-width: var(--avatar-xs);
+  height: var(--avatar-xs);
+}
+
+.sm {
+  min-width: var(--avatar-sm);
+  height: var(--avatar-sm);
+}
+
+.md {
+  min-width: var(--avatar-md);
+  height: var(--avatar-md);
+}

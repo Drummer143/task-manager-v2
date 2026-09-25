@@ -1,0 +1,123 @@
+/* Tag (spec 08). Static by nature; only a clickable one reacts, like a ghost button. */
+
+.tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--sp-2);
+  // Not on the baseline: a tag with a dot or an × would sit differently.
+  vertical-align: top;
+  max-width: 100%;
+
+  height: var(--tag-height);
+  margin: 0;
+  padding-inline: var(--sp-3);
+
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-ui);
+  font-size: var(--type-meta);
+  // Not 1: the text clips its overflow (ellipsis), and descenders would go with it.
+  line-height: var(--lh-meta);
+  white-space: nowrap;
+}
+
+/* Tones */
+.neutral {
+  background-color: var(--tag-neutral-bg);
+  color: var(--text-secondary);
+}
+
+.accent {
+  background-color: var(--bg-accent-soft);
+  color: var(--text-on-accent);
+}
+
+.outline {
+  border-color: var(--border-hairline);
+  background-color: transparent;
+  color: var(--text-secondary);
+}
+
+.danger {
+  background-color: var(--bg-danger-soft);
+  color: var(--text-danger);
+}
+
+/*
+ * tint(): a color from data takes the lightness (and a chroma cap) of the
+ * kit's ramp for this surface; only its hue is kept. After the tones: it wins.
+ */
+.colored {
+  background-color: oklch(from var(--tag-color) var(--tint-fill-l) min(c, var(--tint-fill-c)) h / var(--tint-fill-alpha));
+  color: oklch(from var(--tag-color) var(--tint-text-l) min(c, var(--tint-text-c)) h);
+}
+
+.dot {
+  flex: none;
+  width: var(--tag-dot);
+  height: var(--tag-dot);
+  border-radius: var(--radius-full);
+  background-color: oklch(from var(--tag-color) var(--tint-dot-l) min(c, var(--tint-dot-c)) h);
+}
+
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A clickable tag: the tone stays, a hover / press tint goes over it. */
+.clickable {
+  position: relative;
+  cursor: pointer;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: calc(var(--border-width) * -1);
+    border-radius: inherit;
+    background-color: var(--bg-hover);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--tag-state);
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+
+  &:active::after {
+    background-color: var(--bg-active);
+    opacity: 1;
+    transition: none;
+  }
+}
+
+.remove {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tag-icon-size);
+  height: var(--tag-icon-size);
+  margin: 0;
+  // Pulled to the edge: the × sits where the padding was.
+  margin-inline-end: calc(var(--sp-2) * -1);
+  padding: 0;
+
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--bg-hover);
+  }
+
+  > svg {
+    width: 100%;
+    height: 100%;
+  }
+}

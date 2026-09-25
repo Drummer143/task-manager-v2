@@ -1,0 +1,9 @@
+.list {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--sp-2);
+  vertical-align: top;
+  min-width: 0;
+  max-width: 100%;
+}

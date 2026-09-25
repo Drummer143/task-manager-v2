@@ -5,6 +5,7 @@ import { FieldInput } from './FieldInput';
 import { InlineInput, type InlineEditStart, type InlineSaveStatus } from './InlineInput';
 import { Textarea } from './Textarea';
 import { Surface } from '../Surface';
+import { Avatar } from '../Avatar';
 import { cssVar } from '../../tokens';
 import { useRegisterHotkey } from '../../interaction/hotkeys';
 import { detectPlatform } from '../../utils';
@@ -137,28 +138,6 @@ interface Row {
   status: InlineSaveStatus;
   unsaved?: string;
   remote?: { key: number; by?: ReactNode };
-}
-
-/* Demo only: the kit has no Avatar yet — initials in a circle stand in. */
-function Initials({ children }: { children: string }) {
-  return (
-    <span
-      aria-label={`Edited by ${children}`}
-      role="img"
-      style={{
-        display: 'inline-grid',
-        placeItems: 'center',
-        width: cssVar('avatar-sm'),
-        height: cssVar('avatar-sm'),
-        borderRadius: cssVar('radius-full'),
-        background: cssVar('bg-sunken'),
-        color: cssVar('text-secondary'),
-        fontSize: cssVar('type-meta'),
-      }}
-    >
-      {children}
-    </span>
-  );
 }
 
 const ROWS: Row[] = [
@@ -301,7 +280,7 @@ function LiveTable() {
           const title = `AppShell: shell hotkeys and resize · v${(key % 90) + 10}`;
 
           // In a real app this comes from sync; the author's mark goes after a while.
-          patch('TM-248', { title, remote: { key, by: <Initials>IP</Initials> } });
+          patch('TM-248', { title, remote: { key, by: <Avatar size="xs" name="Ivan Petrov" id="u-ivan" /> } });
           timers.current.push(setTimeout(() => patch('TM-248', { remote: { key } }), 2000));
           setLog('TM-248: edited by someone else');
         }}

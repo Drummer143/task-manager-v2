@@ -136,6 +136,29 @@
 
   /* Switch: no semantic role fits the off thumb */
   --switch-thumb-off: var(--c-n-500);
+
+  /* Tag */
+  --tag-neutral-bg: var(--c-n-150);
+
+  /* Avatar: initials on a neutral tone picked by a hash of the id */
+  --avatar-bg-1: var(--c-n-150);
+  --avatar-bg-2: var(--c-n-200);
+  --avatar-bg-3: var(--c-n-300);
+  --avatar-bg-4: var(--c-n-400);
+  --avatar-fg: var(--c-n-700);
+  --avatar-empty: var(--c-n-400);
+
+  /* tint(): colors from data (board statuses, user labels) keep their hue and
+     take the lightness of our ramp steps — the ramps share one OKLCH lightness
+     scale (100 ≈ .954, 300 ≈ .785, 500 ≈ .555, 700 ≈ .43). Dot = step 500,
+     fill = step 100, text = step 700. */
+  --tint-dot-l: 0.555;
+  --tint-dot-c: 0.15;
+  --tint-fill-l: 0.954;
+  --tint-fill-c: 0.02;
+  --tint-fill-alpha: 1;
+  --tint-text-l: 0.43;
+  --tint-text-c: 0.13;
 }
 
 /* DARK set. Today: inverse surfaces. Tomorrow: also the dark theme (see above). */
@@ -182,6 +205,25 @@
   --text-placeholder: var(--c-n-500);
 
   --switch-thumb-off: var(--c-n-400);
+
+  --text-on-accent: var(--c-accent-300);
+  --tag-neutral-bg: color-mix(in srgb, var(--c-n-50) 10%, transparent);
+
+  --avatar-bg-1: var(--c-n-500);
+  --avatar-bg-2: var(--c-n-600);
+  --avatar-bg-3: var(--c-n-700);
+  --avatar-bg-4: var(--c-n-800);
+  --avatar-fg: var(--c-n-50);
+  --avatar-empty: var(--c-n-600);
+
+  /* tint() on a dark surface: step 300 for the dot and the text, a 16% fill. */
+  --tint-dot-l: 0.785;
+  --tint-dot-c: 0.08;
+  --tint-fill-l: 0.785;
+  --tint-fill-c: 0.08;
+  --tint-fill-alpha: 0.16;
+  --tint-text-l: 0.785;
+  --tint-text-c: 0.08;
 }
 
 /* A surface paints itself. :where() keeps specificity at zero, so a place's own
@@ -282,8 +324,13 @@
   /* One stroke for every icon, in screen pixels (Button's icon slot enforces it). */
   --icon-stroke: 1.5px;
   --icon-size-lg: 20px;
+  /* Avatar: menu · card and table row · panel and presence */
+  --avatar-xs: 16px;
   --avatar-sm: 20px;
   --avatar-md: 28px;
+  /* A stack: at most this many, then a counter; each overlaps the previous. */
+  --avatar-stack-max: 3;
+  --avatar-overlap: -6px;
 
   --palette-width: 560px;
   --palette-row: 36px;
@@ -356,6 +403,14 @@
   --switch-thumb-stretch: 12px;
   --switch-inset: 2px;
   --switch-state: var(--dur-state) var(--ease-out);
+
+  /* Tag: does not change with density */
+  --tag-height: 20px;
+  --tag-dot: 6px;
+  --tag-icon-size: 12px;
+  /* On a card: at most this many, the rest go into "+N". */
+  --tag-max-visible: 3;
+  --tag-state: var(--dur-state) var(--ease-out);
 
   /* Segmented */
   --segmented-pad-x: var(--sp-4);

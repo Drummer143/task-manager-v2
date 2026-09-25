@@ -14,6 +14,12 @@ export interface KitMessages {
   cellSaving: string;
   cellNotSaved: string;
   cellConflict: string;
+  /** Tag: the × button; the tag's own text describes what is removed. */
+  removeTag: string;
+  /** Empty avatar that assigns someone on click. */
+  assign: string;
+  /** "+N" of a tag list or an avatar stack: what readers hear. */
+  more(count: number): string;
 }
 
 export const DEFAULT_MESSAGES: KitMessages = {
@@ -22,6 +28,9 @@ export const DEFAULT_MESSAGES: KitMessages = {
   cellSaving: 'saving',
   cellNotSaved: 'not saved',
   cellConflict: 'conflict',
+  removeTag: 'Remove',
+  assign: 'Assign',
+  more: (count) => `${count} more`,
 };
 
 export const MessagesContext = createContext<KitMessages>(DEFAULT_MESSAGES);
