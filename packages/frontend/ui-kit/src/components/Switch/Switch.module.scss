@@ -1,0 +1,170 @@
+/* Switch (spec 06). The row is the hit zone; the track keeps its size in every density. */
+
+.root {
+  display: inline-flex;
+  flex-direction: column;
+  // Not on the baseline: the track is an empty box (see Checkbox).
+  vertical-align: top;
+  min-width: 0;
+
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+
+  // A settings row: label on the left, switch at the right edge.
+  &[data-position='start'] {
+    display: flex;
+  }
+
+  &[data-disabled] {
+    opacity: var(--disabled-opacity);
+  }
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+
+  min-height: var(--hit-min);
+  // The first text line sits in the middle of the hit zone.
+  padding-block: calc((var(--hit-min) - var(--type-body) * var(--lh-body)) / 2);
+  cursor: pointer;
+
+  [data-position='start'] > & {
+    justify-content: space-between;
+  }
+
+  [data-disabled] > & {
+    cursor: default;
+  }
+}
+
+.track {
+  --travel: calc(var(--switch-width) - var(--switch-thumb) - 2 * var(--switch-inset) - 2 * var(--border-width));
+
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  width: var(--switch-width);
+  height: var(--switch-height);
+  // Centred on the first text line.
+  margin-block-start: calc((var(--type-body) * var(--lh-body) - var(--switch-height)) / 2);
+  padding-inline: var(--switch-inset);
+
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background-color: var(--bg-raised);
+
+  transition:
+    background-color var(--switch-state),
+    border-color var(--switch-state);
+
+  .root:not([data-disabled]) .row:hover > & {
+    border-color: var(--text-muted);
+  }
+
+  [data-checked='true'] & {
+    border-color: var(--border-accent);
+    background-color: var(--bg-accent-soft);
+  }
+
+  .root[data-checked='true']:not([data-disabled]) .row:hover > & {
+    border-color: var(--border-accent-strong);
+  }
+
+  // The ring is on the track, and instant.
+  &:has(> .input:focus-visible) {
+    outline: var(--border-width-strong) solid var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+}
+
+/* The native input stays in place — for focus, Space and readers — but invisible. */
+.input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+/* The only transform among the primitives (spec 06). */
+.thumb {
+  width: var(--switch-thumb);
+  height: var(--switch-thumb);
+  border-radius: var(--radius-full);
+  background-color: var(--switch-thumb-off);
+  pointer-events: none;
+
+  transition:
+    transform var(--switch-state),
+    width var(--switch-state),
+    background-color var(--switch-state);
+
+  [data-checked='true'] & {
+    background-color: var(--border-accent);
+    transform: translateX(var(--travel));
+  }
+
+  // Pressed: it stretches towards where it will go — right when off, left when on.
+  .root:not([data-disabled]) .row:active & {
+    width: var(--switch-thumb-stretch);
+  }
+
+  .root[data-checked='true']:not([data-disabled]) .row:active & {
+    transform: translateX(calc(var(--travel) - (var(--switch-thumb-stretch) - var(--switch-thumb))));
+  }
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.dot {
+  flex: none;
+  width: var(--pending-dot-size);
+  height: var(--pending-dot-size);
+  border-radius: var(--radius-full);
+  background-color: var(--state-pending);
+}
+
+.description {
+  margin-top: var(--sp-1);
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}
+
+.error {
+  color: var(--text-danger);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}
+
+.retry {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

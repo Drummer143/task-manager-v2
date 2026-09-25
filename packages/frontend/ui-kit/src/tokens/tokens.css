@@ -133,6 +133,9 @@
   /* Input */
   --bg-selection: color-mix(in srgb, var(--c-accent) 25%, transparent);
   --text-placeholder: var(--c-n-500);
+
+  /* Switch: no semantic role fits the off thumb */
+  --switch-thumb-off: var(--c-n-500);
 }
 
 /* DARK set. Today: inverse surfaces. Tomorrow: also the dark theme (see above). */
@@ -177,6 +180,8 @@
   --state-pending: var(--c-n-400);
   --bg-selection: color-mix(in srgb, var(--c-accent-400) 35%, transparent);
   --text-placeholder: var(--c-n-500);
+
+  --switch-thumb-off: var(--c-n-400);
 }
 
 /* A surface paints itself. :where() keeps specificity at zero, so a place's own
@@ -341,6 +346,16 @@
   --checkbox-size: 16px;
   --checkbox-glyph-size: 12px;
   --checkbox-state: var(--dur-state) var(--ease-out);
+
+  /* Switch: the track does not change with density — its hit zone (the row) does.
+     The thumb travels width − thumb − 2 × inset − 2 × border = 12 px. */
+  --switch-width: 28px;
+  --switch-height: 16px;
+  --switch-thumb: 10px;
+  /* Pressed: the thumb stretches towards where it will go. */
+  --switch-thumb-stretch: 12px;
+  --switch-inset: 2px;
+  --switch-state: var(--dur-state) var(--ease-out);
 
   --undo-window: 8000ms;
   --tooltip-delay: 400ms;
