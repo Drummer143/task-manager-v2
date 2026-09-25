@@ -190,6 +190,9 @@ export const TOKENS = [
   'switch-thumb-stretch',
   'switch-inset',
   'switch-state',
+  'segmented-pad-x',
+  'segmented-pad-x-sm',
+  'segmented-state',
   'undo-window',
   'tooltip-delay',
   'highlight-remote',
@@ -206,6 +209,7 @@ export const TOKENS = [
   'button-pad-x',
   'button-pad-x-sm',
   'input-pad-x',
+  'segmented-height',
 ] as const;
 /** Token names of layers 2-3. Primitives (--c-*) are excluded on purpose: a component never sees them. */
 export type TokenName = (typeof TOKENS)[number];
@@ -361,6 +365,9 @@ export const token = {
   'switch-thumb-stretch': 'var(--switch-thumb-stretch)',
   'switch-inset': 'var(--switch-inset)',
   'switch-state': 'var(--switch-state)',
+  'segmented-pad-x': 'var(--segmented-pad-x)',
+  'segmented-pad-x-sm': 'var(--segmented-pad-x-sm)',
+  'segmented-state': 'var(--segmented-state)',
   'undo-window': 'var(--undo-window)',
   'tooltip-delay': 'var(--tooltip-delay)',
   'highlight-remote': 'var(--highlight-remote)',
@@ -377,6 +384,7 @@ export const token = {
   'button-pad-x': 'var(--button-pad-x)',
   'button-pad-x-sm': 'var(--button-pad-x-sm)',
   'input-pad-x': 'var(--input-pad-x)',
+  'segmented-height': 'var(--segmented-height)',
 } as const satisfies Record<TokenName, string>;
 
 /** Scalar values (px/ms/unitless) from the base :root — for JS logic. */
@@ -486,6 +494,7 @@ export const raw = {
   'button-pad-x': 12,
   'button-pad-x-sm': 8,
   'input-pad-x': 8,
+  'segmented-height': 28,
 } as const;
 export type RawTokenName = keyof typeof raw;
 
@@ -596,4 +605,5 @@ export const rawUnit = {
   'button-pad-x': 'px',
   'button-pad-x-sm': 'px',
   'input-pad-x': 'px',
+  'segmented-height': 'px',
 } as const satisfies Record<RawTokenName, 'px' | 'ms' | 'none'>;

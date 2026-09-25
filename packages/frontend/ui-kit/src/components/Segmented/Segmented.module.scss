@@ -1,0 +1,123 @@
+/* Segmented (spec 07). One frame, hairline dividers; the chosen segment is an inner outline. */
+
+.group {
+  display: inline-flex;
+  // Not on the baseline: segments with and without icons would shift the row.
+  vertical-align: top;
+  // As wide as its segments (spec 07), even where a grid or flex parent would stretch it.
+  width: fit-content;
+
+  border: var(--border-width) solid var(--border-hairline);
+  // Rounded outside only; the end segments follow it themselves (below), so
+  // nothing is clipped — neither their hover fill nor the chosen outline.
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-raised);
+
+  // The ring is on the whole group — on a segment its neighbours would cut it off.
+  &:has(:focus-visible) {
+    outline: var(--border-width-strong) solid var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+
+  &[data-disabled] {
+    opacity: var(--disabled-opacity);
+  }
+}
+
+.segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  margin: 0;
+
+  border: 0;
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--type-meta);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition: background-color var(--segmented-state);
+
+  & + & {
+    border-inline-start: var(--border-width) solid var(--border-hairline);
+  }
+
+  // The outer corners of the end segments: the group's radius minus its
+  // border, so the chosen outline bends with the frame instead of being cut.
+  &:first-child {
+    border-start-start-radius: calc(var(--radius-sm) - var(--border-width));
+    border-end-start-radius: calc(var(--radius-sm) - var(--border-width));
+  }
+
+  &:last-child {
+    border-start-end-radius: calc(var(--radius-sm) - var(--border-width));
+    border-end-end-radius: calc(var(--radius-sm) - var(--border-width));
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:not([aria-disabled='true'], [data-selected]) {
+    &:hover {
+      background-color: var(--bg-hover);
+    }
+
+    &:active {
+      background-color: var(--bg-active);
+      transition: none;
+    }
+  }
+
+  // The chosen one: an inner accent outline and accent text. Instant — a
+  // sliding frame would delay reading the new value (spec 07).
+  &[data-selected] {
+    box-shadow: inset 0 0 0 var(--border-width) var(--border-accent);
+    color: var(--text-accent);
+    cursor: default;
+  }
+
+  &[aria-disabled='true'] {
+    cursor: default;
+  }
+
+  // A single unavailable segment is dimmed; a disabled group dims as a whole.
+  .group:not([data-disabled]) > &[aria-disabled='true'] {
+    opacity: var(--disabled-opacity);
+  }
+}
+
+/* Sizes */
+.md > .segment {
+  height: var(--segmented-height);
+  padding-inline: var(--segmented-pad-x);
+}
+
+.sm > .segment {
+  height: var(--control-height-sm);
+  padding-inline: var(--segmented-pad-x-sm);
+}
+
+// After the sizes: an icon alone is a square of the segment's height.
+.segment.iconOnly {
+  aspect-ratio: 1;
+  padding-inline: 0;
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+
+  > svg {
+    width: 100%;
+    height: 100%;
+  }
+}

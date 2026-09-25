@@ -357,6 +357,11 @@
   --switch-inset: 2px;
   --switch-state: var(--dur-state) var(--ease-out);
 
+  /* Segmented */
+  --segmented-pad-x: var(--sp-4);
+  --segmented-pad-x-sm: var(--sp-3);
+  --segmented-state: var(--dur-state) var(--ease-out);
+
   --undo-window: 8000ms;
   --tooltip-delay: 400ms;
   --highlight-remote: 400ms;
@@ -384,6 +389,9 @@
 
   /* Input */
   --input-pad-x: 8px;
+
+  /* Segmented: the view switcher (md); sm reads --control-height-sm */
+  --segmented-height: 28px;
 }
 [data-density='compact'] {
   --row-height: 28px;
@@ -400,6 +408,9 @@
 
   /* Input */
   --input-pad-x: 4px;
+
+  /* Segmented */
+  --segmented-height: 24px;
 }
 [data-density='comfortable'] {
   --row-height: 44px;
@@ -416,6 +427,9 @@
 
   /* Input */
   --input-pad-x: 12px;
+
+  /* Segmented */
+  --segmented-height: 32px;
 }
 
 /* ─── Reduced motion ─── */

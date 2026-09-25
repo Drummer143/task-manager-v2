@@ -27,6 +27,8 @@ export * from './components/Checkbox';
 
 export * from './components/Switch';
 
+export * from './components/Segmented';
+
 export { TooltipHost, tooltipProps } from './components/Tooltip';
 export type { TooltipInfo, TooltipPlacement } from './components/Tooltip';
 
