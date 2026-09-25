@@ -1,0 +1,32 @@
+.root {
+  // Positioned by transform from 0,0 (see TooltipHost): the layout box never
+  // moves, so its measured size does not depend on where it is placed.
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-tooltip);
+
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+
+  width: max-content;
+  max-width: var(--tooltip-max-width);
+
+  padding-block: var(--tooltip-pad-y);
+  padding-inline: var(--tooltip-pad-x);
+
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-overlay);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+  border-radius: var(--radius-sm);
+
+  // Only text and Kbd inside (spec) — it never takes the pointer from the trigger.
+  pointer-events: none;
+}
+
+.text {
+  min-width: 0;
+}

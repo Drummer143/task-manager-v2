@@ -46,6 +46,11 @@
   --c-info-300: #a6b8c9;
   --c-info-500: #4f6d8a;
   --c-info-700: #2f4a63;
+
+  --font-ui:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -197,6 +202,8 @@
   --border-width: 1px;
   --border-width-strong: 2px;
   --focus-offset: 2px;
+
+  --overlay-margin: 8px;
 }
 
 /* ─── Motion ─── */
@@ -220,6 +227,7 @@
   --z-dropdown: 100;
   --z-layer: 200;
   --z-toast: 300;
+  --z-tooltip: 400;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -272,6 +280,15 @@
   /* The bar's own token, bound to the shared motion scale: reduced motion
      zeroes --dur-move, and this follows. */
   --progress-transition: var(--dur-move);
+
+  /* Tooltip */
+  --tooltip-max-width: 240px;
+  --tooltip-offset: 6px;
+  --tooltip-pad-y: var(--sp-2);
+  --tooltip-pad-x: var(--sp-3);
+  /* After a tooltip hides, the next one within this window shows at once —
+     sliding along a toolbar (spec: 300 ms without hover). */
+  --tooltip-group-window: 300ms;
 
   --undo-window: 8000ms;
   --tooltip-delay: 400ms;
