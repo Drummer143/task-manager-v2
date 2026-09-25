@@ -25,7 +25,12 @@ export const LayerHost: React.FC = () => {
     return null;
   }
 
-  return <div className={styles.layerHost}>{layer}</div>;
+  return (
+    // data-layer (DATA_ATTR_LAYER): triggers outside it get no tooltips.
+    <div className={styles.layerHost} data-layer="">
+      {layer}
+    </div>
+  );
 };
 
 export default LayerHost;

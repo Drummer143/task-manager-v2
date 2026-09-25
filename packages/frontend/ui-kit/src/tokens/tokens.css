@@ -263,6 +263,8 @@
   --column-gap: 12px;
 
   --icon-size: 16px;
+  /* One stroke for every icon, in screen pixels (Button's icon slot enforces it). */
+  --icon-stroke: 1.5px;
   --icon-size-lg: 20px;
   --avatar-sm: 20px;
   --avatar-md: 28px;

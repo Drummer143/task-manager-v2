@@ -65,6 +65,7 @@ describe('readTrigger', () => {
   it('shows the disabled reason instead of the text, without keys', () => {
     expect(readTrigger(element({ text: 'Archive', keys: 'e', reason: 'Unavailable: no access' }))).toEqual({
       text: 'Unavailable: no access',
+      isReason: true,
       placement: 'top',
       delay: raw['tooltip-delay'],
     });

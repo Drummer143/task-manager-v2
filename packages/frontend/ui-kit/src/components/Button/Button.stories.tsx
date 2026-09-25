@@ -8,21 +8,14 @@ import { cssVar } from '../../tokens';
 const VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'ghost', 'danger'];
 const SIZES: ButtonSize[] = ['md', 'sm'];
 
-/* Demo scaffolding only. The kit has no icon set yet — a stroke glyph stands in. */
+/*
+ * Demo scaffolding only. The kit has no icon set yet — a stroke glyph stands in.
+ * No size, color or stroke width here: Button's icon slot sets all three.
+ */
 function PlusIcon() {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 16 16"
-      style={{
-        width: cssVar('icon-size'),
-        height: cssVar('icon-size'),
-        stroke: 'currentColor',
-        fill: 'none',
-      }}
-    >
-      {/* viewBox units: 1.5 of 16 at the 16 px icon size. */}
-      <path d="M8 3v10M3 8h10" strokeWidth={1.5} strokeLinecap="round" />
+    <svg viewBox="0 0 16 16" stroke="currentColor" fill="none">
+      <path d="M8 3v10M3 8h10" strokeLinecap="round" />
     </svg>
   );
 }
@@ -107,6 +100,10 @@ const meta: Meta<typeof Button> = {
       description: 'Shown in a tooltip while disabled.',
     },
     loading: { control: 'boolean' },
+    tooltip: {
+      control: 'text',
+      description: 'Tooltip text; keys are shown in it too.',
+    },
     href: {
       control: 'text',
       description: 'Renders a link that looks like a button.',
@@ -212,7 +209,32 @@ export const Busy: Story = {
   args: { keys: undefined },
 };
 
-/** A link that looks like a button stays a link: middle-click and "open in new tab" work. */
+/**
+ * A tooltip on a labelled button: for an addition to the label, never a copy of
+ * it. The hotkey shows twice — inline on the button and in the tooltip.
+ */
+export const WithTooltip: Story = {
+  render: () => (
+    <div style={row}>
+      <Button keys="c" tooltip="In the current status">
+        Create task
+      </Button>
+      <Button variant="ghost" tooltip="Only tasks assigned to you" tooltipPlacement="bottom">
+        My tasks
+      </Button>
+      <Button variant="secondary" tooltip="Archive the board" disabled disabledReason="Unavailable: no access to this board">
+        Archive
+      </Button>
+    </div>
+  ),
+};
+
+/**
+ * A link that looks like a button stays a link: middle-click and "open in new
+ * tab" work. With a router adapter on KitRoot a plain click navigates without a
+ * reload; Storybook has none, so these are plain links. The disabled one has no
+ * href but stays focusable for its reason.
+ */
 export const AsLink: Story = {
   render: (args) => (
     <div style={row}>

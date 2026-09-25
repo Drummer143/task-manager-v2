@@ -5,6 +5,7 @@ import { isKeyboardFocus } from './isKeyboardFocus';
 import TooltipHost from './TooltipHost';
 import styles from './TooltipHost.module.scss';
 import { tooltipProps } from './tooltipProps';
+import { TOOLTIP_ID, TOOLTIP_KEYS_ID } from './constants';
 
 // jsdom has no reliable :focus-visible — the test decides what "keyboard focus" is.
 vi.mock('./isKeyboardFocus', () => ({ isKeyboardFocus: vi.fn(() => false) }));
@@ -361,6 +362,45 @@ describe('TooltipHost · trigger lifecycle', () => {
     expect(tooltip()).toBeNull();
   });
 
+  it('stays silent for triggers under an open layer, and works inside it', () => {
+    const view = render(
+      <>
+        <TooltipHost />
+        <button type="button" data-testid="under" {...tooltipProps({ text: 'Create task' })} />
+        <div data-layer="">
+          <button type="button" data-testid="inside" {...tooltipProps({ text: 'Close palette' })} />
+        </div>
+      </>,
+    );
+
+    focus(view.getByTestId('under'), true);
+    expect(tooltip()).toBeNull();
+
+    focus(view.getByTestId('inside'), true);
+    expect(shown()).toBe('Close palette');
+  });
+
+  it('hides a shown tooltip when a layer opens over its trigger', async () => {
+    const Bench = ({ layer }: { layer: boolean }) => (
+      <>
+        <TooltipHost />
+        <button type="button" data-testid="create" {...tooltipProps({ text: 'Create task' })} />
+        {layer && <div data-layer="" />}
+      </>
+    );
+    const view = render(<Bench layer={false} />);
+
+    focus(view.getByTestId('create'), true);
+    expect(shown()).toBe('Create task');
+
+    view.rerender(<Bench layer />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(tooltip()).toBeNull();
+  });
+
   it('removes its listeners on unmount', () => {
     const view = bench();
     const status = view.getByTestId('status');
@@ -375,7 +415,7 @@ describe('TooltipHost · trigger lifecycle', () => {
   });
 });
 
-describe('TooltipHost · content and surface', () => {
+describe('TooltipHost · content', () => {
   it('renders the keys through Kbd', () => {
     const { getByTestId } = bench();
 
@@ -384,31 +424,26 @@ describe('TooltipHost · content and surface', () => {
     expect(tooltip()?.querySelector('kbd')).not.toBeNull();
   });
 
-  it('shows the disabled reason from a focusable wrapper', () => {
+  it('shows the disabled reason from the trigger itself — a reason alone makes a trigger', () => {
     const view = render(
       <>
         <TooltipHost />
-        <span tabIndex={0} data-testid="wrapper" {...tooltipProps({ text: 'Archive', reason: 'Unavailable: no access' })}>
-          <button type="button" disabled>
-            Archive
-          </button>
-        </span>
+        <button type="button" aria-disabled="true" data-testid="archive" {...tooltipProps({ reason: 'Unavailable: no access' })}>
+          Archive
+        </button>
       </>,
     );
+    const archive = view.getByTestId('archive');
 
-    focus(view.getByTestId('wrapper'), true);
+    expect(archive.hasAttribute('data-tooltip')).toBe(false);
+
+    focus(archive, true);
 
     expect(shown()).toBe('Unavailable: no access');
   });
+});
 
-  it('is visual only — hidden from screen readers', () => {
-    const { getByTestId } = bench();
-
-    focus(getByTestId('status'), true);
-
-    expect(tooltip()?.getAttribute('aria-hidden')).toBe('true');
-  });
-
+describe('TooltipHost · surface and position', () => {
   it('takes the surface opposite to the one it hangs over', () => {
     const view = render(
       <>
@@ -434,5 +469,113 @@ describe('TooltipHost · content and surface', () => {
 
     expect(tooltip()?.style.transform).toMatch(/^translate3d\(/);
     expect(tooltip()?.dataset.placement).toMatch(/^(top|bottom|left|right)$/);
+  });
+});
+
+describe('TooltipHost · accessibility', () => {
+  it('is one role="tooltip" element with a stable id', () => {
+    const { getByTestId } = bench();
+
+    focus(getByTestId('status'), true);
+
+    expect(tooltip()?.getAttribute('role')).toBe('tooltip');
+    expect(tooltip()?.id).toBe(TOOLTIP_ID);
+    expect(tooltip()?.hasAttribute('aria-hidden')).toBe(false);
+  });
+
+  it('describes the trigger while shown and drops the description on hide', () => {
+    const { getByTestId } = bench();
+    const status = getByTestId('status');
+
+    enter(status);
+    advance(DELAY);
+    expect(status.getAttribute('aria-describedby')).toBe(TOOLTIP_ID);
+
+    leave(status);
+    expect(status.hasAttribute('aria-describedby')).toBe(false);
+  });
+
+  it('moves the description to the next trigger — the previous one lets it go', () => {
+    const { getByTestId } = bench();
+
+    focus(getByTestId('status'), true);
+    focus(getByTestId('slow'), true);
+
+    expect(getByTestId('status').hasAttribute('aria-describedby')).toBe(false);
+    expect(getByTestId('slow').getAttribute('aria-describedby')).toBe(TOOLTIP_ID);
+  });
+
+  it('re-points the description when the text changes while shown', async () => {
+    const Bench = ({ text }: { text: string }) => (
+      <>
+        <TooltipHost />
+        <button type="button" data-testid="watch" aria-label="Watch" {...tooltipProps({ text, keys: 'w' })} />
+      </>
+    );
+    const view = render(<Bench text="Watch" />);
+    const watch = view.getByTestId('watch');
+
+    focus(watch, true);
+    expect(watch.getAttribute('aria-describedby')).toBe(TOOLTIP_KEYS_ID);
+
+    view.rerender(<Bench text="Watching since 14:32" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(watch.getAttribute('aria-describedby')).toBe(TOOLTIP_ID);
+  });
+
+  it("keeps the trigger's own descriptions", () => {
+    const view = render(
+      <>
+        <TooltipHost />
+        <span id="hint">Hint</span>
+        <button type="button" data-testid="own" aria-describedby="hint" {...tooltipProps({ text: 'Share' })} />
+      </>,
+    );
+    const own = view.getByTestId('own');
+
+    focus(own, true);
+    expect(own.getAttribute('aria-describedby')).toBe(`hint ${TOOLTIP_ID}`);
+
+    act(() => own.blur());
+    expect(own.getAttribute('aria-describedby')).toBe('hint');
+  });
+
+  it('does not repeat a label that is already the name — only the hotkey describes it', () => {
+    const view = render(
+      <>
+        <TooltipHost />
+        <button type="button" data-testid="named" aria-label="Add task" {...tooltipProps({ text: 'Add task', keys: 'c' })} />
+        <button type="button" data-testid="bare" aria-label="Status" {...tooltipProps({ text: 'Status' })} />
+      </>,
+    );
+
+    focus(view.getByTestId('named'), true);
+    expect(view.getByTestId('named').getAttribute('aria-describedby')).toBe(TOOLTIP_KEYS_ID);
+    expect(document.getElementById(TOOLTIP_KEYS_ID)?.tagName).toBe('KBD');
+
+    focus(view.getByTestId('bare'), true);
+    expect(view.getByTestId('bare').hasAttribute('aria-describedby')).toBe(false);
+  });
+
+  it('describes a disabled trigger by its reason', () => {
+    const view = render(
+      <>
+        <TooltipHost />
+        <button
+          type="button"
+          aria-label="Archive"
+          aria-disabled="true"
+          data-testid="archive"
+          {...tooltipProps({ text: 'Archive', reason: 'Unavailable: no access' })}
+        />
+      </>,
+    );
+
+    focus(view.getByTestId('archive'), true);
+
+    expect(view.getByTestId('archive').getAttribute('aria-describedby')).toBe(TOOLTIP_ID);
   });
 });

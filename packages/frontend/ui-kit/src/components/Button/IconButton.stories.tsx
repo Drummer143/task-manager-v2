@@ -8,7 +8,10 @@ import { cssVar } from '../../tokens';
 const VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'ghost', 'danger'];
 const SIZES: ButtonSize[] = ['md', 'sm'];
 
-/* Demo scaffolding only. The kit has no icon set yet — stroke glyphs stand in. */
+/*
+ * Demo scaffolding only. The kit has no icon set yet — stroke glyphs stand in.
+ * No size, color or stroke width here: Button's icon slot sets all three.
+ */
 const GLYPHS = {
   plus: 'M8 3v10M3 8h10',
   status: 'M8 2.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11M8 2.5v11',
@@ -20,13 +23,8 @@ const GLYPHS = {
 
 function Glyph({ name }: { name: keyof typeof GLYPHS }) {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 16 16"
-      style={{ width: cssVar('icon-size'), height: cssVar('icon-size'), stroke: 'currentColor', fill: 'none' }}
-    >
-      {/* viewBox units: 1.5 of 16 at the 16 px icon size. */}
-      <path d={GLYPHS[name]} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 16 16" stroke="currentColor" fill="none">
+      <path d={GLYPHS[name]} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -192,7 +190,7 @@ export const CollapsedSidebar: Story = {
   ),
 };
 
-/** Busy: the spinner replaces the icon after 200 ms; the square does not change size. */
+/** Busy: an icon-sized spinner replaces the icon after 200 ms; the square does not change size. */
 export const Busy: Story = {
   render: (args) => {
     const [loading, setLoading] = useState(false);

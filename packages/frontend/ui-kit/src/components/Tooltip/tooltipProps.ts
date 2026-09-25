@@ -35,7 +35,8 @@ type TooltipAttributes = {
  * element the tooltip should point at; one `<TooltipHost />` does the rest.
  */
 export const tooltipProps = (info: TooltipInfo): TooltipAttributes => ({
-  [DATA_ATTR_TOOLTIP]: info.text ?? '',
+  // An overflow trigger takes its text from the element: an empty marker is enough.
+  [DATA_ATTR_TOOLTIP]: info.text ?? (info.overflow ? '' : undefined),
   [DATA_ATTR_TOOLTIP_OVERFLOW]: info.overflow ? '' : undefined,
   [DATA_ATTR_TOOLTIP_KEYS]: info.keys,
   [DATA_ATTR_TOOLTIP_REASON]: info.reason,

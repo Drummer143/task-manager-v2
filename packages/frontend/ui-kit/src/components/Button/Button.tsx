@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import React from 'react';
 import { cx } from '../../utils';
 import styles from './Button.module.scss';
 import Kbd from '../Kbd';
@@ -6,7 +6,8 @@ import { Spinner } from '../Spinner';
 import { ButtonVariant, ButtonSize } from './types';
 import { BUTTON_VARIANT_TO_SPINNER_VARIANT } from './constants';
 import { useDelayedFlag } from '../../hooks';
-import { tooltipProps } from '../Tooltip';
+import { tooltipProps, type TooltipPlacement } from '../Tooltip';
+import { useLinkClick, useLinkHref } from '../../router';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -14,6 +15,10 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   icon?: React.ReactNode;
   keys?: string;
   loading?: boolean;
+  /** Tooltip text; `keys` are shown in it too. */
+  tooltip?: string;
+  /** Preferred tooltip side, e.g. `right` in a collapsed sidebar. */
+  tooltipPlacement?: TooltipPlacement;
   /** Why the button is disabled; shown in a tooltip and readable from the keyboard. */
   disabledReason?: string;
 
@@ -26,14 +31,31 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   ref?: React.Ref<HTMLButtonElement & HTMLAnchorElement>;
 }
 
+/** `_blank` always gets noopener noreferrer, on top of whatever rel was passed. */
+const relFor = (target: string | undefined, rel: string | undefined) => {
+  if (target !== '_blank') {
+    return rel;
+  }
+
+  const tokens = new Set(rel?.split(/\s+/).filter(Boolean));
+  tokens.add('noopener');
+  tokens.add('noreferrer');
+
+  return [...tokens].join(' ');
+};
+
+const isEmpty = (node: React.ReactNode) => node === undefined || node === null || node === false || node === '';
+
 export const Button: React.FC<ButtonProps> = ({
   keys,
   icon,
   size = 'md',
-  variant = 'primary',
+  variant = 'secondary',
   loading = false,
   disabled = false,
   disabledReason,
+  tooltip,
+  tooltipPlacement,
   children,
   className,
   href,
@@ -47,80 +69,104 @@ export const Button: React.FC<ButtonProps> = ({
   // Only the picture waits: the spinner appears after its delay, while busy
   // logic (aria-busy, ignoring presses) reacts at once.
   const showSpinner = useDelayedFlag(loading);
-  const reasonId = useId();
+  // Hooks run for buttons too: the adapter is fixed, so the order never changes.
+  const linkHref = useLinkHref(href ?? '');
+  const handleLinkClick = useLinkClick({
+    href,
+    target,
+    download,
+    onClick: onClick as React.MouseEventHandler<HTMLAnchorElement> | undefined,
+  });
+
+  const hasIcon = !isEmpty(icon);
+  const iconOnly = hasIcon && isEmpty(children);
+  // No icon to stand in for: the spinner takes the label's place (spec 02, 03).
+  const spinnerOverLabel = showSpinner && !hasIcon;
+  const spinner = (
+    // An icon-only button takes the icon's size; next to a label it is xs (spec 02).
+    <Spinner size={iconOnly ? 'sm' : 'xs'} variant={BUTTON_VARIANT_TO_SPINNER_VARIANT[variant]} />
+  );
+  const label = (
+    <>
+      {children}
+
+      {/* No room for it next to an icon alone: there it lives in the tooltip. */}
+      {keys && !iconOnly && <Kbd keys={keys} variant="inline" />}
+    </>
+  );
   const reason = disabled && disabledReason ? disabledReason : undefined;
 
-  const handleClick = (
-    event: React.MouseEvent<HTMLButtonElement & HTMLAnchorElement>,
-  ) => {
-    // Busy: a repeated press is ignored (spec). A disabled link has no href,
-    // but a click must not reach the caller either.
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement & HTMLAnchorElement>) => {
+    // Disabled is aria-disabled, not the native attribute: the element keeps
+    // pointer events and focus (for its reason), so the press is dropped here.
+    // Busy: a repeated press is ignored (spec).
     if (loading || disabled) {
       event.preventDefault();
       return;
     }
 
-    onClick?.(event);
+    if (href !== undefined) {
+      handleLinkClick(event);
+    } else {
+      onClick?.(event);
+    }
   };
+
+  // The reason wins over the text in the host; both may sit on one element.
+  const tooltipAttributes = reason
+    ? tooltipProps({ reason, text: tooltip, keys, placement: tooltipPlacement })
+    : tooltip
+      ? tooltipProps({ text: tooltip, keys, placement: tooltipPlacement })
+      : undefined;
 
   const common = {
     ...props,
-    className: cx(styles.button, styles[size], styles[variant], className),
+    ...tooltipAttributes,
+    className: cx(styles.button, styles[size], styles[variant], iconOnly && styles.iconOnly, className),
     'aria-busy': loading || undefined,
-    'aria-describedby': reason ? reasonId : props['aria-describedby'],
+    'aria-disabled': disabled || undefined,
     onClick: handleClick,
     children: (
       <>
-        {showSpinner ? (
-          // In place of the icon (spec); aria-busy already tells readers.
-          <Spinner
-            size="xs"
-            variant={BUTTON_VARIANT_TO_SPINNER_VARIANT[variant]}
-            aria-hidden="true"
-          />
-        ) : (
-          icon
+        {hasIcon && (
+          // One slot for the icon and the spinner that replaces it: the button
+          // keeps its width. Decorative — the name comes from the label.
+          <span className={cx(styles.icon, !showSpinner && styles.glyph)} aria-hidden="true">
+            {showSpinner ? spinner : icon}
+          </span>
         )}
 
-        {children}
-
-        {keys && <Kbd keys={keys} variant="inline" />}
+        {spinnerOverLabel ? (
+          <>
+            {/* Transparent, not removed: it keeps the width and the accessible name. */}
+            <span className={styles.labelHidden}>{label}</span>
+            <span className={styles.spinnerOverlay} aria-hidden="true">
+              {spinner}
+            </span>
+          </>
+        ) : (
+          label
+        )}
       </>
     ),
   };
 
-  const element =
-    href !== undefined ? (
-      // A link that looks like a button stays a link (spec): no role="button".
+  if (href !== undefined) {
+    return (
+      // A link that looks like a button stays a link (spec). Disabled: no href
+      // (nothing to open), but still focusable and named a link, so the reason
+      // is reachable from the keyboard like on a button.
       <a
         {...(common as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
-        // `disabled` does not exist on <a>: drop the href and say it instead.
-        href={disabled ? undefined : href}
-        aria-disabled={disabled || undefined}
+        href={disabled ? undefined : linkHref}
+        role={disabled ? 'link' : undefined}
+        tabIndex={disabled ? 0 : props.tabIndex}
         target={target}
-        rel={rel}
+        rel={relFor(target, rel)}
         download={download}
       />
-    ) : (
-      <button {...common} type={type} disabled={disabled} />
     );
-
-  if (!reason) {
-    return element;
   }
 
-  // A disabled button gets no pointer events and no focus, so the reason lives
-  // on a focusable wrapper (spec); the hidden text is its accessible description.
-  return (
-    <span
-      className={styles.reasonWrapper}
-      tabIndex={0}
-      {...tooltipProps({ reason })}
-    >
-      {element}
-      <span id={reasonId} hidden>
-        {reason}
-      </span>
-    </span>
-  );
+  return <button {...common} type={type} />;
 };

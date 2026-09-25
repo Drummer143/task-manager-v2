@@ -67,25 +67,19 @@ function Check({ children }: { children: ReactNode }) {
 }
 
 function Icon({ label, glyph, keys, reason }: { label: string; glyph: string; keys?: string; reason?: string }) {
-  const button = (
+  // Disabled the kit way: aria-disabled, not the native attribute — the element
+  // keeps hover and focus, so its reason is reachable without a wrapper.
+  return (
     <button
       type="button"
       style={{ ...iconButton, ...(reason ? { opacity: 0.45, cursor: 'default' } : null) }}
       aria-label={label}
       aria-keyshortcuts={keys}
-      disabled={Boolean(reason)}
-      {...(reason ? {} : tooltipProps({ text: label, keys }))}
+      aria-disabled={reason ? true : undefined}
+      {...(reason ? tooltipProps({ text: label, reason, keys }) : tooltipProps({ text: label, keys }))}
     >
       <span aria-hidden="true">{glyph}</span>
     </button>
-  );
-
-  return reason ? (
-    <span tabIndex={0} style={{ display: 'inline-flex' }} {...tooltipProps({ text: label, reason, keys })}>
-      {button}
-    </span>
-  ) : (
-    button
   );
 }
 

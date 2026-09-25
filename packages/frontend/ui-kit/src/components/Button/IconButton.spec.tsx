@@ -1,8 +1,9 @@
 import { createRef } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { IconButton } from './IconButton';
 import styles from './Button.module.scss';
+import { raw } from '../../tokens';
 
 const Icon = () => <svg data-testid="icon" aria-hidden="true" />;
 
@@ -28,7 +29,7 @@ describe('IconButton', () => {
     const button = screen.getByRole('button');
 
     expect(button.children).toHaveLength(1);
-    expect(button.firstElementChild).toBe(screen.getByTestId('icon'));
+    expect(button.firstElementChild?.firstElementChild).toBe(screen.getByTestId('icon'));
   });
 
   it('is square and ghost by default', () => {
@@ -58,16 +59,28 @@ describe('IconButton', () => {
     expect(container.querySelector('kbd')).toBeNull();
   });
 
-  it('shows only the disabled reason when disabled with one — one trigger, not two', () => {
+  it('carries the disabled reason on the button itself — one trigger, the reason wins in the host', () => {
     const { container } = render(
       <IconButton icon={<Icon />} label="Archive" disabled disabledReason="Unavailable: no access" />,
     );
     const button = screen.getByRole('button', { name: 'Archive' });
 
-    expect(button.hasAttribute('data-tooltip')).toBe(false);
-    expect(container.querySelectorAll('[data-tooltip]')).toHaveLength(1);
-    expect(container.querySelector('[data-tooltip-reason]')?.getAttribute('data-tooltip-reason')).toBe(
-      'Unavailable: no access',
+    expect(container.firstElementChild).toBe(button);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.getAttribute('data-tooltip-reason')).toBe('Unavailable: no access');
+  });
+
+  it('puts an icon-sized spinner in place of the icon while busy', () => {
+    vi.useFakeTimers();
+    const { container } = render(<IconButton icon={<Icon />} label="Copy link" loading />);
+
+    act(() => {
+      vi.advanceTimersByTime(raw['spinner-delay']);
+    });
+    vi.useRealTimers();
+
+    expect(container.querySelector('[role="status"] svg')?.getAttribute('viewBox')).toBe(
+      `0 0 ${raw['spinner-size-sm']} ${raw['spinner-size-sm']}`,
     );
   });
 

@@ -38,7 +38,7 @@ export const readTrigger = (element: Element): TooltipContent | null => {
   const reason = element.getAttribute(DATA_ATTR_TOOLTIP_REASON);
 
   if (reason) {
-    return { text: reason, placement, delay };
+    return { text: reason, isReason: true, placement, delay };
   }
 
   let text = element.getAttribute(DATA_ATTR_TOOLTIP) ?? '';

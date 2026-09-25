@@ -4,11 +4,12 @@ import styles from './TooltipHost.module.scss';
 import { raw } from '../../tokens';
 import { Kbd } from '../Kbd';
 import { oppositeSurface, Surface, type SurfaceTone } from '../Surface';
-import { TRIGGER_SELECTOR, WATCHED_ATTRIBUTES } from './constants';
+import { TOOLTIP_ID, TOOLTIP_KEYS_ID, TRIGGER_SELECTOR, WATCHED_ATTRIBUTES } from './constants';
 import { isKeyboardFocus } from './isKeyboardFocus';
 import { placeTooltip } from './placeTooltip';
 import { readTrigger } from './readTrigger';
 import { useSingleInstance } from '../../hooks/useSingleInstance';
+import { isUnderLayer } from '../../interaction/layers/constants';
 import type { TooltipContent } from './types';
 
 type Source = 'hover' | 'focus';
@@ -25,16 +26,56 @@ const closestTrigger = (target: EventTarget | null) =>
 const surfaceOf = (element: Element): SurfaceTone =>
   element.closest('[data-surface]')?.getAttribute('data-surface') === 'inverse' ? 'inverse' : 'default';
 
-/** An open menu's trigger stays silent (spec: no trigger tooltips over an open menu). */
-const isSilenced = (trigger: Element) => trigger.getAttribute('aria-expanded') === 'true';
+/**
+ * Silent: an open menu's own trigger, and every trigger under an open layer —
+ * inside the layer tooltips work (spec 10).
+ */
+const isSilenced = (trigger: Element) =>
+  trigger.getAttribute('aria-expanded') === 'true' || isUnderLayer(trigger);
+
+/**
+ * What of the tooltip describes the trigger. A label that only repeats the
+ * trigger's name (IconButton: tooltip = aria-label) is not read twice — then
+ * only the hotkey is its description; a reason or any other text is, whole.
+ */
+const descriptionFor = (trigger: Element, content: TooltipContent) => {
+  if (content.isReason) {
+    return TOOLTIP_ID;
+  }
+
+  const name = (trigger.getAttribute('aria-label') ?? trigger.textContent ?? '').trim();
+
+  if (content.text !== name) {
+    return TOOLTIP_ID;
+  }
+
+  return content.keys ? TOOLTIP_KEYS_ID : null;
+};
+
+const DESCRIBED_BY = 'aria-describedby';
+
+/** Adds or removes one id in aria-describedby, keeping the trigger's own ones. */
+const toggleDescription = (trigger: Element, id: string, on: boolean) => {
+  const ids = (trigger.getAttribute(DESCRIBED_BY) ?? '').split(/\s+/).filter((item) => item && item !== id);
+
+  if (on) {
+    ids.push(id);
+  }
+
+  if (ids.length > 0) {
+    trigger.setAttribute(DESCRIBED_BY, ids.join(' '));
+  } else {
+    trigger.removeAttribute(DESCRIBED_BY);
+  }
+};
 
 /**
  * The single tooltip of the app. Mount once, near the root. Triggers are plain
  * elements with `tooltipProps()` attributes — no component, hook or listener
  * per trigger; this host listens on the document and shows one element.
  *
- * The tooltip is visual only (aria-hidden): the trigger carries its own name,
- * `aria-keyshortcuts` and disabled reason, so nothing depends on it being shown.
+ * The tooltip is `role="tooltip"` with a stable id: while shown, the trigger's
+ * aria-describedby points at it (or only at its hotkey), and drops it on hide.
  */
 export const TooltipHost: React.FC = () => {
   const [view, setView] = useState<View | null>(null);
@@ -55,6 +96,26 @@ export const TooltipHost: React.FC = () => {
     let lastHiddenAt = Number.NEGATIVE_INFINITY;
     /** Pressed trigger: no tooltip again until the pointer leaves it (spec). */
     let suppressed: Element | null = null;
+    /** The trigger whose aria-describedby currently points at the tooltip. */
+    let described: { trigger: Element; id: string } | null = null;
+
+    const describe = (trigger: Element, content: TooltipContent) => {
+      undescribe();
+
+      const id = descriptionFor(trigger, content);
+
+      if (id) {
+        toggleDescription(trigger, id, true);
+        described = { trigger, id };
+      }
+    };
+
+    const undescribe = () => {
+      if (described) {
+        toggleDescription(described.trigger, described.id, false);
+        described = null;
+      }
+    };
 
     const observer = new MutationObserver((records) => {
       if (!active) {
@@ -74,6 +135,7 @@ export const TooltipHost: React.FC = () => {
         const content = readTrigger(trigger);
 
         if (content) {
+          describe(trigger, content);
           setView((current) => (current ? { ...current, ...content } : current));
         } else {
           hide();
@@ -99,12 +161,14 @@ export const TooltipHost: React.FC = () => {
       observer.observe(document.body, { childList: true, subtree: true });
       observer.observe(trigger, { attributes: true, attributeFilter: WATCHED_ATTRIBUTES });
 
+      describe(trigger, content);
       setView({ ...content, trigger, tone: oppositeSurface(surfaceOf(trigger)) });
     };
 
     const hide = () => {
       clearTimeout(showTimer);
       observer.disconnect();
+      undescribe();
 
       if (visible) {
         lastHiddenAt = performance.now();
@@ -245,6 +309,7 @@ export const TooltipHost: React.FC = () => {
     return () => {
       clearTimeout(showTimer);
       observer.disconnect();
+      undescribe();
 
       document.removeEventListener('pointerover', handlePointerOver, capture);
       document.removeEventListener('pointerout', handlePointerOut, capture);
@@ -286,9 +351,9 @@ export const TooltipHost: React.FC = () => {
   }
 
   return createPortal(
-    <Surface tone={view.tone} ref={tooltipRef} className={styles.root} aria-hidden="true">
+    <Surface tone={view.tone} ref={tooltipRef} className={styles.root} id={TOOLTIP_ID} role="tooltip">
       <span className={styles.text}>{view.text}</span>
-      {view.keys && <Kbd keys={view.keys} />}
+      {view.keys && <Kbd id={TOOLTIP_KEYS_ID} keys={view.keys} />}
     </Surface>,
     document.body,
   );
