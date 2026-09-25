@@ -19,6 +19,7 @@
     "customConditions": ["@task-manager-v2/source"],
     "paths": {
       "@task-manager-v2/ui-kit": ["./packages/frontend/ui-kit/src/index.ts"],
+      "@task-manager-v2/ui-kit/icons": ["./packages/frontend/ui-kit/src/icons/index.ts"],
       "@task-manager-v2/ui-kit/tokens.css": ["./packages/frontend/ui-kit/src/tokens/tokens.css"]
     }
   }

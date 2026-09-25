@@ -34,9 +34,11 @@ export default defineConfig(() => ({
     },
     lib: {
       // Could also be a dictionary or array of multiple entry points.
-      entry: 'src/index.ts',
+      // The main entry and the icons: apps import them as
+      // `@task-manager-v2/ui-kit` and `@task-manager-v2/ui-kit/icons`.
+      entry: { index: 'src/index.ts', icons: 'src/icons/index.ts' },
       name: 'ui-kit',
-      fileName: 'index',
+      fileName: (_format: string, entryName: string) => `${entryName}.mjs`,
       // Change this to the formats you want to support.
       // Don't forget to update your package.json as well.
       formats: ['es' as const],

@@ -1,0 +1,136 @@
+/* Checkbox (spec 05). The row is the hit zone; the box keeps its size in every density. */
+
+.root {
+  display: inline-flex;
+  align-items: flex-start;
+  // Not on the baseline: an empty box (off) and one with a mark (on) have
+  // different baselines, and the row around would jump on every toggle.
+  vertical-align: top;
+  gap: var(--sp-3);
+
+  min-height: var(--hit-min);
+  // The first text line sits in the middle of the hit zone.
+  padding-block: calc((var(--hit-min) - var(--type-body) * var(--lh-body)) / 2);
+
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+  cursor: pointer;
+
+  &[data-disabled] {
+    opacity: var(--disabled-opacity);
+    cursor: default;
+  }
+}
+
+/* Without a label (a table row): the box alone, centred in its hit zone. */
+.bare {
+  align-items: center;
+  justify-content: center;
+  min-width: var(--hit-min);
+  padding-block: 0;
+}
+
+.box {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
+  // Centred on the first text line.
+  margin-block-start: calc((var(--type-body) * var(--lh-body) - var(--checkbox-size)) / 2);
+
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-xs);
+  background-color: var(--bg-raised);
+  color: var(--text-accent);
+
+  transition:
+    background-color var(--checkbox-state),
+    border-color var(--checkbox-state);
+
+  .bare > & {
+    margin-block-start: 0;
+  }
+
+  // Hover and press come from the whole row, not only the square.
+  .root:not([data-disabled]):hover > & {
+    border-color: var(--text-muted);
+  }
+
+  .root:not([data-disabled]):active > & {
+    background-color: var(--bg-active);
+  }
+
+  // On and mixed: an accent outline on a soft base, the mark in the accent text color.
+  .root:not([data-checked='false']) > & {
+    border-color: var(--border-accent);
+    background-color: var(--bg-accent-soft);
+  }
+
+  .root:not([data-checked='false'], [data-disabled]):hover > & {
+    border-color: var(--border-accent-strong);
+  }
+
+  .root:not([data-checked='false'], [data-disabled]):active > & {
+    background-color: var(--bg-accent-active);
+  }
+
+  .root[data-invalid] > & {
+    border-color: var(--border-danger);
+  }
+
+  // The ring is on the square (spec 05), and instant.
+  &:has(> .input:focus-visible) {
+    outline: var(--border-width-strong) solid var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+}
+
+/* The native input stays in place — for focus, Space and readers — but invisible. */
+.input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+/* The mark is not "drawn": it is there in the first frame (spec 05). */
+.mark {
+  display: inline-flex;
+
+  > svg {
+    width: var(--checkbox-glyph-size);
+    height: var(--checkbox-glyph-size);
+  }
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.description {
+  margin-top: var(--sp-1);
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}
+
+.error {
+  margin-top: var(--sp-1);
+  color: var(--text-danger);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}

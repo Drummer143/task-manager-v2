@@ -8,6 +8,10 @@
       "import": "./index.mjs",
       "require": "./index.js"
     },
+    "./icons": {
+      "types": "./icons/index.d.ts",
+      "import": "./icons.mjs"
+    },
     "./tokens.css": "./src/tokens/tokens.css"
   }
 }

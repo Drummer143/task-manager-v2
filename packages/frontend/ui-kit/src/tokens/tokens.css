@@ -337,6 +337,11 @@
      motion holds it for the same time and drops it without the fade. */
   --highlight-remote-easing: linear;
 
+  /* Checkbox: the box does not change with density — its hit zone (the row) does. */
+  --checkbox-size: 16px;
+  --checkbox-glyph-size: 12px;
+  --checkbox-state: var(--dur-state) var(--ease-out);
+
   --undo-window: 8000ms;
   --tooltip-delay: 400ms;
   --highlight-remote: 400ms;
