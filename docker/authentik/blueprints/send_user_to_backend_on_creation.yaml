@@ -1,0 +1,188 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+
+version: 1
+
+metadata:
+    name: Synchronization of users with backend
+
+entries:
+    # PAYLOAD MAPPER
+
+    - model: authentik_events.notificationwebhookmapping
+      id: user-sync-with-backed-mapping
+      identifiers:
+          name: user-sync-with-backed-mapping
+      attrs:
+          name: user-sync-with-backed-mapping
+          expression: |
+                from authentik.core.models import User
+                import ast
+
+                event_obj = notification.event
+                raw_action = event_obj.action
+
+                action_map = {
+                    "model_created": "user_created",
+                    "model_updated": "user_updated",
+                    "model_deleted": "user_deleted"
+                }
+
+                if raw_action not in action_map:
+                    return None
+
+                raw_context = event_obj.context
+                model_info_raw = raw_context.get("model", {})
+                
+                model_data = {}
+                if isinstance(model_info_raw, str):
+                    try:
+                        model_data = ast.literal_eval(model_info_raw)
+                    except Exception:
+                        pass
+                elif isinstance(model_info_raw, dict):
+                    model_data = model_info_raw
+
+                if model_data.get("model_name") != "user":
+                    return None
+
+                target_pk = model_data.get("pk")
+                target_action = action_map[raw_action]
+
+                if target_action == "user_deleted":
+                    # При удалении мы знаем только PK. 
+                    # UUID и Email достать невозможно, так как записи нет.
+                    return {
+                        "event": "user_deleted",
+                        "payload": {
+                            "pk": target_pk
+                        }
+                    }
+
+                user = User.objects.filter(pk=target_pk).first()
+                
+                if user:
+                    user_payload = {
+                        "pk": user.pk,
+                        "uuid": str(user.uuid),
+                        "username": user.username,
+                        "is_active": user.is_active,
+                        "created_at": user.date_joined.isoformat(),
+                    }
+                    if user.email and user.email.strip():
+                        user_payload["email"] = user.email
+
+                    return {
+                        "event": target_action,
+                        "payload": user_payload
+                    }
+
+                return None
+
+    # NOTIFICATION TRANSPORT
+
+    - model: authentik_events.notificationtransport
+      id: user-sync-with-backed-transport
+      identifiers:
+          name: user-sync-with-backed-transport
+      attrs:
+          name: user-sync-with-backed-transport
+          mode: webhook
+          webhook_url: !Env AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC
+          send_once: true
+          webhook_mapping: !KeyOf user-sync-with-backed-mapping
+
+    # NOTIFICATION RULE
+
+    - model: authentik_events.notificationrule
+      id: user-sync-with-backed-rule
+      identifiers:
+          name: user-sync-with-backed-rule
+      attrs:
+          name: user-sync-with-backed-rule
+          destination_event_user: true
+          severity: alert
+          group: !Find [authentik_core.group, [name, "authentik Admins"]]
+          transports:
+              - !KeyOf user-sync-with-backed-transport
+
+    # POLICIES EVENT MATCHERS
+
+    - model: authentik_policies_event_matcher.eventmatcherpolicy
+      id: user-sync-with-backed-event-matcher-policy-user-created
+      identifiers:  
+          name: user-sync-with-backed-event-matcher-policy-user-created
+      attrs:
+          name: user-sync-with-backed-event-matcher-policy-user-created
+          model: authentik_core.user
+          action: model_created
+          client_ip: null
+          app: null
+          execution_logging: false
+
+    - model: authentik_policies_event_matcher.eventmatcherpolicy
+      id: user-sync-with-backed-event-matcher-policy-user-updated
+      identifiers:
+          name: user-sync-with-backed-event-matcher-policy-user-updated
+      attrs:
+          name: user-sync-with-backed-event-matcher-policy-user-updated
+          model: authentik_core.user
+          action: model_updated
+          client_ip: null
+          app: null
+          execution_logging: false
+
+    - model: authentik_policies_event_matcher.eventmatcherpolicy
+      id: user-sync-with-backed-event-matcher-policy-user-deleted
+      identifiers:
+          name: user-sync-with-backed-event-matcher-policy-user-deleted
+      attrs:
+          name: user-sync-with-backed-event-matcher-policy-user-deleted
+          model: authentik_core.user
+          action: model_deleted
+          client_ip: null
+          app: null
+          execution_logging: false
+
+    # POLICY -> NOTIFICATION RULE BINDINGS
+
+    - model: authentik_policies.policybinding
+      id: user-sync-with-backed-notification-policy-binding-user-created
+      identifiers:
+          target: !KeyOf user-sync-with-backed-rule
+          policy: !KeyOf user-sync-with-backed-event-matcher-policy-user-created
+      attrs:
+          target: !KeyOf user-sync-with-backed-rule
+          policy: !KeyOf user-sync-with-backed-event-matcher-policy-user-created
+          enabled: true
+          failure_result: false
+          order: 0
+          timeout: 30
+          negate: false
+
+    - model: authentik_policies.policybinding
+      id: user-sync-with-backed-notification-policy-binding-user-updated
+      identifiers:
+          target: !KeyOf user-sync-with-backed-rule
+          policy: !KeyOf user-sync-with-backed-event-matcher-policy-user-updated
+      attrs:
+          target: !KeyOf user-sync-with-backed-rule
+          policy: !KeyOf user-sync-with-backed-event-matcher-policy-user-updated
+          enabled: true
+          failure_result: false
+          order: 0
+          timeout: 30
+          negate: false
+
+    - model: authentik_policies.policybinding
+      id: user-sync-with-backed-notification-policy-binding-user-deleted
+      identifiers:
+          target: !KeyOf user-sync-with-backed-rule
+          policy: !KeyOf user-sync-with-backed-event-matcher-policy-user-deleted
+      attrs:
+          target: !KeyOf user-sync-with-backed-rule
+          policy: !KeyOf user-sync-with-backed-event-matcher-policy-user-deleted
+          enabled: true
+          failure_result: false
+          order: 0
+          timeout: 30
+          negate: false

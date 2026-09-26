@@ -1,0 +1,14 @@
+# Keep secrets and local state out of the build context
+.env
+.env.*
+!.env.*.example
+
+.git
+.nx
+.vscode
+.claude
+node_modules
+dist
+coverage
+storybook-static
+test-output

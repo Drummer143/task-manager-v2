@@ -1,0 +1,8 @@
+{$DOMAIN} {
+    encode zstd gzip
+    reverse_proxy task-manager:80
+}
+
+auth.{$DOMAIN} {
+    reverse_proxy authentik_server:9000
+}

@@ -1,0 +1,209 @@
+name: task-manager
+
+# Shared by authentik_server and authentik_worker. The AUTHENTIK_SLUG, AUTHENTIK_CLIENT_ID,
+# AUTHENTIK_REDIRECT_URI* and AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC values are not authentik
+# settings: the blueprints in ./authentik/blueprints read them via !Env.
+x-authentik-env: &authentik-env
+    AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY is required}
+    AUTHENTIK_ALLOWED_HOSTS: "localhost,authentik_server,auth.${DOMAIN}"
+    AUTHENTIK_POSTGRESQL__HOST: postgres
+    AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_DB_USER:?AUTHENTIK_DB_USER is required}
+    AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_DB_NAME:?AUTHENTIK_DB_NAME is required}
+    AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD:?AUTHENTIK_DB_PASSWORD is required}
+    AUTHENTIK_SLUG: ${AUTHENTIK_SLUG:?AUTHENTIK_SLUG is required}
+    AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID:?AUTHENTIK_CLIENT_ID is required}
+    AUTHENTIK_REDIRECT_URI: ${AUTHENTIK_REDIRECT_URI:?AUTHENTIK_REDIRECT_URI is required}
+    AUTHENTIK_REDIRECT_URI_SILENT: ${AUTHENTIK_REDIRECT_URI_SILENT:?AUTHENTIK_REDIRECT_URI_SILENT is required}
+    AUTHENTIK_REDIRECT_URI_2: ${AUTHENTIK_REDIRECT_URI_2:?AUTHENTIK_REDIRECT_URI_2 is required}
+    AUTHENTIK_REDIRECT_URI_2_SILENT: ${AUTHENTIK_REDIRECT_URI_2_SILENT:?AUTHENTIK_REDIRECT_URI_2_SILENT is required}
+    AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC: ${AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC:?AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC is required}
+
+x-authentik-depends-on: &authentik-depends-on
+    postgres:
+        condition: service_healthy
+    postgres-init:
+        condition: service_completed_successfully
+
+services:
+    caddy:
+        image: caddy:2-alpine
+        restart: unless-stopped
+        container_name: caddy
+        ports:
+            - "80:80"
+            - "443:443"
+            - "443:443/udp"
+        environment:
+            DOMAIN: ${DOMAIN:?DOMAIN is required}
+        volumes:
+            - ./Caddyfile:/etc/caddy/Caddyfile:ro
+            - caddy_data:/data
+            - caddy_config:/config
+        networks:
+            - net
+        depends_on:
+            - task-manager
+            - authentik_server
+
+    postgres:
+        image: postgres:16-alpine
+        restart: unless-stopped
+        container_name: postgres
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+        deploy:
+            resources:
+                limits:
+                    memory: 512M
+                    cpus: "0.5"
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+            POSTGRES_DB: ${POSTGRES_DB_NAME:?POSTGRES_DB_NAME is required}
+        ports:
+            - "127.0.0.1:5432:5432"
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        networks:
+            - net
+
+    # One-shot job: creates the authentik role and database on the shared postgres.
+    # Values come from the environment ($$ = resolved inside the container), so the
+    # password never ends up in the container command line.
+    postgres-init:
+        image: postgres:16-alpine
+        container_name: postgres-init
+        restart: "no"
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - net
+        environment:
+            PGHOST: postgres
+            PGUSER: ${POSTGRES_USER}
+            PGPASSWORD: ${POSTGRES_PASSWORD}
+            PGDATABASE: ${POSTGRES_DB_NAME}
+            NEW_DB: ${AUTHENTIK_DB_NAME}
+            NEW_USER: ${AUTHENTIK_DB_USER}
+            NEW_PASS: ${AUTHENTIK_DB_PASSWORD}
+        command:
+            - sh
+            - -ec
+            - |
+                echo 'Ensuring authentik role...'
+                psql -v ON_ERROR_STOP=1 -v u="$$NEW_USER" -v p="$$NEW_PASS" <<'SQL'
+                SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'u', :'p')
+                WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'u')\gexec
+                SQL
+
+                echo 'Ensuring authentik database...'
+                psql -v ON_ERROR_STOP=1 -v u="$$NEW_USER" -v d="$$NEW_DB" <<'SQL'
+                SELECT format('CREATE DATABASE %I OWNER %I', :'d', :'u')
+                WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = :'d')\gexec
+                SELECT format('GRANT ALL PRIVILEGES ON DATABASE %I TO %I', :'d', :'u')\gexec
+                SQL
+
+                echo 'Authentik DB init complete'
+
+    rmq:
+        image: rabbitmq:management-alpine
+        restart: unless-stopped
+        container_name: rmq
+        healthcheck:
+            test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+            start_period: 10s
+        deploy:
+            resources:
+                limits:
+                    memory: 256M
+                    cpus: "0.5"
+        environment:
+            RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?RABBITMQ_DEFAULT_USER is required}
+            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?RABBITMQ_DEFAULT_PASS is required}
+        networks:
+            - net
+        volumes:
+            - rmqdata:/var/lib/rabbitmq
+
+    authentik_server:
+        image: ghcr.io/goauthentik/server:2026.8.3
+        restart: unless-stopped
+        container_name: authentik_server
+        command: server
+        shm_size: 512mb
+        deploy:
+            resources:
+                limits:
+                    memory: 1G
+                    cpus: "1.0"
+        environment: *authentik-env
+        ports:
+            - "127.0.0.1:9000:9000"
+        volumes:
+            - authentik_data:/data
+            - authentik_templates:/templates
+            - ./authentik/blueprints:/blueprints/custom:ro
+        depends_on: *authentik-depends-on
+        networks:
+            - net
+
+    authentik_worker:
+        image: ghcr.io/goauthentik/server:2026.8.3
+        restart: unless-stopped
+        container_name: authentik_worker
+        command: worker
+        shm_size: 512mb
+        # root is needed to use the docker socket for managed outposts
+        user: root
+        deploy:
+            resources:
+                limits:
+                    memory: 1G
+                    cpus: "1.0"
+        environment: *authentik-env
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - authentik_data:/data
+            - authentik_templates:/templates
+            - ./authentik/blueprints:/blueprints/custom:ro
+        depends_on: *authentik-depends-on
+        networks:
+            - net
+
+    task-manager:
+        restart: unless-stopped
+        container_name: task-manager
+        image: ghcr.io/drummer143/task-manager/task-manager:${IMAGE_TAG:-latest}
+        build:
+            context: ..
+            dockerfile: docker/Dockerfile.frontend
+            args:
+                VITE_AUTHORITY: ${VITE_AUTHORITY:-}
+                VITE_CLIENT_ID: ${VITE_CLIENT_ID:-}
+                VITE_REDIRECT_URI: ${VITE_REDIRECT_URI:-}
+                VITE_POST_LOGOUT_REDIRECT_URI: ${VITE_POST_LOGOUT_REDIRECT_URI:-}
+        deploy:
+            resources:
+                limits:
+                    memory: 48M
+                    cpus: "0.25"
+        networks:
+            - net
+
+networks:
+    net:
+
+volumes:
+    pgdata:
+    rmqdata:
+    caddy_data:
+    caddy_config:
+    authentik_data:
+    authentik_templates:

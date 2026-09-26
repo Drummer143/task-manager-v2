@@ -56,3 +56,7 @@ test-output
 .nx/migrate-runs
 
 storybook-static
+
+.env
+.env.site
+.env.tunnel
