@@ -3,6 +3,7 @@ import TooltipHost from '../Tooltip';
 import { LayerHost } from '../../interaction/layers';
 import { useListenEscape } from '../../interaction/escape';
 import { useListenHotkey } from '../../interaction/hotkeys';
+import { useListenPalette } from '../CommandPalette/hooks';
 import { useSingleInstance } from '../../hooks/useSingleInstance';
 import { RouterContext, type RouterAdapter } from '../../router';
 import { DEFAULT_MESSAGES, MessagesContext, type KitMessages } from '../../messages';
@@ -27,6 +28,9 @@ export const KitRoot: React.FC<KitRootProps> = ({ children, router, messages }) 
   useListenEscape();
 
   useListenHotkey();
+
+  // ⌘K on any screen: the palette opens as the app's layer (in LayerHost below).
+  useListenPalette();
 
   const kitMessages = useMemo(() => ({ ...DEFAULT_MESSAGES, ...messages }), [messages]);
 

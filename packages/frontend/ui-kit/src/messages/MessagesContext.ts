@@ -20,6 +20,19 @@ export interface KitMessages {
   assign: string;
   /** After a failed async menu item: how to try again. */
   menuRetryHint: string;
+  /** Command palette: its name, the field, the empty result, the footer hints. */
+  palette: string;
+  paletteInput: string;
+  palettePlaceholder: string;
+  paletteScopedPlaceholder(scope: string): string;
+  paletteNothingFound: string;
+  paletteCreateGroup: string;
+  paletteCancel: string;
+  paletteHintMove: string;
+  paletteHintRun: string;
+  paletteEscClose: string;
+  paletteEscClear: string;
+  paletteEscBack: string;
   /** The × of a popover, a dialog. */
   close: string;
   /** "+N" of a tag list or an avatar stack: what readers hear. */
@@ -35,6 +48,18 @@ export const DEFAULT_MESSAGES: KitMessages = {
   removeTag: 'Remove',
   assign: 'Assign',
   close: 'Close',
+  palette: 'Command palette',
+  paletteInput: 'Search commands, pages, tasks, people',
+  palettePlaceholder: 'Type a command or search…',
+  paletteScopedPlaceholder: (scope) => `Search ${scope.toLowerCase()}…`,
+  paletteNothingFound: 'Nothing found',
+  paletteCreateGroup: 'Create',
+  paletteCancel: 'Cancel',
+  paletteHintMove: 'move',
+  paletteHintRun: 'run',
+  paletteEscClose: 'close',
+  paletteEscClear: 'clear',
+  paletteEscBack: 'back',
   menuRetryHint: 'Enter to retry',
   more: (count) => `${count} more`,
 };

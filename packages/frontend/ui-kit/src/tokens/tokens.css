@@ -89,6 +89,8 @@
   --bg-danger-hover: color-mix(in srgb, var(--c-danger-500) 8%, transparent);
   --bg-danger-active: color-mix(in srgb, var(--c-danger-500) 16%, transparent);
   --bg-scrim: color-mix(in srgb, var(--c-n-900) 45%, transparent);
+  /* Under the palette: lighter than a dialog's — a tool, not an interruption. */
+  --bg-scrim-light: color-mix(in srgb, var(--c-n-900) 20%, transparent);
 
   --text-primary: var(--c-n-1000);
   --text-secondary: var(--c-n-700);
@@ -338,6 +340,13 @@
 
   --palette-width: 560px;
   --palette-row: 36px;
+  --palette-input: 48px;
+  /* About ten rows, then the list scrolls. */
+  --palette-max: 360px;
+  /* Palette and dialog sit this far from the top, not in the centre. */
+  --dialog-top: 12vh;
+  --palette-enter: var(--dur-layer) var(--ease-out);
+  --palette-exit: var(--dur-exit) var(--ease-in);
 
   /* Kbd keycap. Its colors (--kbd-bg/-border/-fg) live in the semantic sets above. */
   --kbd-size: 18px;
@@ -519,6 +528,8 @@
     --progress-breath: 2000ms;
     --highlight-remote-easing: steps(1, end);
     --overlay-enter-scale: 1;
+    /* The palette opens at once under reduced motion (tokens 07b). */
+    --palette-enter: 0ms;
   }
 }
 

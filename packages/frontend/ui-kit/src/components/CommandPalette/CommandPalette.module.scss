@@ -1,0 +1,231 @@
+/* Command palette (spec: CommandPalette). A layer: a light scrim, the window near the top. */
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--dialog-top);
+  padding-inline: var(--sp-5);
+  background-color: var(--bg-scrim-light);
+  animation: palette-fade var(--palette-enter);
+}
+
+.window {
+  display: flex;
+  flex-direction: column;
+  width: min(var(--palette-width), 100%);
+  overflow: hidden;
+
+  border: var(--border-width) solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-raised);
+  box-shadow: var(--shadow-modal);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+
+  // The field is focused from the first frame: typing never waits for this.
+  animation: palette-in var(--palette-enter);
+}
+
+@keyframes palette-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: scale(var(--overlay-enter-scale));
+  }
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: var(--palette-input);
+  padding-inline: var(--sp-4);
+  border-bottom: var(--border-width) solid var(--border-hairline);
+}
+
+.searchIcon {
+  flex: none;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  color: var(--text-muted);
+}
+
+/* The narrowed source: before the field, like a tag. */
+.scope {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: var(--tag-height);
+  padding-inline: var(--sp-2);
+  border-radius: var(--radius-xs);
+  background-color: var(--bg-accent-soft);
+  color: var(--text-on-accent);
+  font-size: var(--type-meta);
+  white-space: nowrap;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--type-h3);
+  font-weight: var(--weight-normal);
+  outline: none;
+
+  &::placeholder {
+    color: var(--text-placeholder);
+    opacity: 1;
+  }
+}
+
+.list {
+  max-height: var(--palette-max);
+  overflow-y: auto;
+  padding: var(--sp-2);
+}
+
+.groupLabel {
+  padding: var(--sp-3) var(--sp-3) var(--sp-1);
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}
+
+/* A row: fixed height, so a long list can be virtualized (tokens 07). */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: var(--palette-row);
+  padding-inline: var(--sp-3);
+  border-radius: var(--radius-sm);
+  cursor: default;
+  user-select: none;
+
+  // The cursor is instant — it must keep up with the keys.
+  &[data-cursor] {
+    background-color: var(--bg-hover);
+  }
+
+  &[aria-disabled='true'] {
+    opacity: var(--disabled-opacity);
+  }
+}
+
+.danger {
+  color: var(--text-danger);
+
+  &[data-cursor] {
+    background-color: var(--bg-danger-hover);
+  }
+}
+
+.create {
+  color: var(--text-accent);
+
+  .icon {
+    color: var(--text-accent);
+  }
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  color: var(--text-secondary);
+
+  > svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.meta {
+  flex: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--type-meta);
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  b {
+    font-weight: var(--weight-strong);
+  }
+}
+
+.path {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keys {
+  flex: none;
+}
+
+.empty {
+  padding: var(--sp-5) var(--sp-4);
+  color: var(--text-muted);
+}
+
+.confirm {
+  padding: var(--sp-4);
+}
+
+.confirmText {
+  margin: 0 0 var(--sp-4);
+  color: var(--text-secondary);
+
+  strong {
+    color: var(--text-primary);
+    font-weight: var(--weight-strong);
+  }
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  border-top: var(--border-width) solid var(--border-hairline);
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}
+
+.hintKey {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.escHint {
+  margin-inline-start: auto;
+}

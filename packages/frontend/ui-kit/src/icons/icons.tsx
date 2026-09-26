@@ -9,3 +9,6 @@ export const XIcon = createIcon('XIcon', <path d="M18 6 6 18M6 6l12 12" />, 2.5)
 
 /* A submenu's chevron. */
 export const ChevronRightIcon = createIcon('ChevronRightIcon', <path d="m9 18 6-6-6-6" />);
+
+/* The palette's and a filter's magnifier. */
+export const SearchIcon = createIcon('SearchIcon', <path d="m21 21-4.3-4.3M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14" />);
