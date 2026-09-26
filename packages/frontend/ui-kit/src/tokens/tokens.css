@@ -278,6 +278,10 @@
   --focus-offset: 2px;
 
   --overlay-margin: 8px;
+  /* Overlays (popover, menu, select): the gap to the trigger, and how an
+     overlay grows in — reduced motion keeps only the fade. */
+  --menu-offset: 4px;
+  --overlay-enter-scale: 0.98;
 }
 
 /* ─── Motion ─── */
@@ -404,6 +408,12 @@
   --switch-inset: 2px;
   --switch-state: var(--dur-state) var(--ease-out);
 
+  /* Popover */
+  --popover-width: 300px;
+  --popover-width-wide: 360px;
+  --popover-enter: var(--dur-layer) var(--ease-out);
+  --popover-exit: var(--dur-exit) var(--ease-in);
+
   /* Tag: does not change with density */
   --tag-height: 20px;
   --tag-dot: 6px;
@@ -500,6 +510,7 @@
 
     --progress-breath: 2000ms;
     --highlight-remote-easing: steps(1, end);
+    --overlay-enter-scale: 1;
   }
 }
 

@@ -1,0 +1,59 @@
+@use '../../overlay/overlay';
+
+.content {
+  @include overlay.panel;
+  @include overlay.motion(--popover-enter, --popover-exit);
+
+  width: var(--popover-width);
+  max-width: calc(100vw - 2 * var(--overlay-margin));
+
+  // Focused itself only when it has nothing interactive (spec); no ring on a panel.
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.wide {
+  width: var(--popover-width-wide);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-4) 0;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+  font-weight: var(--weight-strong);
+}
+
+.close {
+  flex: none;
+  // Pulled up and right: the × sits in the corner, the title keeps its line.
+  margin-block: calc(var(--sp-2) * -1);
+  margin-inline-end: calc(var(--sp-2) * -1);
+}
+
+.body {
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  color: var(--text-secondary);
+  font-size: var(--type-body);
+
+  .untitled > & {
+    padding-top: var(--sp-4);
+  }
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: var(--border-width) solid var(--border-hairline);
+}

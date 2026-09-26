@@ -10,6 +10,8 @@
   },
   "private": true,
   "dependencies": {
+    "@zag-js/popover": "1.44.0",
+    "@zag-js/react": "1.44.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-router-dom": "7.18.4",

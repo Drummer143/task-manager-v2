@@ -6,7 +6,9 @@ let listenersCount = 0;
 // No typing-target guard here on purpose: Esc must cancel an in-place edit,
 // which by definition happens while an input is focused (spec 04).
 const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key !== 'Escape') {
+  // Already handled — an overlay (popover, menu) closed itself on this press.
+  // One press is one step (spec 05): the ladder must not take a second one.
+  if (event.key !== 'Escape' || event.defaultPrevented) {
     return;
   }
 

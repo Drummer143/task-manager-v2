@@ -18,6 +18,8 @@ export interface KitMessages {
   removeTag: string;
   /** Empty avatar that assigns someone on click. */
   assign: string;
+  /** The × of a popover, a dialog. */
+  close: string;
   /** "+N" of a tag list or an avatar stack: what readers hear. */
   more(count: number): string;
 }
@@ -30,6 +32,7 @@ export const DEFAULT_MESSAGES: KitMessages = {
   cellConflict: 'conflict',
   removeTag: 'Remove',
   assign: 'Assign',
+  close: 'Close',
   more: (count) => `${count} more`,
 };
 

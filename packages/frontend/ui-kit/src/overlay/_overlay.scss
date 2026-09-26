@@ -1,0 +1,45 @@
+/*
+ * The shell every overlay shares (spec: Popover · the overlay family):
+ * always the default surface, a hairline frame, the overlay shadow; grows in
+ * from the corner nearest to its trigger, fades out faster than it came.
+ */
+
+@mixin panel {
+  border: var(--border-width) solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-raised);
+  box-shadow: var(--shadow-overlay);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+}
+
+/* $enter / $exit — the component's own motion tokens (tokens doc, 07b). */
+@mixin motion($enter, $exit) {
+  // Zag puts the corner nearest to the trigger here.
+  transform-origin: var(--transform-origin);
+
+  &[data-state='open'] {
+    animation: overlay-in var(#{$enter});
+  }
+
+  &[data-state='closed'] {
+    // Clicks go through a leaving overlay (spec 09).
+    pointer-events: none;
+    animation: overlay-out var(#{$exit}) forwards;
+  }
+
+  @keyframes overlay-in {
+    from {
+      opacity: 0;
+      transform: scale(var(--overlay-enter-scale));
+    }
+  }
+
+  @keyframes overlay-out {
+    to {
+      opacity: 0;
+    }
+  }
+}

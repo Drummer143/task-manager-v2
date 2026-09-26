@@ -53,6 +53,7 @@ export default defineConfig(() => ({
     watch: false,
     globals: true,
     environment: 'jsdom',
+    setupFiles: ['src/test-setup.ts'],
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
@@ -65,6 +66,7 @@ export default defineConfig(() => ({
         'src/**/index.ts',
         'src/**/*.generated.*',
         'src/**/*.d.ts',
+        'src/test-setup.ts',
       ],
       reporter: ['text', 'html', 'lcov'],
       // Current level, rounded down. Raise when coverage grows; never lower silently.
