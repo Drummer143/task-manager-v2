@@ -33,6 +33,13 @@ export interface KitMessages {
   paletteEscClose: string;
   paletteEscClear: string;
   paletteEscBack: string;
+  /** Screen states: a skeleton's name, refetching over data, what an error did to the data. */
+  loading: string;
+  refetching: string;
+  dataSafe: string;
+  dataUnchanged: string;
+  copyErrorDetails: string;
+  errorDetailsCopied: string;
   /** AppShell landmarks and resizers. */
   shellSidebar: string;
   shellPanel: string;
@@ -53,6 +60,12 @@ export const DEFAULT_MESSAGES: KitMessages = {
   removeTag: 'Remove',
   assign: 'Assign',
   close: 'Close',
+  loading: 'Loading',
+  refetching: 'Updating',
+  dataSafe: 'Your changes are safe.',
+  dataUnchanged: 'Nothing was changed.',
+  copyErrorDetails: 'Copy error details',
+  errorDetailsCopied: 'Copied',
   shellSidebar: 'Sidebar',
   shellPanel: 'Task',
   resizeSidebar: 'Resize sidebar',

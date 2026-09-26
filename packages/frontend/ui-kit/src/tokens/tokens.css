@@ -126,6 +126,10 @@
 
   --bg-track: color-mix(in srgb, var(--c-n-1000) 8%, transparent);
 
+  /* Skeleton shapes: on a raised surface, and on a sunken one (sidebar, board column). */
+  --skeleton: var(--c-n-200);
+  --skeleton-sunken: var(--c-n-300);
+
   --bg-accent-hover: color-mix(in srgb, var(--c-accent) 8%, transparent);
   --bg-accent-active: color-mix(in srgb, var(--c-accent) 16%, transparent);
 
@@ -192,6 +196,10 @@
   --kbd-fg: var(--c-n-300);
 
   --bg-track: color-mix(in srgb, var(--c-n-50) 14%, transparent);
+
+  /* No sunken surface on inverse yet: both shapes are the same. */
+  --skeleton: color-mix(in srgb, var(--c-n-50) 10%, transparent);
+  --skeleton-sunken: color-mix(in srgb, var(--c-n-50) 10%, transparent);
 
   --bg-accent-hover: color-mix(in srgb, var(--c-accent-400) 12%, transparent);
   --bg-accent-active: color-mix(in srgb, var(--c-accent) 22%, transparent);
@@ -464,6 +472,19 @@
   --highlight-remote: 400ms;
   --drag-threshold: 4px;
 
+
+  /* Screen states (Skeleton · Empty · Error). A skeleton appears after
+     --spinner-delay, pulses once and then holds still — endless shimmer
+     reads as broken. */
+  --skeleton-pulse: 1000ms;
+  --skeleton-pulse-opacity: 0.55;
+  --skeleton-line: 10px;
+  /* Refetching over data: the data dims only if it takes longer than this. */
+  --refetch-dim-after: 1000ms;
+  --refetch-dim: 0.6;
+  --empty-measure: 380px;
+  /* "Copied" on a copy button, before it reads as the action again. */
+  --copied-hold: 1500ms;
 }
 
 /* ─── Density ─── */
@@ -541,6 +562,8 @@
     --highlight-remote-easing: steps(1, end);
     --overlay-enter-scale: 1;
     --panel-enter-shift: 0px;
+    /* A skeleton holds still from the start. */
+    --skeleton-pulse: 0ms;
     /* The palette opens at once under reduced motion (tokens 07b). */
     --palette-enter: 0ms;
   }

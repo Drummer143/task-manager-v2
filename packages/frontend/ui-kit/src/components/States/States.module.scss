@@ -1,0 +1,161 @@
+/*
+ * EmptyState and ErrorState (spec: States · 02–04): one layout in three
+ * scales, a tone apart. They appear at once — no animation.
+ */
+
+.state {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+
+  &[data-tone='danger'] {
+    background-color: var(--bg-danger-soft);
+  }
+}
+
+.title {
+  margin: 0;
+
+  [data-tone='danger'] > &,
+  [data-tone='danger'] > .line > & {
+    color: var(--text-danger);
+  }
+}
+
+.description {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* ── area: a block in the middle, as tall as the area ── */
+
+.area {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--sp-3);
+  min-height: 100%;
+  padding: var(--sp-7);
+  text-align: center;
+  outline: none;
+
+  > .title {
+    font-size: var(--type-h3);
+    font-weight: var(--weight-strong);
+    line-height: var(--lh-h3);
+  }
+
+  > .description {
+    max-width: var(--empty-measure);
+    font-size: var(--type-body);
+    line-height: var(--lh-body);
+  }
+
+  &:focus-visible {
+    box-shadow: inset 0 0 0 var(--border-width-strong) var(--focus-ring);
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+/* ── block and row: one line ── */
+
+.block,
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--sp-2);
+  border-radius: var(--radius-sm);
+}
+
+.line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--sp-2);
+  min-width: 0;
+}
+
+.block {
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+
+  &[data-tone='neutral'] {
+    background-color: var(--bg-sunken);
+  }
+}
+
+.row {
+  min-height: var(--row-height);
+  padding: 0 var(--sp-4);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+
+  // An empty place, not a missing one: a dashed outline, muted words.
+  &[data-tone='neutral'] {
+    border: var(--border-width) dashed var(--border-hairline);
+    color: var(--text-muted);
+
+    .title {
+      color: inherit;
+    }
+  }
+}
+
+.dot {
+  color: var(--text-muted);
+
+  [data-tone='danger'] > & {
+    color: var(--text-danger);
+  }
+}
+
+/* A link action: the words are the button. */
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: var(--sp-1);
+  cursor: pointer;
+
+  [data-tone='danger'] > & {
+    color: var(--text-danger);
+  }
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+/* An empty row with one step: the whole line is the button. */
+.rowButton {
+  width: 100%;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--dur-state) var(--ease-out);
+
+  &:hover {
+    background-color: var(--bg-hover);
+  }
+}
+
+.rowAction {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text-secondary);
+}

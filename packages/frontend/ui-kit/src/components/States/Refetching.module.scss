@@ -1,0 +1,22 @@
+/* Refetching over data (spec: States · 00). */
+
+.root {
+  position: relative;
+}
+
+// Along the top edge of the area, right under its header; over the data, taking no height.
+.bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: var(--z-sticky);
+}
+
+.content {
+  transition: opacity var(--dur-state) var(--ease-out);
+
+  &[data-dim] {
+    opacity: var(--refetch-dim);
+  }
+}

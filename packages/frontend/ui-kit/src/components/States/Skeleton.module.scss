@@ -1,0 +1,67 @@
+/* Skeleton (spec: States · 01). */
+
+.root {
+  position: relative;
+}
+
+// Laid out during the delay, so the skeleton takes its place without a shift; drawn once it is due.
+.frameSet {
+  visibility: hidden;
+
+  .root[data-shown] > & {
+    visibility: visible;
+    // One pulse, then still (reduced motion: --skeleton-pulse is 0 — no pulse at all).
+    animation: skeleton-pulse var(--skeleton-pulse) var(--ease-inout) 1;
+  }
+}
+
+.shape {
+  display: block;
+  background-color: var(--skeleton);
+
+  &[data-sunken] {
+    background-color: var(--skeleton-sunken);
+  }
+}
+
+.line {
+  height: var(--skeleton-line);
+  border-radius: var(--radius-xs);
+}
+
+.block {
+  border-radius: var(--radius-sm);
+}
+
+/* A card-like frame: its own surface, the lines inside it are the shapes. */
+.frame {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-3);
+  padding: var(--card-padding);
+  border: var(--border-width) solid var(--border-hairline);
+  background-color: var(--bg-raised);
+}
+
+.circle {
+  flex: none;
+  border-radius: var(--radius-full);
+}
+
+.srOnly {
+  position: absolute;
+  width: var(--visually-hidden-size);
+  height: var(--visually-hidden-size);
+  margin: calc(var(--visually-hidden-size) * -1);
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: var(--skeleton-pulse-opacity);
+  }
+}
