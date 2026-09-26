@@ -40,6 +40,8 @@ export const KitRoot: React.FC<KitRootProps> = ({ children, router, messages }) 
         {children}
 
         <TooltipHost />
+        {/* The app's single layer — the command palette renders here too:
+            ⌘K (useListenPalette above) opens it as a layer, not as a host of its own. */}
         <LayerHost />
       </MessagesContext.Provider>
     </RouterContext.Provider>
