@@ -1,0 +1,48 @@
+/*
+ * Resizer (spec: AppShell · 03). An invisible grab zone over a region's own
+ * 1 px border; the line lights up only when the border can be worked with.
+ */
+
+.resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  width: var(--resizer-hit);
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+
+  // The kit's focus ring around the zone, and the line in accent.
+  &:focus-visible {
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 var(--border-width-strong) var(--focus-ring);
+  }
+}
+
+/* The line: at the centre of the zone, over the region's border. */
+.line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc((var(--resizer-hit) - var(--border-width-strong)) / 2);
+  width: var(--border-width-strong);
+  background-color: transparent;
+  transition: background-color var(--dur-state) var(--ease-out);
+
+  .resizer:is([data-hover], [data-dragging], :focus-visible) > & {
+    background-color: var(--border-accent);
+  }
+
+  // At its limit it does not go further: muted instead of accent.
+  .resizer[data-limit] > & {
+    background-color: var(--text-muted);
+  }
+}
+
+/* While a border is dragged: the whole page shows the resize cursor and selects no text. */
+:global(html[data-resizing]),
+:global(html[data-resizing] *) {
+  cursor: col-resize !important;
+  user-select: none;
+}

@@ -8,6 +8,7 @@ export * from './router';
 export * from './messages';
 
 export * from './components/AppShell';
+export * from './components/Resizer';
 
 export { Surface, useSurface, oppositeSurface } from './components/Surface';
 export type { SurfaceProps, SurfaceTone } from './components/Surface';

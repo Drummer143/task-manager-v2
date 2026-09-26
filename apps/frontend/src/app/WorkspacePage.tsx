@@ -1,6 +1,6 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useMemo, type CSSProperties, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { AppShell, cssVar, raw } from '@task-manager-v2/ui-kit';
+import { AppShell, cssVar } from '@task-manager-v2/ui-kit';
 import {
   parseViewState,
   serializeViewState,
@@ -59,9 +59,6 @@ export function WorkspacePage() {
   const setView = (patch: Partial<ViewState>) => commit(patch);
   const openTask = (id: string) => commit({ task: id }, true);
   const closeTask = () => commit({ task: null });
-
-  const [sidebarWidth, setSidebarWidth] = useState<number>(raw['sidebar-width']);
-  const [panelWidth, setPanelWidth] = useState<number>(raw['panel-width']);
 
   const assigneeFilter = view.filters['assignee']?.includes('me') ?? false;
   const cycleGroup = () => {
@@ -196,10 +193,8 @@ export function WorkspacePage() {
       header={header}
       status={status}
       panel={panel}
-      sidebarWidth={sidebarWidth}
-      onSidebarWidthChange={setSidebarWidth}
-      panelWidth={panelWidth}
-      onPanelWidthChange={setPanelWidth}
+      onPanelClose={closeTask}
+      scrollKey={`${workspace}/${page}:${view.view}`}
     >
       {canvas}
     </AppShell>

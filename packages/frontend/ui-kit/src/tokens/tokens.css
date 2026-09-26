@@ -303,6 +303,8 @@
 :root {
   --z-content: 0;
   --z-sticky: 10;
+  /* peek sidebar and overlay panel: over the canvas, under a dragged card and every layer. */
+  --z-shell: 40;
   --z-drag: 50;
   --z-dropdown: 100;
   --z-layer: 200;
@@ -314,13 +316,26 @@
    Layer 3 — component tokens. Shell dimensions and behavioral constants.
    ───────────────────────────────────────────────────────────── */
 :root {
+  /* AppShell (layout · part 1). Defaults, limits; the widths themselves are the user's. */
   --sidebar-width: 260px;
-  --sidebar-width-min: 200px;
-  --sidebar-width-max: 420px;
+  --sidebar-min: 200px;
+  --sidebar-max: 420px;
+  /* Dragging the sidebar narrower than this collapses it, in the same gesture. */
+  --sidebar-snap: 140px;
   --sidebar-collapsed: 48px;
   --panel-width: 420px;
-  --panel-width-min: 360px;
-  --panel-width-max: 640px;
+  --panel-min: 360px;
+  --panel-max: 640px;
+  /* Less than this for the canvas and the panel goes over it instead. */
+  --canvas-min: 480px;
+  --panel-enter: var(--dur-panel) var(--ease-out);
+  /* How far the panel's content slides in; reduced motion keeps only the fade. */
+  --panel-enter-shift: 8px;
+  /* Resizer: the grab zone over a column border, the hover delay, the key steps. */
+  --resizer-hit: 8px;
+  --resizer-delay: 150ms;
+  --resize-step: 16px;
+  --resize-step-big: 64px;
   --canvas-header-height: 48px;
   --statusbar-height: 24px;
   --column-width: 288px;
@@ -449,9 +464,6 @@
   --highlight-remote: 400ms;
   --drag-threshold: 4px;
 
-  /* Responsive breakpoints (read from JS via matchMedia, not CSS @media). */
-  --breakpoint-sidebar-collapse: 1100px;
-  --breakpoint-panel-overlay: 900px;
 }
 
 /* ─── Density ─── */
@@ -528,6 +540,7 @@
     --progress-breath: 2000ms;
     --highlight-remote-easing: steps(1, end);
     --overlay-enter-scale: 1;
+    --panel-enter-shift: 0px;
     /* The palette opens at once under reduced motion (tokens 07b). */
     --palette-enter: 0ms;
   }

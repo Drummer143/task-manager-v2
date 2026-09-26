@@ -1,6 +1,7 @@
-/* Global app shell needs a full-height root; theme comes from the token layer. */
+/* The frame (AppShell) is the page: it owns the only scroll areas, the document never scrolls. */
 html,
 body,
 #root {
   height: 100%;
+  overflow: hidden;
 }

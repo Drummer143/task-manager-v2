@@ -10,3 +10,18 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     disconnect = () => undefined;
   };
 }
+
+/*
+ * Nor PointerEvent: testing-library then fires a bare Event and drops clientX,
+ * so a drag cannot be told from a click. A MouseEvent carries the coordinates.
+ */
+if (typeof globalThis.PointerEvent === 'undefined') {
+  globalThis.PointerEvent = class PointerEvent extends MouseEvent {
+    readonly pointerId: number;
+
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 1;
+    }
+  } as unknown as typeof globalThis.PointerEvent;
+}

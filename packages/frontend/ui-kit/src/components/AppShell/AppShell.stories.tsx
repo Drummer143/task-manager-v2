@@ -1,301 +1,251 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import type { CSSProperties, ReactNode } from 'react';
-import { useState } from 'react';
-import { AppShell } from './AppShell';
-import type { AppShellProps } from './AppShell';
-import { cssVar, raw } from '../../tokens';
+import React, { useState } from 'react';
+import { cssVar } from '../../tokens';
+import { useRegisterHotkey } from '../../interaction/hotkeys';
+import { Button } from '../Button';
+import { AppShell, type AppShellProps } from './AppShell';
+import { toggleSidebar, useShell } from './shellStore';
+import { useSidebar } from './SidebarContext';
 
-/**
- * Demo slots. Not part of the kit — they only fill AppShell so its geometry is
- * visible: regions, the single scroll area, and the panel compressing the canvas.
+/*
+ * Demo slots. Not part of the kit — they only fill AppShell so its geometry
+ * shows: the regions, the one scroll area, the borders, the modes.
  */
 const hairline = `${cssVar('border-width')} solid ${cssVar('border-hairline')}`;
 
-function Row({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+const PAGES = ['Board Q3', 'Requirements', 'Retro', 'Mobile', 'Infrastructure'];
+
+/** A sidebar item: an icon and a label; on the rail — the icon alone, the label in a tooltip. */
+const Item: React.FC<{ label: string; count?: number }> = ({ label, count }) => {
+  const { collapsed, tooltipProps } = useSidebar();
+
   return (
-    <div
+    <button
+      type="button"
+      aria-label={collapsed ? label : undefined}
+      {...tooltipProps({ text: label })}
       style={{
+        width: '100%',
         height: cssVar('row-height'),
         display: 'flex',
         alignItems: 'center',
+        justifyContent: collapsed ? 'center' : undefined,
         gap: cssVar('sp-3'),
-        padding: `0 ${cssVar('sp-3')}`,
+        padding: collapsed ? 0 : `0 ${cssVar('sp-3')}`,
+        border: 0,
         borderRadius: cssVar('radius-sm'),
+        background: 'transparent',
         fontSize: cssVar('type-body'),
         color: cssVar('text-secondary'),
-        ...style,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        cursor: 'pointer',
       }}
     >
-      {children}
-    </div>
+      <span
+        aria-hidden="true"
+        style={{
+          width: cssVar('avatar-sm'),
+          height: cssVar('avatar-sm'),
+          flex: 'none',
+          display: 'grid',
+          placeItems: 'center',
+          borderRadius: cssVar('radius-sm'),
+          border: hairline,
+          fontSize: cssVar('type-meta'),
+        }}
+      >
+        {label[0]}
+      </span>
+      {!collapsed && label}
+      {!collapsed && count !== undefined && (
+        <span style={{ marginLeft: 'auto', fontSize: cssVar('type-meta'), color: cssVar('text-accent') }}>{count}</span>
+      )}
+    </button>
   );
-}
+};
 
-function SidebarDemo() {
+const SidebarDemo: React.FC = () => {
+  const { collapsed } = useSidebar();
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <>
       <div
         style={{
           height: cssVar('canvas-header-height'),
           flex: 'none',
           display: 'flex',
           alignItems: 'center',
-          gap: cssVar('sp-3'),
-          padding: `0 ${cssVar('sp-4')}`,
+          padding: `0 ${cssVar('sp-2')}`,
           borderBottom: hairline,
           fontWeight: cssVar('weight-strong'),
         }}
       >
-        <span
-          style={{
-            width: cssVar('avatar-sm'),
-            height: cssVar('avatar-sm'),
-            borderRadius: cssVar('radius-sm'),
-            background: cssVar('bg-raised'),
-            border: hairline,
-          }}
-        />
-        Product
+        <Item label="Product" />
       </div>
       <div style={{ padding: cssVar('sp-2'), overflow: 'auto', flex: 1 }}>
-        <Row>Board Q3</Row>
-        <Row>Requirements</Row>
-        <Row>Retro</Row>
-        <Row>Mobile</Row>
-        <Row>Infrastructure</Row>
+        <Item label="Inbox" count={3} />
+        {!collapsed && (
+          <div style={{ padding: `${cssVar('sp-3')} ${cssVar('sp-3')} ${cssVar('sp-1')}`, fontSize: cssVar('type-meta'), color: cssVar('text-muted') }}>
+            Pages
+          </div>
+        )}
+        {PAGES.map((page) => (
+          <Item key={page} label={page} />
+        ))}
       </div>
-      <Row style={{ flex: 'none', borderTop: hairline, color: cssVar('text-primary') }}>
-        Inbox
-        <span
-          style={{
-            marginLeft: 'auto',
-            fontSize: cssVar('type-meta'),
-            color: cssVar('text-accent'),
-            background: cssVar('bg-accent-soft'),
-            borderRadius: cssVar('radius-full'),
-            padding: `0 ${cssVar('sp-2')}`,
-          }}
-        >
-          3
-        </span>
-      </Row>
-    </div>
+    </>
   );
-}
+};
 
-function StatusDemo() {
+const StatusDemo: React.FC = () => {
+  const { collapsed, tooltipProps } = useSidebar();
+
   return (
     <div
+      {...tooltipProps({ text: 'Synced · 14:32' })}
       style={{
         height: '100%',
         display: 'flex',
         alignItems: 'center',
-        padding: `0 ${cssVar('sp-4')}`,
+        justifyContent: collapsed ? 'center' : undefined,
+        padding: collapsed ? 0 : `0 ${cssVar('sp-4')}`,
+        fontSize: cssVar('type-meta'),
+        color: cssVar('text-muted'),
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {collapsed ? '●' : 'Synced · 14:32'}
+    </div>
+  );
+};
+
+const HeaderDemo: React.FC<{ onTogglePanel?(): void }> = ({ onTogglePanel }) => {
+  const { layout, resetWidths } = useShell();
+
+  return (
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', gap: cssVar('sp-3'), padding: `0 ${cssVar('sp-5')}` }}>
+      <Button size="sm" variant="ghost" onClick={toggleSidebar} tooltip="Toggle sidebar" keys="Ctrl+\">
+        Sidebar
+      </Button>
+      <span style={{ fontSize: cssVar('type-meta'), color: cssVar('text-muted'), whiteSpace: 'nowrap', overflow: 'hidden' }}>
+        {layout.sidebar} · {layout.panel} · canvas {Math.round(layout.canvasPx)} px
+      </span>
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: cssVar('sp-2') }}>
+        {onTogglePanel && (
+          <Button size="sm" onClick={onTogglePanel}>
+            Toggle panel
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" onClick={resetWidths}>
+          Reset widths
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+const CanvasDemo: React.FC = () => (
+  <div style={{ padding: cssVar('sp-5'), display: 'flex', flexDirection: 'column', gap: cssVar('card-gap') }}>
+    {Array.from({ length: 60 }, (_, index) => (
+      <div
+        key={index}
+        style={{
+          padding: cssVar('card-padding'),
+          background: cssVar('bg-raised'),
+          border: hairline,
+          borderRadius: cssVar('radius-sm'),
+          fontSize: cssVar('type-body'),
+        }}
+      >
+        <span style={{ color: cssVar('text-muted'), fontSize: cssVar('type-meta') }}>TM-{index + 1}</span> A task in
+        the one scroll area of the page
+      </div>
+    ))}
+  </div>
+);
+
+const PanelDemo: React.FC<{ onClose(): void }> = ({ onClose }) => (
+  <>
+    <div
+      style={{
+        height: cssVar('canvas-header-height'),
+        flex: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        padding: `0 ${cssVar('sp-5')}`,
+        borderBottom: hairline,
         fontSize: cssVar('type-meta'),
         color: cssVar('text-muted'),
       }}
     >
-      Synced · 14:32
+      TM-248
+      <Button size="sm" variant="ghost" style={{ marginLeft: 'auto' }} onClick={onClose} keys="Esc" tooltip="Close">
+        Close
+      </Button>
     </div>
-  );
-}
-
-function HeaderDemo() {
-  const chip: CSSProperties = {
-    height: cssVar('control-height-sm'),
-    display: 'flex',
-    alignItems: 'center',
-    padding: `0 ${cssVar('sp-3')}`,
-    border: hairline,
-    borderRadius: cssVar('radius-sm'),
-    fontSize: cssVar('type-meta'),
-    color: cssVar('text-secondary'),
-  };
-  return (
-    <div
-      style={{
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: cssVar('sp-4'),
-        padding: `0 ${cssVar('sp-5')}`,
-      }}
-    >
-      <div style={{ fontSize: cssVar('type-meta'), color: cssVar('text-muted') }}>
-        Product / Web /{' '}
-        <span style={{ color: cssVar('text-primary'), fontWeight: cssVar('weight-strong') }}>
-          Board Q3
-        </span>
+    <div style={{ padding: cssVar('sp-5'), overflow: 'auto', flex: 1, scrollbarGutter: 'stable' }}>
+      <div style={{ fontSize: cssVar('type-h1'), fontWeight: cssVar('weight-strong'), marginBottom: cssVar('sp-5') }}>
+        AppShell: focus regions and resize
       </div>
-      <div style={{ marginLeft: 'auto', display: 'flex', gap: cssVar('sp-3') }}>
-        <div style={{ ...chip, color: cssVar('text-accent'), borderColor: cssVar('border-accent') }}>
-          Board
-        </div>
-        <div style={chip}>Table</div>
-        <div style={chip}>Group: status</div>
+      <div style={{ fontSize: cssVar('type-body'), color: cssVar('text-secondary'), lineHeight: cssVar('lh-body') }}>
+        Opening the panel leaves focus on the canvas. Closing it with focus inside brings focus back to the canvas.
       </div>
     </div>
-  );
-}
+  </>
+);
 
-function Card({ title, muted }: { title: string; muted?: boolean }) {
-  return (
-    <div
-      style={{
-        background: cssVar('bg-raised'),
-        border: hairline,
-        borderRadius: cssVar('radius-sm'),
-        padding: cssVar('card-padding'),
-        fontSize: cssVar('type-body'),
-        color: muted ? cssVar('text-muted') : cssVar('text-primary'),
-        boxShadow: cssVar('shadow-raised'),
-      }}
-    >
-      {title}
-    </div>
-  );
-}
+/** The app's part: ⌘\ / Ctrl+\ and the panel's open state (in the product: ?task in the URL). */
+const Playground: React.FC<Partial<AppShellProps> & { initialPanel?: boolean }> = ({ initialPanel = false, ...args }) => {
+  const [open, setOpen] = useState(initialPanel);
 
-function Column({ title, count, children }: { title: string; count: number; children?: ReactNode }) {
-  return (
-    <div
-      style={{
-        width: cssVar('column-width'),
-        flex: 'none',
-        background: cssVar('bg-sunken'),
-        border: hairline,
-        borderRadius: cssVar('radius-md'),
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <div
-        style={{
-          height: cssVar('row-height'),
-          flex: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          gap: cssVar('sp-3'),
-          padding: `0 ${cssVar('sp-4')}`,
-          borderBottom: hairline,
-        }}
-      >
-        <span style={{ fontWeight: cssVar('weight-strong'), fontSize: cssVar('type-h3') }}>{title}</span>
-        <span style={{ fontSize: cssVar('type-meta'), color: cssVar('text-muted') }}>{count}</span>
-      </div>
-      <div
-        style={{
-          padding: cssVar('sp-3'),
-          display: 'flex',
-          flexDirection: 'column',
-          gap: cssVar('card-gap'),
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
+  useRegisterHotkey({ key: '\\', ctrl: true, callback: toggleSidebar, description: 'Toggle sidebar' });
+  useRegisterHotkey({ key: '\\', meta: true, callback: toggleSidebar, description: 'Toggle sidebar' });
 
-function CanvasDemo() {
-  return (
-    <div style={{ display: 'flex', gap: cssVar('column-gap'), padding: cssVar('sp-4'), height: '100%' }}>
-      <Column title="Backlog" count={12}>
-        <Card title="Extract the token layer into a package" />
-        <Card title='Shortcut registry + "?" cheatsheet' muted />
-      </Column>
-      <Column title="In progress" count={4}>
-        <Card title="AppShell: focus regions and resize" />
-      </Column>
-      <Column title="Review" count={0} />
-      <Column title="Done" count={18} />
-      <Column title="Ideas" count={7} />
-      <Column title="Frozen" count={2} />
-    </div>
-  );
-}
-
-function PanelDemo() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div
-        style={{
-          height: cssVar('canvas-header-height'),
-          flex: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          padding: `0 ${cssVar('sp-5')}`,
-          borderBottom: hairline,
-          fontSize: cssVar('type-meta'),
-          color: cssVar('text-muted'),
-        }}
-      >
-        TM-248
-        <span style={{ marginLeft: 'auto' }}>Esc</span>
-      </div>
-      <div style={{ padding: cssVar('sp-5'), overflow: 'auto', flex: 1 }}>
-        <div style={{ fontSize: cssVar('type-h1'), fontWeight: cssVar('weight-strong'), marginBottom: cssVar('sp-5') }}>
-          AppShell: focus regions and resize
-        </div>
-        <div style={{ fontSize: cssVar('type-body'), color: cssVar('text-secondary'), lineHeight: cssVar('lh-body') }}>
-          Lay out the four regions, resize the sidebar and panel with width persisted. On closing
-          the panel, focus returns to the card it was opened from.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Wraps AppShell with local width state so the resize handles are live in
- * Storybook. In the product this state comes from the view/layout store.
- */
-function Interactive(args: AppShellProps) {
-  const [sidebarWidth, setSidebarWidth] = useState(args.sidebarWidth ?? raw['sidebar-width']);
-  const [panelWidth, setPanelWidth] = useState(args.panelWidth ?? raw['panel-width']);
   return (
     <AppShell
+      sidebar={<SidebarDemo />}
+      status={<StatusDemo />}
+      header={<HeaderDemo onTogglePanel={() => setOpen((value) => !value)} />}
+      panel={open ? <PanelDemo onClose={() => setOpen(false)} /> : null}
+      onPanelClose={() => setOpen(false)}
       {...args}
-      sidebarWidth={sidebarWidth}
-      onSidebarWidthChange={setSidebarWidth}
-      panelWidth={panelWidth}
-      onPanelWidthChange={setPanelWidth}
-    />
+    >
+      <CanvasDemo />
+    </AppShell>
   );
-}
+};
 
-const meta: Meta<typeof AppShell> = {
+const meta: Meta<typeof Playground> = {
   title: 'App shell/AppShell',
-  component: AppShell,
+  component: Playground,
   parameters: { layout: 'fullscreen' },
-  render: (args) => <Interactive {...args} />,
+};
+
+export default meta;
+type Story = StoryObj<typeof Playground>;
+
+/**
+ * Drag the borders (Tab to them: arrows, Shift+arrows, Home/End, Enter to
+ * reset; double click resets too). Drag the sidebar below 140 px — it
+ * collapses. Ctrl+\ toggles it; narrow the window below 1100 px and Ctrl+\
+ * opens it over the canvas. Widths are remembered in localStorage.
+ */
+export const Default: Story = {};
+
+/** The panel docked: it squeezes the canvas, never below 480 px. Esc closes it. */
+export const WithPanel: Story = {
+  args: { initialPanel: true },
+};
+
+/** A frame narrower than 900 px: the sidebar collapses by itself, the panel goes over the canvas. */
+export const Narrow: Story = {
+  args: { initialPanel: true },
   decorators: [
     (Story) => (
-      <div style={{ height: '100vh', overflow: 'hidden' }}>
+      <div style={{ width: 860 }}>
         <Story />
       </div>
     ),
   ],
-  args: {
-    sidebar: <SidebarDemo />,
-    header: <HeaderDemo />,
-    status: <StatusDemo />,
-    children: <CanvasDemo />,
-  },
-};
-
-export default meta;
-type Story = StoryObj<typeof AppShell>;
-
-/** Board, task panel closed — the default state. */
-export const Default: Story = {};
-
-/** Task panel open: it compresses the canvas rather than overlaying it. */
-export const WithPanel: Story = {
-  args: { panel: <PanelDemo /> },
-};
-
-/** Sidebar collapsed to the icon rail. */
-export const CollapsedSidebar: Story = {
-  args: { sidebarCollapsed: true },
 };

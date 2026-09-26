@@ -33,6 +33,11 @@ export interface KitMessages {
   paletteEscClose: string;
   paletteEscClear: string;
   paletteEscBack: string;
+  /** AppShell landmarks and resizers. */
+  shellSidebar: string;
+  shellPanel: string;
+  resizeSidebar: string;
+  resizePanel: string;
   /** The × of a popover, a dialog. */
   close: string;
   /** "+N" of a tag list or an avatar stack: what readers hear. */
@@ -48,6 +53,10 @@ export const DEFAULT_MESSAGES: KitMessages = {
   removeTag: 'Remove',
   assign: 'Assign',
   close: 'Close',
+  shellSidebar: 'Sidebar',
+  shellPanel: 'Task',
+  resizeSidebar: 'Resize sidebar',
+  resizePanel: 'Resize panel',
   palette: 'Command palette',
   paletteInput: 'Search commands, pages, tasks, people',
   palettePlaceholder: 'Type a command or search…',

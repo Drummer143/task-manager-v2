@@ -1,0 +1,160 @@
+/*
+ * AppShell (spec: AppShell · 01). A grid of three columns; the widths are
+ * CSS variables that AppShell writes on .shell (a drag writes them per frame,
+ * without React). The resizers are absolute over the column borders, so their
+ * 8 px zone takes no width.
+ */
+
+.shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--_sidebar, var(--sidebar-width)) minmax(0, 1fr) var(--_panel-col, 0);
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+}
+
+/* ── Sidebar ── */
+
+.sidebar {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: var(--border-width) solid var(--border-hairline);
+  background-color: var(--bg-sunken);
+
+  // Peek (state E): the user's width over the canvas; the rail stays behind it.
+  &[data-peek] {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--z-shell);
+    width: var(--_peek, var(--sidebar-width));
+    box-shadow: var(--shadow-overlay);
+    animation: shell-in var(--panel-enter);
+    --_shift: calc(var(--panel-enter-shift) * -1);
+  }
+}
+
+/* The collapsed column under a peek sidebar. */
+.rail {
+  grid-column: 1;
+  grid-row: 1;
+  border-right: var(--border-width) solid var(--border-hairline);
+  background-color: var(--bg-sunken);
+}
+
+/* The sidebar's content owns its scroll (its header stays, its tree scrolls). */
+.sidebarBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.status {
+  flex: none;
+  height: var(--statusbar-height);
+  border-top: var(--border-width) solid var(--border-hairline);
+}
+
+/* ── Canvas ── */
+
+.main {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.header {
+  flex: none;
+  height: var(--canvas-header-height);
+  border-bottom: var(--border-width) solid var(--border-hairline);
+}
+
+/* The single scroll area of the page. */
+.canvas {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  outline: none;
+
+  &[data-scroll='none'] {
+    overflow: hidden;
+  }
+
+  &:focus-visible {
+    box-shadow: inset 0 0 0 var(--border-width-strong) var(--focus-ring);
+  }
+}
+
+/* ── Panel ── */
+
+.panel {
+  grid-column: 3;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-left: var(--border-width) solid var(--border-hairline);
+  background-color: var(--bg-raised);
+  // Opens with its content easing in; closes at once (a docked panel) — spec: animations.
+  animation: shell-in var(--panel-enter);
+  --_shift: var(--panel-enter-shift);
+
+  // State F: over the right edge of the canvas, with a shadow and no scrim — the canvas stays workable.
+  &[data-mode='overlay'] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-shell);
+    width: var(--_panel-px);
+    box-shadow: var(--shadow-overlay);
+  }
+
+  &[data-state='closed'] {
+    pointer-events: none;
+    animation: shell-out var(--dur-exit) var(--ease-in) forwards;
+  }
+}
+
+/* ── Resizers: centred on the column borders ── */
+
+.sidebarResizer {
+  left: calc(var(--_sidebar, var(--sidebar-width)) - var(--resizer-hit) / 2);
+}
+
+.panelResizer {
+  right: calc(var(--_panel-px) - var(--resizer-hit) / 2);
+}
+
+// Over the overlay panel's shadow, not under it.
+.shell[data-panel='overlay'] > .panelResizer {
+  z-index: calc(var(--z-shell) + 1);
+}
+
+@keyframes shell-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--_shift));
+  }
+}
+
+@keyframes shell-out {
+  to {
+    opacity: 0;
+  }
+}
