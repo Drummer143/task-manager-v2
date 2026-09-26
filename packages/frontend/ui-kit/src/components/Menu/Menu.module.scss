@@ -1,0 +1,160 @@
+@use '../../overlay/overlay';
+
+/* Menu (spec 09). Always the default surface; the cursor is instant — it must not lag behind the keys. */
+
+.content {
+  @include overlay.panel;
+  @include overlay.motion(--menu-enter, --menu-exit);
+
+  min-width: var(--menu-min-width);
+  max-width: var(--menu-max-width);
+  // Ten items, then it scrolls inside (spec 09) — a longer choice is a Select.
+  max-height: calc(var(--menu-max-items) * var(--control-height) + 2 * var(--sp-2) + 2 * var(--border-width));
+  overflow-y: auto;
+  padding: var(--sp-2);
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.groupLabel {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height-sm);
+  padding-inline: var(--sp-3);
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}
+
+.separator {
+  height: var(--border-width);
+  margin-block: var(--sp-2);
+  margin-inline: calc(var(--sp-2) * -1);
+  background-color: var(--border-hairline);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+
+  min-height: var(--control-height);
+  padding-inline: var(--sp-3);
+
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+
+  // The cursor — mouse and keyboard alike (spec 09).
+  &[data-highlighted] {
+    background-color: var(--bg-hover);
+  }
+
+  &:active:not([data-disabled]) {
+    background-color: var(--bg-active);
+  }
+
+  &[data-disabled] {
+    opacity: var(--disabled-opacity);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.danger {
+  color: var(--text-danger);
+
+  &[data-highlighted] {
+    background-color: var(--bg-danger-hover);
+  }
+}
+
+/* The one 16 px slot on the left: an icon, a check, a radio dot, the spinner. */
+.slot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  color: var(--text-secondary);
+
+  > svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.check {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  color: var(--text-accent);
+}
+
+.radioDot {
+  width: var(--menu-radio-dot);
+  height: var(--menu-radio-dot);
+  border-radius: var(--radius-full);
+  background-color: var(--text-accent);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// With a second line the row grows; the slot and the hotkey stay on the first.
+.item:has(.description, .error) {
+  align-items: flex-start;
+  padding-block: var(--sp-2);
+
+  > .slot,
+  > .trailing {
+    margin-block-start: calc((var(--type-body) * var(--lh-body) - var(--icon-size)) / 2);
+  }
+}
+
+.description {
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+  white-space: normal;
+}
+
+.error {
+  color: var(--text-danger);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+  white-space: normal;
+}
+
+/* The right edge: a hotkey, a submenu's chevron or a trailing check. */
+.trailing {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+.chevron {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  color: var(--text-muted);
+}

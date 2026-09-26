@@ -6,3 +6,6 @@ export const MinusIcon = createIcon('MinusIcon', <path d="M5 12h14" />, 3);
 
 /* A removable tag's ×. */
 export const XIcon = createIcon('XIcon', <path d="M18 6 6 18M6 6l12 12" />, 2.5);
+
+/* A submenu's chevron. */
+export const ChevronRightIcon = createIcon('ChevronRightIcon', <path d="m9 18 6-6-6-6" />);

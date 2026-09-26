@@ -18,6 +18,8 @@ export interface KitMessages {
   removeTag: string;
   /** Empty avatar that assigns someone on click. */
   assign: string;
+  /** After a failed async menu item: how to try again. */
+  menuRetryHint: string;
   /** The × of a popover, a dialog. */
   close: string;
   /** "+N" of a tag list or an avatar stack: what readers hear. */
@@ -33,6 +35,7 @@ export const DEFAULT_MESSAGES: KitMessages = {
   removeTag: 'Remove',
   assign: 'Assign',
   close: 'Close',
+  menuRetryHint: 'Enter to retry',
   more: (count) => `${count} more`,
 };
 

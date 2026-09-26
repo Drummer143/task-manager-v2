@@ -1,13 +1,14 @@
 import { createRef } from 'react';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { CheckIcon, MinusIcon, XIcon, createIcon } from './index';
+import { CheckIcon, ChevronRightIcon, MinusIcon, XIcon, createIcon } from './index';
 
 describe('icons', () => {
   it.each([
     ['CheckIcon', CheckIcon],
     ['MinusIcon', MinusIcon],
     ['XIcon', XIcon],
+    ['ChevronRightIcon', ChevronRightIcon],
   ])('%s is a decorative currentColor stroke icon, 1em by default', (name, Icon) => {
     const { container } = render(<Icon />);
     const svg = container.querySelector('svg') as SVGSVGElement;

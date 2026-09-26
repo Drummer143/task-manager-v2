@@ -408,6 +408,14 @@
   --switch-inset: 2px;
   --switch-state: var(--dur-state) var(--ease-out);
 
+  /* Menu: as wide as its longest item within these; ten items, then it scrolls. */
+  --menu-min-width: 200px;
+  --menu-max-width: 320px;
+  --menu-max-items: 10;
+  --menu-radio-dot: 6px;
+  --menu-enter: var(--dur-layer) var(--ease-out);
+  --menu-exit: var(--dur-exit) var(--ease-in);
+
   /* Popover */
   --popover-width: 300px;
   --popover-width-wide: 360px;

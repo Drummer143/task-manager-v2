@@ -10,6 +10,7 @@
   },
   "private": true,
   "dependencies": {
+    "@zag-js/menu": "1.44.0",
     "@zag-js/popover": "1.44.0",
     "@zag-js/react": "1.44.0",
     "react": "19.0.0",
