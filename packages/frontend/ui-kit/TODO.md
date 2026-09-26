@@ -46,3 +46,28 @@ type ConflictPopoverProps<V> = {
 8. Tests: the keys above, no pre-selection, Esc keeps the conflict, "Copy mine"
    for text. Stories: in a table cell (status, assignee) and for a title, light
    and dark surfaces.
+
+## Tree virtualization
+
+**File:** `src/components/Tree/Tree.tsx` (+ spec)
+
+**Spec:** the Tree component doc, section 05 (API and rules): "virtualization from 200 visible nodes; the row height is fixed".
+
+**When it is needed:** when a real workspace has a page tree with more than ~200
+visible rows. Today every visible row is rendered; rows are memoized, so a cursor
+move re-renders two rows, but a first render or an expand of a large subtree
+renders all of them.
+
+**What it must do:**
+
+1. Window the rows once there are more than 200 visible: `--tree-row` is fixed
+   (read it from the tree's computed style — it changes with density), so the
+   offset of row `i` is `i × row`. No library needed; if one is added, it goes
+   in once for the tree, the table and the board.
+2. The cursor row, the renaming row and the drag source are always rendered
+   (aria-activedescendant must point at a node in the DOM; the rename field
+   must keep focus; the drag must not lose its source).
+3. `scrollIntoView` of the cursor and of the open page becomes "scroll the
+   scroller to the row's offset by the least shift".
+4. Drag and drop: the drop target is found from the pointer's offset in the
+   list, not `elementFromPoint`; the move animation plays only for rendered rows.

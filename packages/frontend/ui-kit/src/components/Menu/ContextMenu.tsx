@@ -9,6 +9,18 @@ export interface ContextMenuProps {
   /** One element: a card, a row, a tree node. It gets two handlers, nothing else. */
   children: React.ReactElement;
   'aria-label'?: string;
+  /** Opening from code — a composite widget whose focus is not on the row. */
+  ref?: React.Ref<ContextMenuHandle>;
+}
+
+export interface ContextMenuHandle {
+  /**
+   * Opens the menu at an element's bottom-left corner, as from the keyboard:
+   * closing brings focus back to `returnFocusTo` (default: the anchor). For
+   * widgets that keep focus on themselves and point at the active item (a tree
+   * with aria-activedescendant): Shift+F10 and the row's ⋯ both go here.
+   */
+  openAt(anchor: HTMLElement, returnFocusTo?: HTMLElement): void;
 }
 
 interface OpenRequest {
@@ -92,13 +104,9 @@ const LiveMenu: React.FC<{
  * there is no menu machine at all, so hundreds of cards each wrapped in one
  * cost two handlers. The element itself is never re-created.
  */
-export const ContextMenu: React.FC<ContextMenuProps> = ({ children, items, 'aria-label': ariaLabel }) => {
+export const ContextMenu: React.FC<ContextMenuProps> = ({ children, items, 'aria-label': ariaLabel, ref }) => {
   const [first, setFirst] = useState<OpenRequest | null>(null);
   const live = useRef<LiveMenuHandle>(null);
-
-  if (!isValidElement<ChildProps>(children)) {
-    return children;
-  }
 
   const ask = (request: OpenRequest) => {
     if (live.current) {
@@ -107,6 +115,14 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ children, items, 'aria
       setFirst(request);
     }
   };
+
+  useImperativeHandle(ref, () => ({
+    openAt: (anchor, returnFocusTo = anchor) => ask({ ...cornerOf(anchor), element: returnFocusTo }),
+  }));
+
+  if (!isValidElement<ChildProps>(children)) {
+    return children;
+  }
 
   return (
     <>

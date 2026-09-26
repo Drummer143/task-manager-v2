@@ -47,3 +47,5 @@ export type { TooltipInfo, TooltipPlacement } from './components/Tooltip';
 
 export { KitRoot, type KitRootProps } from './components/KitRoot';
 
+
+export * from './components/Tree';

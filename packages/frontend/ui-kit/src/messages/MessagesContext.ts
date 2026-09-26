@@ -47,6 +47,14 @@ export interface KitMessages {
   resizePanel: string;
   /** The × of a popover, a dialog. */
   close: string;
+  /** Tree: an expanded node with nothing inside, a node the user cannot open, children that did not load. */
+  treeEmpty: string;
+  treeNoAccess: string;
+  treeLoadFailed: string;
+  /** Tree: a row's actions and the rename field. */
+  treeAdd: string;
+  treeMore: string;
+  treeRename: string;
   /** "+N" of a tag list or an avatar stack: what readers hear. */
   more(count: number): string;
 }
@@ -60,6 +68,12 @@ export const DEFAULT_MESSAGES: KitMessages = {
   removeTag: 'Remove',
   assign: 'Assign',
   close: 'Close',
+  treeEmpty: 'No pages inside',
+  treeNoAccess: 'no access',
+  treeLoadFailed: 'Couldn’t load',
+  treeAdd: 'Add page inside',
+  treeMore: 'More',
+  treeRename: 'Page name',
   loading: 'Loading',
   refetching: 'Updating',
   dataSafe: 'Your changes are safe.',

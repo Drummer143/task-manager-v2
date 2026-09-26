@@ -1,5 +1,5 @@
 export { Menu, type MenuProps } from './Menu';
-export { ContextMenu, type ContextMenuProps } from './ContextMenu';
+export { ContextMenu, type ContextMenuProps, type ContextMenuHandle } from './ContextMenu';
 export type {
   MenuItem,
   MenuActionItem,

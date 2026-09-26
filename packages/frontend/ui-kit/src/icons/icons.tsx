@@ -12,3 +12,16 @@ export const ChevronRightIcon = createIcon('ChevronRightIcon', <path d="m9 18 6-
 
 /* The palette's and a filter's magnifier. */
 export const SearchIcon = createIcon('SearchIcon', <path d="m21 21-4.3-4.3M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14" />);
+
+/* A tree node's chevron: the glyph changes, it never rotates (spec: Tree · animations). */
+export const ChevronDownIcon = createIcon('ChevronDownIcon', <path d="m6 9 6 6 6-6" />);
+
+/* Add inside — a tree node's action. */
+export const PlusIcon = createIcon('PlusIcon', <path d="M12 5v14M5 12h14" />);
+
+/* More actions — the menu of a row. */
+export const MoreHorizontalIcon = createIcon(
+  'MoreHorizontalIcon',
+  <path d="M12 12h.01M19 12h.01M5 12h.01" />,
+  3,
+);

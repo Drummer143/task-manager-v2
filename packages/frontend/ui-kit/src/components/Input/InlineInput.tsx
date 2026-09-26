@@ -2,7 +2,7 @@ import React, { useCallback, useId, useLayoutEffect, useRef, useState } from 're
 import { cx } from '../../utils';
 import { tooltipProps } from '../Tooltip';
 import { useEscapeStack } from '../../interaction/escape';
-import { getChordPrefixes, getEventHotkeyString, useHotkeysStore } from '../../interaction/hotkeys';
+import { isAppHotkey } from '../../interaction/hotkeys';
 import { useAutoGrow } from './useAutoGrow';
 import { useMessages } from '../../messages';
 import styles from './InlineInput.module.scss';
@@ -70,12 +70,7 @@ const isTextKey = (event: React.KeyboardEvent) =>
  * A letter the app uses as a hotkey (J, K, S…) or as the first step of a
  * sequence (G in "g b") does not start an edit (spec 04) — the registry says which.
  */
-const isAppHotkey = (event: React.KeyboardEvent) => {
-  const { hotkeys, getHotkeyHandler } = useHotkeysStore.getState();
-  const step = getEventHotkeyString(event.nativeEvent);
-
-  return getHotkeyHandler(step) !== undefined || getChordPrefixes(Object.keys(hotkeys)).has(step);
-};
+const isAppLetter = (event: React.KeyboardEvent) => isAppHotkey(event.nativeEvent);
 
 /**
  * In-place editing (spec 04, mode "inline"). At rest it is just the text of its
@@ -179,7 +174,7 @@ export const InlineInput: React.FC<InlineInputProps> = ({
       return;
     }
 
-    if (isAppHotkey(event)) {
+    if (isAppLetter(event)) {
       return;
     }
 

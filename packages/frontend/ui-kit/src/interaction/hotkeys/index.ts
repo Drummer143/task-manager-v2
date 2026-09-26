@@ -5,3 +5,4 @@ export * from './helpers';
 export * from './chords';
 export * from './useRegisterHotkey';
 export * from './useListenHotkey';
+export * from './isAppHotkey';

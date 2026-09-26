@@ -1,0 +1,310 @@
+/* Tree (spec: Tree). A row is --tree-row high, each level indents by --tree-indent. */
+
+.tree {
+  // Beyond --tree-max-depth the indent stops growing (the path is in the tooltip).
+  --_levels: calc(var(--tree-max-depth) - 1);
+
+  padding: var(--sp-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-sunken);
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+  user-select: none;
+
+  // The cursor frame is the focus indicator; the ring is for a tree with no rows.
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible:not(:has([data-cursor])) {
+    outline: var(--border-width-strong) solid var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--tree-row);
+  padding-inline: calc(min(var(--_depth), var(--_levels)) * var(--tree-indent)) var(--sp-2);
+
+  border-radius: var(--radius-sm);
+  color: var(--tree-text);
+  cursor: pointer;
+
+  // Hover fades in; the cursor and the open page are instant (spec: Tree · animations).
+  transition:
+    background-color var(--tree-state),
+    transform var(--tree-move);
+
+  &:hover {
+    background-color: var(--bg-hover);
+  }
+
+  &[data-active] {
+    background-color: var(--bg-selected);
+    color: var(--text-primary);
+    font-weight: var(--weight-strong);
+    transition: transform var(--tree-move);
+  }
+
+  &[data-locked] {
+    color: var(--text-placeholder);
+  }
+
+  // A failed rename or move: a tint and a stripe on the left, like an inline cell.
+  &[data-error] {
+    background-color: var(--bg-danger-soft);
+    box-shadow: inset var(--border-width-strong) 0 0 0 var(--border-danger);
+  }
+
+  &[data-drag-source] {
+    opacity: var(--drag-source-opacity);
+    box-shadow: inset 0 0 0 var(--border-width) var(--border-strong);
+  }
+
+  // A drop "into": the row itself lights up.
+  &[data-drop='into'] {
+    background-color: var(--bg-selected);
+    box-shadow: inset 0 0 0 var(--border-width) var(--border-accent);
+  }
+
+  .tree:focus-within &[data-cursor] {
+    box-shadow: inset 0 0 0 var(--border-width) var(--border-accent);
+  }
+
+  // While dragging, only the drop target answers the pointer.
+  .tree[data-dragging] &:hover:not([data-active], [data-drop]) {
+    background-color: transparent;
+  }
+}
+
+/* The name, the icon and the counter — a link when the node has a page. */
+.main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  color: var(--text-muted);
+
+  > svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.meta {
+  flex: none;
+  color: var(--text-placeholder);
+  font-size: var(--type-meta);
+  font-weight: var(--weight-normal);
+  font-variant-numeric: var(--num-tabular);
+}
+
+/* The chevron and the actions: --tree-chevron square, whatever the density. */
+.tool {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tree-chevron);
+  height: var(--tree-chevron);
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  transition: background-color var(--tree-state);
+
+  &:hover {
+    background-color: var(--bg-active);
+  }
+
+  // A leaf keeps the chevron's place, so names line up.
+  &[data-leaf] {
+    visibility: hidden;
+  }
+
+  > svg {
+    width: var(--icon-size);
+    height: var(--icon-size);
+    stroke-width: var(--icon-stroke);
+
+    * {
+      vector-effect: non-scaling-stroke;
+    }
+  }
+}
+
+/* On hover and on the cursor the actions take the counter's place. */
+.actions {
+  display: none;
+  flex: none;
+  gap: var(--sp-1);
+
+  .row:hover &,
+  .tree:focus-within .row[data-cursor] & {
+    display: inline-flex;
+  }
+
+  .tree[data-dragging] .row:hover & {
+    display: none;
+  }
+}
+
+.row[data-has-actions]:hover .meta,
+.tree:focus-within .row[data-has-actions][data-cursor] .meta {
+  display: none;
+}
+
+.tree[data-dragging] .row[data-has-actions]:hover .meta {
+  display: inline;
+}
+
+.retry {
+  flex: none;
+  height: var(--tree-chevron);
+  margin: 0;
+  padding: 0 var(--sp-2);
+
+  border: 0;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--text-danger);
+  font: inherit;
+  font-size: var(--type-meta);
+  font-weight: var(--weight-normal);
+  cursor: pointer;
+
+  transition: background-color var(--tree-state);
+
+  &:hover {
+    background-color: var(--bg-danger-hover);
+  }
+}
+
+/* F2: the name becomes a field in place; the row keeps its height. */
+.rename {
+  flex: 1;
+  min-width: 0;
+  height: calc(var(--tree-row) - 2 * var(--sp-1));
+  margin: 0;
+  padding: 0 var(--sp-2);
+
+  border: 0;
+  border-radius: var(--radius-xs);
+  outline: none;
+  background-color: var(--bg-raised);
+  box-shadow: inset 0 0 0 var(--border-width-strong) var(--border-accent);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: var(--weight-normal);
+
+  // The accent frame is the focus indicator.
+  &:focus-visible {
+    outline: none;
+  }
+
+  &::selection {
+    background-color: var(--bg-selection);
+  }
+}
+
+/* The insertion line: from the indent of the level the node goes to, with a hollow knob. */
+.dropLine {
+  position: absolute;
+  inset-inline: calc(min(var(--_line-depth), var(--_levels)) * var(--tree-indent) + var(--tree-chevron)) 0;
+  height: var(--border-width-strong);
+  background-color: var(--border-accent);
+  pointer-events: none;
+
+  &[data-edge='top'] {
+    top: calc(var(--border-width-strong) / -2);
+  }
+
+  &[data-edge='bottom'] {
+    bottom: calc(var(--border-width-strong) / -2);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: calc((var(--border-width-strong) - var(--sp-3)) / 2);
+    left: calc(var(--sp-3) / -2);
+    width: var(--sp-3);
+    height: var(--sp-3);
+    border: var(--border-width-strong) solid var(--border-accent);
+    border-radius: var(--radius-full);
+    background-color: var(--bg-sunken);
+  }
+}
+
+/* Under an expanded node: loading, failed, empty — aligned with its children's names. */
+.note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--tree-row);
+  padding-inline: calc(
+      min(var(--_depth), var(--_levels)) * var(--tree-indent) + var(--tree-chevron) + var(--icon-size) + 2 * var(--sp-2)
+    )
+    var(--sp-2);
+  color: var(--text-placeholder);
+  font-size: var(--type-meta);
+  cursor: default;
+
+  > span:only-child {
+    flex: 1;
+  }
+}
+
+/* What follows the pointer: the row, lifted. Placed by transform, never re-rendered. */
+.ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-drag);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--tree-row);
+  padding-inline: calc(var(--tree-chevron) + var(--sp-2)) var(--sp-2);
+
+  border-radius: var(--radius-sm);
+  // Raised over the surface it came from: on inverse --bg-raised is a tint, not a fill.
+  background-color: var(--bg-surface);
+  background-image: linear-gradient(var(--bg-raised), var(--bg-raised));
+  box-shadow: var(--shadow-overlay);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  pointer-events: none;
+}

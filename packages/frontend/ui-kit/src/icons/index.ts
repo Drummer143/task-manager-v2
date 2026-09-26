@@ -1,2 +1,11 @@
 export { createIcon, type IconProps } from './createIcon';
-export { CheckIcon, ChevronRightIcon, MinusIcon, SearchIcon, XIcon } from './icons';
+export {
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  MinusIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
+  SearchIcon,
+  XIcon,
+} from './icons';

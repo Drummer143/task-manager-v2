@@ -67,7 +67,7 @@
    it is declared, so every such token is listed in BOTH sets.
 
    Dark theme, when its palette is ready: complete the DARK set with the tokens
-   it does not cover yet (canvas, sunken, selected, soft fills, states,
+   it does not cover yet (canvas, soft fills, states,
    shadows), then add `[data-theme='dark']` to its selector list.
    Surface selectors for the dark theme are already in place.
    ───────────────────────────────────────────────────────────── */
@@ -146,6 +146,9 @@
   /* Tag */
   --tag-neutral-bg: var(--c-n-150);
 
+  /* Tree: a node's label is a step softer than content text (spec: Tree · 04). */
+  --tree-text: color-mix(in srgb, var(--text-primary) 90%, transparent);
+
   /* Avatar: initials on a neutral tone picked by a hash of the id */
   --avatar-bg-1: var(--c-n-150);
   --avatar-bg-2: var(--c-n-200);
@@ -172,6 +175,9 @@
 [data-theme='dark'] [data-surface='default'] {
   --bg-surface: var(--c-n-900);
   --bg-raised: color-mix(in srgb, var(--c-n-50) 6%, transparent);
+  /* One step darker than the inverse surface (n-900) — as sunken is on light. */
+  --bg-sunken: var(--c-n-1000);
+  --bg-selected: color-mix(in srgb, var(--c-accent-400) 16%, transparent);
   --bg-hover: color-mix(in srgb, var(--c-n-50) 8%, transparent);
   --bg-active: color-mix(in srgb, var(--c-n-50) 14%, transparent);
   --bg-danger-hover: color-mix(in srgb, var(--c-danger-300) 12%, transparent);
@@ -197,9 +203,8 @@
 
   --bg-track: color-mix(in srgb, var(--c-n-50) 14%, transparent);
 
-  /* No sunken surface on inverse yet: both shapes are the same. */
   --skeleton: color-mix(in srgb, var(--c-n-50) 10%, transparent);
-  --skeleton-sunken: color-mix(in srgb, var(--c-n-50) 10%, transparent);
+  --skeleton-sunken: var(--c-n-800);
 
   --bg-accent-hover: color-mix(in srgb, var(--c-accent-400) 12%, transparent);
   --bg-accent-active: color-mix(in srgb, var(--c-accent) 22%, transparent);
@@ -218,6 +223,7 @@
 
   --text-on-accent: var(--c-accent-300);
   --tag-neutral-bg: color-mix(in srgb, var(--c-n-50) 10%, transparent);
+  --tree-text: color-mix(in srgb, var(--text-primary) 90%, transparent);
 
   --avatar-bg-1: var(--c-n-500);
   --avatar-bg-2: var(--c-n-600);
@@ -467,6 +473,25 @@
   --segmented-pad-x-sm: var(--sp-3);
   --segmented-state: var(--dur-state) var(--ease-out);
 
+  /* Tree (the page tree of the sidebar). The chevron and the icon do not change
+     with density; the row does (--tree-row). Deeper than --tree-max-depth the
+     indent stops growing and the path goes into the tooltip. */
+  --tree-indent: 16px;
+  --tree-chevron: 20px;
+  --tree-max-depth: 6;
+  --tree-state: var(--dur-state) var(--ease-out);
+  /* Siblings sliding into place after a move (a drop, mod+arrows). */
+  --tree-move: var(--dur-move) var(--ease-inout);
+  /* Hovering a collapsed node while dragging opens it after this long. */
+  --tree-hover-expand: 600ms;
+
+  /* Dragging near the edge of a scroll area scrolls it: this close to the edge,
+     this far per frame — linear, never in jerks (philosophy 09). */
+  --drag-autoscroll-zone: 32px;
+  --drag-autoscroll-step: 8px;
+  /* What is being dragged stays in its place as a ghost of itself. */
+  --drag-source-opacity: 0.45;
+
   --undo-window: 8000ms;
   --tooltip-delay: 400ms;
   --highlight-remote: 400ms;
@@ -507,6 +532,8 @@
 
   /* Segmented: the view switcher (md); sm reads --control-height-sm */
   --segmented-height: 28px;
+
+  --tree-row: 28px;
 }
 [data-density='compact'] {
   --row-height: 28px;
@@ -526,6 +553,8 @@
 
   /* Segmented */
   --segmented-height: 24px;
+
+  --tree-row: 24px;
 }
 [data-density='comfortable'] {
   --row-height: 44px;
@@ -545,6 +574,8 @@
 
   /* Segmented */
   --segmented-height: 32px;
+
+  --tree-row: 32px;
 }
 
 /* ─── Reduced motion ─── */
