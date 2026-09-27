@@ -1,0 +1,159 @@
+name: Build images
+
+# Images are described in .github/images.json (name, Dockerfile, compose service, watched paths).
+# - push to main: builds only images whose paths changed, then deploys `latest`
+# - manual run: builds the listed images; optionally deploys exactly those images by commit sha
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      images:
+        description: "Images to build: comma-separated names from .github/images.json, or 'all'"
+        required: true
+        default: "all"
+        type: string
+      deploy:
+        description: "Deploy the built images after the build"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: build-images-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      any: ${{ steps.plan.outputs.any }}
+      images: ${{ steps.plan.outputs.images }}
+      config: ${{ steps.plan.outputs.config }}
+      sha_tag: ${{ steps.plan.outputs.sha_tag }}
+      image_prefix: ${{ steps.plan.outputs.image_prefix }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Generate path filters from the catalog
+        id: filters
+        run: |
+          {
+            echo 'filters<<EOF'
+            jq -r '.[] | "\(.name):", (.paths[] | "  - \"\(.)\"")' .github/images.json
+            # Deploy config (compose, Caddyfile, blueprints) triggers a deploy even without image changes
+            echo 'deploy-config:'
+            echo "  - 'docker/**'"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: dorny/paths-filter@v4
+        id: changes
+        if: github.event_name == 'push'
+        with:
+          filters: ${{ steps.filters.outputs.filters }}
+
+      - name: Resolve images to build
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          CHANGES: ${{ steps.changes.outputs.changes || '[]' }}
+          REQUESTED: ${{ inputs.images }}
+        run: |
+          set -euo pipefail
+          catalog=.github/images.json
+          all=$(jq -c '[.[].name]' "$catalog")
+
+          if [ "$EVENT" = "push" ]; then
+            selected=$(jq -c --argjson all "$all" '[.[] | select(. as $n | any($all[]; . == $n))]' <<<"$CHANGES")
+            config=$(jq -r 'any(.[]; . == "deploy-config")' <<<"$CHANGES")
+          elif [ "$REQUESTED" = "all" ]; then
+            selected=$all
+            config=false
+          else
+            selected=$(jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0)) | unique' <<<"$REQUESTED")
+            unknown=$(jq -r --argjson all "$all" 'map(select(. as $n | any($all[]; . == $n) | not)) | join(", ")' <<<"$selected")
+            if [ -n "$unknown" ]; then
+              echo "::error::Unknown image(s): $unknown. Available: $(jq -r 'join(", ")' <<<"$all")"
+              exit 1
+            fi
+            config=false
+          fi
+
+          matrix=$(jq -c --argjson sel "$selected" '[.[] | select(.name as $n | any($sel[]; . == $n))]' "$catalog")
+          {
+            echo "matrix=$matrix"
+            echo "any=$(jq -r 'length > 0' <<<"$matrix")"
+            echo "images=$(jq -r 'join(",")' <<<"$selected")"
+            echo "config=$config"
+            echo "sha_tag=${GITHUB_SHA::7}"
+            echo "image_prefix=ghcr.io/${GITHUB_REPOSITORY,,}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Images to build: $(jq -r 'if length == 0 then "none" else join(", ") end' <<<"$selected")"
+
+  build:
+    name: Build ${{ matrix.image.name }}
+    needs: plan
+    if: needs.plan.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v6
+        id: meta
+        with:
+          images: ${{ needs.plan.outputs.image_prefix }}/${{ matrix.image.name }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.image.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Frontend build-time config; Dockerfiles that do not declare these args ignore them
+          build-args: |
+            VITE_AUTHORITY=${{ vars.VITE_AUTHORITY }}
+            VITE_CLIENT_ID=${{ vars.VITE_CLIENT_ID }}
+            VITE_REDIRECT_URI=${{ vars.VITE_REDIRECT_URI }}
+            VITE_POST_LOGOUT_REDIRECT_URI=${{ vars.VITE_POST_LOGOUT_REDIRECT_URI }}
+          cache-from: type=gha,scope=${{ matrix.image.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
+
+  deploy:
+    name: Deploy
+    needs: [plan, build]
+    if: |
+      !cancelled() && needs.plan.result == 'success' && needs.build.result != 'failure' && (
+        (github.event_name == 'push' && (needs.plan.outputs.any == 'true' || needs.plan.outputs.config == 'true')) ||
+        (github.event_name == 'workflow_dispatch' && inputs.deploy && needs.plan.outputs.any == 'true')
+      )
+    uses: ./.github/workflows/deploy.yml
+    with:
+      # push to main: roll the whole stack to `latest`; manual run: exactly the images built here
+      image_tag: ${{ github.event_name == 'push' && 'latest' || needs.plan.outputs.sha_tag }}
+      images: ${{ github.event_name == 'push' && 'all' || needs.plan.outputs.images }}
+    secrets: inherit

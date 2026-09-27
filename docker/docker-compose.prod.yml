@@ -180,7 +180,7 @@ services:
     task-manager:
         restart: unless-stopped
         container_name: task-manager
-        image: ghcr.io/drummer143/task-manager/task-manager:${IMAGE_TAG:-latest}
+        image: ghcr.io/drummer143/task-manager-v2/task-manager:${IMAGE_TAG:-latest}
         build:
             context: ..
             dockerfile: docker/Dockerfile.frontend

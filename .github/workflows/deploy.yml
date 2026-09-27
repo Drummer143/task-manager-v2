@@ -1,0 +1,132 @@
+name: Deploy
+
+# Syncs docker/ and the prod .env to the VPS, then pulls and restarts images.
+# - images = 'all': every service in the compose file is pulled and brought up (unchanged ones keep running)
+# - images = list:  only those app services are pulled and recreated, dependencies are left as they are
+# A commit sha tag exists only for images built at that commit, so use it together with an image list
+# (e.g. rollback: image_tag=<sha>, images=task-manager).
+#
+# Required secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY, PROD_ENV_FILE (contents of .env.site)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy: latest, a branch name or a short commit sha"
+        required: true
+        default: "latest"
+        type: string
+      images:
+        description: "Images to deploy: comma-separated names from .github/images.json, or 'all'"
+        required: true
+        default: "all"
+        type: string
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      images:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.images }} @ ${{ inputs.image_tag }}
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve compose services
+        id: resolve
+        env:
+          REQUESTED: ${{ inputs.images }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "::error::Invalid image tag: $IMAGE_TAG"
+            exit 1
+          fi
+
+          if [ "$REQUESTED" = "all" ]; then
+            echo "services=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          catalog=.github/images.json
+          selected=$(jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0)) | unique' <<<"$REQUESTED")
+          unknown=$(jq -r --slurpfile c "$catalog" 'map(select(. as $n | any($c[0][]; .name == $n) | not)) | join(", ")' <<<"$selected")
+          if [ -n "$unknown" ]; then
+            echo "::error::Unknown image(s): $unknown. Available: $(jq -r '[.[].name] | join(", ")' "$catalog")"
+            exit 1
+          fi
+          services=$(jq -r --argjson sel "$selected" '[.[] | select(.name as $n | any($sel[]; . == $n)) | .compose_service] | join(" ")' "$catalog")
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare VPS and write .env
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: PROD_ENV_FILE
+          script: |
+            set -eu
+            mkdir -p ~/task-manager
+            # Drop the previous copy so removed files (e.g. authentik blueprints) do not linger
+            rm -rf ~/task-manager/docker
+            umask 077
+            printf '%s\n' "$PROD_ENV_FILE" > ~/task-manager/.env
+
+      - name: Copy docker/ to VPS
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "docker/"
+          target: "~/task-manager"
+
+      - name: Pull and restart
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          SERVICES: ${{ steps.resolve.outputs.services }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: IMAGE_TAG,SERVICES,GHCR_USER,GHCR_TOKEN
+          script: |
+            set -eu
+            cd ~/task-manager
+            export IMAGE_TAG
+
+            # Short-lived job token; logged out again whatever happens below
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+
+            compose="docker compose -f docker/docker-compose.prod.yml --env-file .env"
+            if [ -n "$SERVICES" ]; then
+              $compose pull $SERVICES
+              $compose up -d --no-deps $SERVICES
+            else
+              $compose pull
+              $compose up -d --remove-orphans
+            fi
+
+            $compose ps
+            docker image prune -f
