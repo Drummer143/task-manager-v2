@@ -12,3 +12,7 @@ dist
 coverage
 storybook-static
 test-output
+
+# Rust: the builder image already ships the pinned toolchain; the file would make rustup fetch extra components
+target
+rust-toolchain.toml

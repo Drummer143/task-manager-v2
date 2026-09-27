@@ -60,3 +60,5 @@ storybook-static
 .env
 .env.site
 .env.tunnel
+# Rust
+/target/

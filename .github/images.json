@@ -14,5 +14,19 @@
       "docker/Dockerfile.frontend",
       "docker/nginx.frontend.conf"
     ]
+  },
+  {
+    "name": "main-service",
+    "dockerfile": "docker/Dockerfile.rust",
+    "compose_service": "main-service",
+    "build_args": "APP_NAME=main_service",
+    "paths": [
+      "apps/main_service/**",
+      "Cargo.toml",
+      "Cargo.lock",
+      "rust-toolchain.toml",
+      ".dockerignore",
+      "docker/Dockerfile.rust"
+    ]
   }
 ]

@@ -1,0 +1,25 @@
+# Builds one binary of the cargo workspace: --build-arg APP_NAME=<package> (package and binary share the name)
+ARG CHEF_IMAGE=lukemathwalker/cargo-chef:0.1.78-rust-1.98.1-slim-trixie
+ARG RUNNER_IMAGE=gcr.io/distroless/cc-debian13:nonroot
+
+FROM ${CHEF_IMAGE} AS chef
+WORKDIR /app
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# Dependencies are built from the recipe only, so source changes do not invalidate this layer
+FROM chef AS builder
+ARG APP_NAME
+RUN test -n "$APP_NAME" || (echo "APP_NAME build arg is required" && exit 1)
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --locked -p ${APP_NAME} --recipe-path recipe.json
+
+COPY . .
+RUN cargo build --release --locked -p ${APP_NAME} \
+    && cp target/release/${APP_NAME} /app/service
+
+FROM ${RUNNER_IMAGE} AS runner
+COPY --from=builder /app/service /usr/local/bin/service
+ENTRYPOINT ["/usr/local/bin/service"]

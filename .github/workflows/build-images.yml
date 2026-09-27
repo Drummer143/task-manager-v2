@@ -134,12 +134,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Frontend build-time config; Dockerfiles that do not declare these args ignore them
+          # VITE_*: frontend build-time config, ignored by Dockerfiles that do not declare them.
+          # Per-image args come from `build_args` in .github/images.json.
           build-args: |
             VITE_AUTHORITY=${{ vars.VITE_AUTHORITY }}
             VITE_CLIENT_ID=${{ vars.VITE_CLIENT_ID }}
             VITE_REDIRECT_URI=${{ vars.VITE_REDIRECT_URI }}
             VITE_POST_LOGOUT_REDIRECT_URI=${{ vars.VITE_POST_LOGOUT_REDIRECT_URI }}
+            ${{ matrix.image.build_args }}
           cache-from: type=gha,scope=${{ matrix.image.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
 
