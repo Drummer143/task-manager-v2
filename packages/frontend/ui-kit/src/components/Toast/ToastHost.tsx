@@ -7,7 +7,7 @@ import { useDocumentHidden } from '../../hooks';
 import { useSingleInstance } from '../../hooks/useSingleInstance';
 import { useMessages, type KitMessages } from '../../messages';
 import { isTypingTarget } from '../../interaction/hotkeys';
-import { undoHistory, useUndoStore } from '../../interaction/undo';
+import { undoHistory, useUndoStore, type UndoEntry } from '../../interaction/undo';
 import { usePresence } from '../../overlay';
 import { Button, IconButton } from '../Button';
 import { matchKeys } from '../Kbd';
@@ -63,22 +63,31 @@ const usePause = () => {
   };
 };
 
-/** Undo, or redo, with the failure said out loud: the entry stays in the history to be tried again. */
+/**
+ * Undo, or redo, with the failure said out loud. A failed operation leaves the
+ * history at once — the next mod+Z goes on to the one before it; Retry in the
+ * error toast tries that same operation again, for as long as the toast is there.
+ */
 const useRunUndo = (messages: KitMessages) => {
-  const run = (redo: boolean, id?: string) => {
-    const { past, future } = useUndoStore.getState();
-    const entry = redo ? future[future.length - 1] : id ? past.find((item) => item.id === id) : past[past.length - 1];
+  const failed = (entry: UndoEntry, step: 'undo' | 'redo') => () =>
+    toast.error({
+      message: messages.undoFailed(entry.label),
+      retry: () => {
+        undoHistory.retry(entry, step).catch(failed(entry, step));
+      },
+    });
 
-    if (!entry || (redo && !entry.redo)) {
+  return (redo: boolean, id?: string) => {
+    const step = redo ? 'redo' : 'undo';
+    // The toast's own operation wherever it was done; mod+Z — the next one in reach here.
+    const entry = id ? useUndoStore.getState().past.find((item) => item.id === id) : undoHistory.next(step);
+
+    if (!entry) {
       return;
     }
 
-    (redo ? undoHistory.redo() : undoHistory.undo(entry.id)).catch(() =>
-      toast.error({ message: messages.undoFailed(entry.label), retry: () => run(redo, entry.id) }),
-    );
+    (redo ? undoHistory.redo() : undoHistory.undo(entry.id)).catch(failed(entry, step));
   };
-
-  return run;
 };
 
 const lifetimeOf = (item: ActionToast) =>

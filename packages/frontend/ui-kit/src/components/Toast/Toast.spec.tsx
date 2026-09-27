@@ -37,6 +37,7 @@ beforeEach(() => {
   Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
   useToastStore.setState(INITIAL, true);
   undoHistory.clear();
+  undoHistory.setScope(null);
 });
 
 afterEach(() => {
@@ -135,6 +136,38 @@ describe('Toast', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
       await flush();
       expect(undo).toHaveBeenCalledTimes(2);
+      expect(toastEl('action')).toBeNull();
+    });
+
+    it('a failed undo does not block: the next mod+Z undoes the operation before it', async () => {
+      const earlier = vi.fn();
+
+      render(<ToastHost />);
+      act(() => void toast.undo({ message: 'Moved', undo: earlier }));
+      act(() => void toast.undo({ message: 'Status set to Blocked', undo: () => Promise.reject(new Error('offline')) }));
+
+      pressUndo();
+      await flush();
+      expect(inLanes().getByText('Couldn’t undo “Status set to Blocked”')).toBeTruthy();
+
+      pressUndo();
+      await flush();
+      expect(earlier).toHaveBeenCalledTimes(1);
+    });
+
+    it('a Retry that fails again says so again', async () => {
+      const undo = vi.fn().mockRejectedValue(new Error('offline'));
+
+      render(<ToastHost />);
+      act(() => void toast.undo({ message: 'Status set to Blocked', undo }));
+
+      pressUndo();
+      await flush();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      await flush();
+
+      expect(undo).toHaveBeenCalledTimes(2);
+      expect(inLanes().getByText('Couldn’t undo “Status set to Blocked”')).toBeTruthy();
     });
   });
 
