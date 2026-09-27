@@ -4,6 +4,7 @@ export * from './hooks';
 export * from './interaction/cursor';
 export * from './interaction/escape';
 export * from './interaction/layers';
+export * from './interaction/undo';
 export * from './router';
 export * from './messages';
 
@@ -49,3 +50,5 @@ export { KitRoot, type KitRootProps } from './components/KitRoot';
 
 
 export * from './components/Tree';
+
+export * from './components/Toast';

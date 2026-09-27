@@ -67,6 +67,8 @@
 /* ── Canvas ── */
 
 .main {
+  // The toast area (spec: Toast · 03): toasts are placed against it.
+  position: relative;
   grid-column: 2;
   grid-row: 1;
   display: flex;

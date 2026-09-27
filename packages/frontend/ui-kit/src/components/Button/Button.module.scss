@@ -24,6 +24,13 @@
     cursor: pointer;
   }
 
+  /* A colored button's hotkey is in its color: a muted grey reads as someone else's text there.
+     A neutral button keeps the muted hint, as menus and fields do. */
+  &.primary .keys,
+  &.danger .keys {
+    color: inherit;
+  }
+
   /* variants */
   &.primary {
     border: var(--border-width) solid var(--border-accent);

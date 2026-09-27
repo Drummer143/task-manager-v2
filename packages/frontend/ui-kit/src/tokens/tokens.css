@@ -149,6 +149,9 @@
   /* Tree: a node's label is a step softer than content text (spec: Tree · 04). */
   --tree-text: color-mix(in srgb, var(--text-primary) 90%, transparent);
 
+  /* Toast: the timer strip of an undo or a notification (a toast on a dark canvas). */
+  --toast-timer: color-mix(in srgb, var(--c-n-1000) 20%, transparent);
+
   /* Avatar: initials on a neutral tone picked by a hash of the id */
   --avatar-bg-1: var(--c-n-150);
   --avatar-bg-2: var(--c-n-200);
@@ -224,6 +227,7 @@
   --text-on-accent: var(--c-accent-300);
   --tag-neutral-bg: color-mix(in srgb, var(--c-n-50) 10%, transparent);
   --tree-text: color-mix(in srgb, var(--text-primary) 90%, transparent);
+  --toast-timer: color-mix(in srgb, var(--c-n-50) 30%, transparent);
 
   --avatar-bg-1: var(--c-n-500);
   --avatar-bg-2: var(--c-n-600);
@@ -492,6 +496,22 @@
   /* What is being dragged stays in its place as a ghost of itself. */
   --drag-source-opacity: 0.45;
 
+  /* Toast (spec: Toast). One action toast at the bottom centre of the canvas;
+     a notification in its own lane above it. */
+  --toast-height: 40px;
+  --toast-max-width: 520px;
+  --notify-width: 400px;
+  --toast-enter: var(--dur-layer) var(--ease-out);
+  --toast-exit: var(--dur-exit) var(--ease-in);
+  /* How far a toast rises as it appears; reduced motion keeps it still. */
+  --toast-enter-shift: 6px;
+  --toast-timer-height: 2px;
+  /* How long a note and a notification live; an undo lives --undo-window. */
+  --toast-note: 3000ms;
+  --notify-duration: 6000ms;
+  /* A notification toast at most once in this long (JS). */
+  --notify-gap: 30000ms;
+
   --undo-window: 8000ms;
   --tooltip-delay: 400ms;
   --highlight-remote: 400ms;
@@ -597,6 +617,9 @@
     --skeleton-pulse: 0ms;
     /* The palette opens at once under reduced motion (tokens 07b). */
     --palette-enter: 0ms;
+    /* A toast appears at once; it still fades out (--dur-exit 60 ms). */
+    --toast-enter: 0ms;
+    --toast-enter-shift: 0px;
   }
 }
 

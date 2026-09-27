@@ -1,0 +1,218 @@
+/* Toast (spec: Toast). Bottom centre of the canvas; a notification's lane above the action toast. */
+
+.viewport {
+  position: fixed;
+  inset-inline: 0;
+  bottom: var(--sp-5);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  // Never wider than the canvas minus 16 px at each side.
+  padding-inline: var(--sp-5);
+  // The empty lanes let clicks through to the canvas.
+  pointer-events: none;
+
+  // Inside the canvas column (AppShell), not over the whole window.
+  &[data-contained] {
+    position: absolute;
+  }
+}
+
+.toast {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: var(--toast-height);
+  max-width: min(var(--toast-max-width), 100%);
+  padding-block: var(--sp-2);
+  padding-inline: var(--sp-4) var(--sp-2);
+  overflow: hidden;
+
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  box-shadow: var(--shadow-overlay);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+  pointer-events: auto;
+
+  animation: toast-enter var(--toast-enter) both;
+
+  // A replacement has no exit — only a toast that goes and leaves the place empty.
+  &[data-leaving] {
+    animation: toast-exit var(--toast-exit) forwards;
+    pointer-events: none;
+  }
+
+  // A note has no actions: even padding.
+  &[data-kind='note'] {
+    padding-inline-end: var(--sp-4);
+  }
+
+  // The notification: an avatar and two lines, as in the inbox.
+  &[data-kind='notify'] {
+    align-items: flex-start;
+    gap: var(--sp-3);
+    width: min(var(--notify-width), 100%);
+    padding-block: var(--sp-3);
+    padding-inline-start: var(--sp-4);
+    cursor: pointer;
+
+    &:hover {
+      box-shadow:
+        var(--shadow-overlay),
+        inset 0 0 0 var(--border-width) var(--border-hairline);
+    }
+  }
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+
+  &[data-error] {
+    color: var(--text-danger);
+  }
+
+  > svg {
+    width: 100%;
+    height: 100%;
+    stroke-width: var(--icon-stroke);
+
+    * {
+      vector-effect: non-scaling-stroke;
+    }
+  }
+}
+
+.message {
+  flex: 1;
+  min-width: 0;
+  font-variant-numeric: var(--num-tabular);
+}
+
+.detail {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}
+
+.avatar {
+  display: inline-flex;
+  flex: none;
+  margin-top: var(--sp-1);
+}
+
+/* Both lines are cut; the buttons never are (spec: Toast · 07). */
+.title,
+.context,
+.more {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.title b,
+.title strong {
+  font-weight: var(--weight-strong);
+}
+
+.context,
+.more {
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}
+
+.more {
+  margin-top: var(--sp-1);
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+/* How long an undo (or a notification) has left: it stands while the toast is paused. */
+.timer {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: var(--toast-timer-height);
+  background-color: var(--toast-timer);
+  transform-origin: left;
+  animation: toast-timer var(--undo-window) linear forwards;
+
+  .toast[data-kind='notify'] & {
+    animation-duration: var(--notify-duration);
+  }
+
+  .toast[data-paused] & {
+    animation-play-state: paused;
+  }
+
+  // A paused notification hides its strip — and keeps its place in time.
+  .toast[data-kind='notify'][data-paused] & {
+    visibility: hidden;
+  }
+}
+
+.progress {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: var(--visually-hidden-size);
+  height: var(--visually-hidden-size);
+  margin: calc(var(--visually-hidden-size) * -1);
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--toast-enter-shift));
+  }
+}
+
+@keyframes toast-exit {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes toast-timer {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
+// The strip is motion by itself: under reduced motion it is not drawn (spec: Toast · animations).
+@media (prefers-reduced-motion: reduce) {
+  .timer {
+    display: none;
+  }
+}

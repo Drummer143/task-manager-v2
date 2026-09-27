@@ -91,7 +91,7 @@ export const Button: React.FC<ButtonProps> = ({
       {children}
 
       {/* No room for it next to an icon alone: there it lives in the tooltip. */}
-      {keys && !iconOnly && <Kbd keys={keys} variant="inline" />}
+      {keys && !iconOnly && <Kbd keys={keys} variant="inline" className={styles.keys} />}
     </>
   );
   const reason = disabled && disabledReason ? disabledReason : undefined;

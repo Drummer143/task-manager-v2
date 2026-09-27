@@ -55,6 +55,14 @@ export interface KitMessages {
   treeAdd: string;
   treeMore: string;
   treeRename: string;
+  /** Toasts: the buttons, the region readers land in, a notification's "+N more", a failed undo. */
+  toastUndo: string;
+  toastDismiss: string;
+  toastCancel: string;
+  toastOpen: string;
+  toastRegion: string;
+  notifyMore(count: number): string;
+  undoFailed(label: string): string;
   /** "+N" of a tag list or an avatar stack: what readers hear. */
   more(count: number): string;
 }
@@ -74,6 +82,13 @@ export const DEFAULT_MESSAGES: KitMessages = {
   treeAdd: 'Add page inside',
   treeMore: 'More',
   treeRename: 'Page name',
+  toastUndo: 'Undo',
+  toastDismiss: 'Dismiss',
+  toastCancel: 'Cancel',
+  toastOpen: 'Open',
+  toastRegion: 'Notifications',
+  notifyMore: (count) => `+${count} more in Inbox`,
+  undoFailed: (label) => `Couldn’t undo “${label}”`,
   loading: 'Loading',
   refetching: 'Updating',
   dataSafe: 'Your changes are safe.',

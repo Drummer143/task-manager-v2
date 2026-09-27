@@ -7,7 +7,8 @@ import { HOTKEY_CHORD_WINDOW_MS } from './constants';
 let listersCount = 0;
 let chordState: ChordState = IDLE_CHORD_STATE;
 
-const isTypingTarget = (target: EventTarget | null) =>
+/** Keys typed into a field belong to the field: its own undo, its letters. */
+export const isTypingTarget = (target: EventTarget | null) =>
   target instanceof HTMLInputElement ||
   target instanceof HTMLTextAreaElement ||
   target instanceof HTMLSelectElement ||

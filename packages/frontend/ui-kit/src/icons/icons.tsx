@@ -16,6 +16,9 @@ export const SearchIcon = createIcon('SearchIcon', <path d="m21 21-4.3-4.3M11 18
 /* A tree node's chevron: the glyph changes, it never rotates (spec: Tree · animations). */
 export const ChevronDownIcon = createIcon('ChevronDownIcon', <path d="m6 9 6 6 6-6" />);
 
+/* Something failed — an error toast. */
+export const AlertIcon = createIcon('AlertIcon', <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M12 8v4M12 16h.01" />);
+
 /* Add inside — a tree node's action. */
 export const PlusIcon = createIcon('PlusIcon', <path d="M12 5v14M5 12h14" />);
 

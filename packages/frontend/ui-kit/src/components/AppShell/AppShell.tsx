@@ -4,6 +4,7 @@ import { useMessages } from '../../messages';
 import { useEscapeStack } from '../../interaction/escape/useEscapeStack';
 import { usePresence } from '../../overlay';
 import { Resizer } from '../Resizer';
+import { useToastArea } from '../Toast/ToastHost';
 import { panelMaxFor, resolveShell, type ShellLayout, type ShellPrefs } from './resolveShell';
 import { STORAGE_KEY, readPrefs, useShellStore } from './shellStore';
 import { SidebarContext, sidebarState } from './SidebarContext';
@@ -76,6 +77,10 @@ export const AppShell: React.FC<AppShellProps> = ({
   const shellRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
+
+  // Toasts stand at the bottom centre of the canvas column, not of the window (spec: Toast · 03).
+  useToastArea(mainRef);
   const panelRef = useRef<HTMLElement>(null);
 
   const vw = useShellStore((state) => state.vw);
@@ -346,7 +351,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         />
       )}
 
-      <div className={styles.main}>
+      <div ref={mainRef} className={styles.main}>
         <header className={styles.header}>{header}</header>
         <main
           ref={canvasRef}
