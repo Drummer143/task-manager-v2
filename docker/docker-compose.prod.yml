@@ -43,6 +43,7 @@ services:
             - net
         depends_on:
             - task-manager
+            - socket-server
             - authentik_server
 
     postgres:
@@ -220,6 +221,29 @@ services:
                 limits:
                     memory: 128M
                     cpus: "0.5"
+        networks:
+            - net
+
+    # Served by caddy under {$DOMAIN}/socket/*, same origin as the frontend,
+    # so Phoenix check_origin passes with PHX_HOST = DOMAIN
+    socket-server:
+        restart: unless-stopped
+        container_name: socket-server
+        image: ghcr.io/drummer143/task-manager-v2/socket-server:${IMAGE_TAG:-latest}
+        build:
+            context: ..
+            dockerfile: docker/Dockerfile.elixir
+            args:
+                APP_NAME: socket_server
+        environment:
+            SECRET_KEY_BASE: ${SECRET_KEY_BASE:?SECRET_KEY_BASE is required}
+            PHX_HOST: ${DOMAIN}
+            SOCKET_SERVER_PORT: 4000
+        deploy:
+            resources:
+                limits:
+                    memory: 256M
+                    cpus: "0.25"
         networks:
             - net
 

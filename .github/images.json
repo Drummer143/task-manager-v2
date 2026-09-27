@@ -28,5 +28,19 @@
       ".dockerignore",
       "docker/Dockerfile.rust"
     ]
+  },
+  {
+    "name": "socket-server",
+    "dockerfile": "docker/Dockerfile.elixir",
+    "compose_service": "socket-server",
+    "build_args": "APP_NAME=socket_server",
+    "paths": [
+      "apps/socket_server/**",
+      "config/**",
+      "mix.exs",
+      "mix.lock",
+      ".dockerignore",
+      "docker/Dockerfile.elixir"
+    ]
   }
 ]

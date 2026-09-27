@@ -60,5 +60,14 @@ storybook-static
 .env
 .env.site
 .env.tunnel
+
 # Rust
 /target/
+
+# Elixir (umbrella at repo root)
+/_build/
+/deps/
+/cover/
+/doc/
+erl_crash.dump
+*.ez

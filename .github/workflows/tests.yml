@@ -30,8 +30,22 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '27'
+          elixir-version: '1.18'
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
+          mix deps.get
 
       - name: Unit tests with coverage
         run: pnpm nx run-many -t test --coverage --output-style=static

@@ -1,6 +1,14 @@
 {$DOMAIN} {
     encode zstd gzip
-    reverse_proxy task-manager:80
+
+    # Phoenix sockets live under /socket (e.g. /socket/websocket); the path is passed through as is
+    handle /socket/* {
+        reverse_proxy socket-server:4000
+    }
+
+    handle {
+        reverse_proxy task-manager:80
+    }
 }
 
 auth.{$DOMAIN} {
