@@ -1,0 +1,70 @@
+{
+  "name": "error_handlers",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/rust/error_handlers/src",
+  "projectType": "library",
+  "tags": [
+    "lang:rust"
+  ],
+  "namedInputs": {
+    "rust": [
+      "{projectRoot}/**/*",
+      "{workspaceRoot}/Cargo.toml",
+      "{workspaceRoot}/Cargo.lock",
+      "{workspaceRoot}/rust-toolchain.toml"
+    ]
+  },
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo build -p error_handlers",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "rust"
+      ],
+      "options": {
+        "command": "cargo test -p error_handlers --all-features",
+        "cwd": "{workspaceRoot}",
+        "forwardAllArgs": false
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "rust"
+      ],
+      "options": {
+        "commands": [
+          "cargo fmt -p error_handlers -- --check",
+          "cargo clippy -p error_handlers --all-features --all-targets -- -D warnings"
+        ],
+        "parallel": false,
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo fmt -p error_handlers",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "update-snapshot": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo test -p error_handlers --all-features --test catalog_snapshot",
+        "env": {
+          "UPDATE_SNAPSHOT": "1"
+        },
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

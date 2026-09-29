@@ -1,6 +1,10 @@
 [workspace]
 resolver = "3"
-members = ["apps/main_service"]
+members = [
+    "apps/main_service",
+    "apps/storage_service",
+    "packages/rust/error_handlers",
+]
 
 [workspace.package]
 edition = "2024"
@@ -10,6 +14,8 @@ publish = false
 [workspace.dependencies]
 anyhow = "1.0.104"
 axum = "0.8.9"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
 sqlx = { version = "0.9.0", default-features = false, features = [
     "runtime-tokio",
     "tls-rustls-ring-webpki",
@@ -17,9 +23,18 @@ sqlx = { version = "0.9.0", default-features = false, features = [
     "migrate",
     "macros",
 ] }
-tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "net", "signal"] }
+tokio = { version = "1.53.1", features = [
+    "macros",
+    "rt-multi-thread",
+    "net",
+    "signal",
+] }
+tower = { version = "0.5.3", features = ["util", "timeout"] }
+tower-http = { version = "0.7.1", features = ["catch-panic"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+utoipa = "6.0.0"
+uuid = { version = "1.26.1", features = ["v4"] }
 
 [profile.release]
 lto = "thin"

@@ -1,0 +1,31 @@
+[package]
+name = "error_handlers"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+default = ["axum"]
+axum = ["dep:axum", "dep:tokio", "dep:tower", "dep:tower-http", "dep:uuid"]
+sqlx = ["dep:sqlx"]
+openapi = ["dep:utoipa"]
+
+[dependencies]
+axum = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+sqlx = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["time"] }
+tower = { workspace = true, optional = true }
+tower-http = { workspace = true, optional = true }
+tracing.workspace = true
+utoipa = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
+
+[dev-dependencies]
+uuid.workspace = true
+
+[[example]]
+name = "error_codes"
+required-features = ["openapi"]

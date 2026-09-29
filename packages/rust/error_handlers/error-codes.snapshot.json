@@ -1,0 +1,183 @@
+[
+  {
+    "code": "VALIDATION_FAILED",
+    "status": 422,
+    "type": "urn:task-manager:error:validation-failed",
+    "description": "The request failed validation; see `errors` for per-field details.",
+    "params": [],
+    "example": {
+      "code": "VALIDATION_FAILED",
+      "errors": [
+        {
+          "code": "REQUIRED",
+          "field": "avatar"
+        }
+      ],
+      "status": 422,
+      "type": "urn:task-manager:error:validation-failed"
+    }
+  },
+  {
+    "code": "NOT_FOUND",
+    "status": 404,
+    "type": "urn:task-manager:error:not-found",
+    "description": "The requested resource does not exist.",
+    "params": [],
+    "example": {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "type": "urn:task-manager:error:not-found"
+    }
+  },
+  {
+    "code": "CONFLICT",
+    "status": 409,
+    "type": "urn:task-manager:error:conflict",
+    "description": "The request conflicts with the current state of the resource.",
+    "params": [],
+    "example": {
+      "code": "CONFLICT",
+      "status": 409,
+      "type": "urn:task-manager:error:conflict"
+    }
+  },
+  {
+    "code": "UNAUTHORIZED",
+    "status": 401,
+    "type": "urn:task-manager:error:unauthorized",
+    "description": "Authentication is missing or invalid.",
+    "params": [],
+    "example": {
+      "code": "UNAUTHORIZED",
+      "status": 401,
+      "type": "urn:task-manager:error:unauthorized"
+    }
+  },
+  {
+    "code": "FORBIDDEN",
+    "status": 403,
+    "type": "urn:task-manager:error:forbidden",
+    "description": "The caller is not allowed to perform this action.",
+    "params": [],
+    "example": {
+      "code": "FORBIDDEN",
+      "status": 403,
+      "type": "urn:task-manager:error:forbidden"
+    }
+  },
+  {
+    "code": "INTERNAL",
+    "status": 500,
+    "type": "urn:task-manager:error:internal",
+    "description": "Unexpected server failure. Details are only available in server logs.",
+    "params": [],
+    "example": {
+      "code": "INTERNAL",
+      "status": 500,
+      "type": "urn:task-manager:error:internal"
+    }
+  },
+  {
+    "code": "REQUIRED",
+    "status": 422,
+    "type": "urn:task-manager:error:required",
+    "description": "A required field is missing. Used in per-field errors.",
+    "params": [],
+    "example": {
+      "code": "REQUIRED",
+      "status": 422,
+      "type": "urn:task-manager:error:required"
+    }
+  },
+  {
+    "code": "INVALID_FORMAT",
+    "status": 422,
+    "type": "urn:task-manager:error:invalid-format",
+    "description": "A field has an invalid format. Used in per-field errors.",
+    "params": [],
+    "example": {
+      "code": "INVALID_FORMAT",
+      "status": 422,
+      "type": "urn:task-manager:error:invalid-format"
+    }
+  },
+  {
+    "code": "MALFORMED_REQUEST",
+    "status": 400,
+    "type": "urn:task-manager:error:malformed-request",
+    "description": "The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+    "params": [],
+    "example": {
+      "code": "MALFORMED_REQUEST",
+      "status": 400,
+      "type": "urn:task-manager:error:malformed-request"
+    }
+  },
+  {
+    "code": "UNSUPPORTED_MEDIA_TYPE",
+    "status": 415,
+    "type": "urn:task-manager:error:unsupported-media-type",
+    "description": "The request body has an unsupported `Content-Type`; JSON endpoints expect `application/json`.",
+    "params": [],
+    "example": {
+      "code": "UNSUPPORTED_MEDIA_TYPE",
+      "status": 415,
+      "type": "urn:task-manager:error:unsupported-media-type"
+    }
+  },
+  {
+    "code": "PAYLOAD_TOO_LARGE",
+    "status": 413,
+    "type": "urn:task-manager:error:payload-too-large",
+    "description": "The request body exceeds the size limit of the endpoint.",
+    "params": [],
+    "example": {
+      "code": "PAYLOAD_TOO_LARGE",
+      "status": 413,
+      "type": "urn:task-manager:error:payload-too-large"
+    }
+  },
+  {
+    "code": "METHOD_NOT_ALLOWED",
+    "status": 405,
+    "type": "urn:task-manager:error:method-not-allowed",
+    "description": "The HTTP method is not supported by this endpoint; see the `Allow` response header.",
+    "params": [],
+    "example": {
+      "code": "METHOD_NOT_ALLOWED",
+      "status": 405,
+      "type": "urn:task-manager:error:method-not-allowed"
+    }
+  },
+  {
+    "code": "TIMEOUT",
+    "status": 504,
+    "type": "urn:task-manager:error:timeout",
+    "description": "The server did not finish handling the request in time. The request may be retried.",
+    "params": [],
+    "example": {
+      "code": "TIMEOUT",
+      "status": 504,
+      "type": "urn:task-manager:error:timeout"
+    }
+  },
+  {
+    "code": "FILE_TOO_LARGE",
+    "status": 413,
+    "type": "urn:task-manager:error:file-too-large",
+    "description": "The uploaded file exceeds the size limit.",
+    "params": [
+      "actual_bytes",
+      "max_bytes"
+    ],
+    "example": {
+      "code": "FILE_TOO_LARGE",
+      "params": {
+        "actual_bytes": 9437184,
+        "max_bytes": 5242880
+      },
+      "status": 413,
+      "type": "urn:task-manager:error:file-too-large"
+    }
+  }
+]
