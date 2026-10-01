@@ -247,9 +247,9 @@ services:
             - net
 
     # File storage: chunked, deduplicated uploads and downloads through signed or public links.
-    # Served by caddy under {$DOMAIN}/storage/* (only /files, /public/files and /actions; /internal/*
-    # is reachable from this network only). The port, 8082, is fixed in the binary and referenced
-    # by STORAGE_SERVICE_URL. The blobs table is created by the migrations main-service applies on
+    # Served by caddy on storage.{$DOMAIN} (only /files, /public/files and /actions; /internal/* is
+    # reachable from this network only). The port, 8082, is fixed in the binary and referenced by
+    # STORAGE_SERVICE_URL. The blobs table is created by the migrations main-service applies on
     # startup; storage-service only starts after it, and fails requests until they are done.
     storage-service:
         restart: unless-stopped
@@ -281,9 +281,9 @@ services:
             INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
             FILE_LINK_SECRET: ${FILE_LINK_SECRET:?FILE_LINK_SECRET is required}
             FILE_LINK_TTL_SECONDS: ${FILE_LINK_TTL_SECONDS:-3600}
-            # Links point at the public route of caddy; the browser talks to the same origin as the
-            # frontend, so CORS only has to allow it
-            STORAGE_PUBLIC_URL: https://${DOMAIN:?DOMAIN is required}/storage
+            # Links point at the public address of caddy. The frontend (https://DOMAIN) calls
+            # storage cross-origin, so its origin must be allowed by CORS
+            STORAGE_PUBLIC_URL: https://storage.${DOMAIN:?DOMAIN is required}
             CORS_ORIGINS: https://${DOMAIN}
         volumes:
             - storage_data:/static
