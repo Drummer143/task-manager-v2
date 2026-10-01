@@ -1,4 +1,8 @@
-use axum::{Router, extract::DefaultBodyLimit, routing::{delete, get, post}};
+use axum::{
+    Router,
+    extract::DefaultBodyLimit,
+    routing::{delete, get, post},
+};
 
 use crate::types::app_state::AppState;
 

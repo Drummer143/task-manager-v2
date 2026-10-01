@@ -40,6 +40,7 @@ tokio-util = "0.7.19"
 tower-http = { workspace = true, features = ["cors", "fs", "trace"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+utils.workspace = true
 utoipa = { workspace = true, features = ["chrono", "uuid"] }
 utoipa-swagger-ui = { workspace = true, features = ["axum"] }
 uuid = { workspace = true, features = ["serde"] }

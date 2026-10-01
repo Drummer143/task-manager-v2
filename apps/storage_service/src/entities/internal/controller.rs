@@ -84,9 +84,7 @@ pub async fn upload(
         .await
         .map_err(ApiError::internal)?;
 
-    file.write_all(&bytes)
-        .await
-        .map_err(ApiError::internal)?;
+    file.write_all(&bytes).await.map_err(ApiError::internal)?;
 
     let blob = BlobsRepository::create(
         &state.postgres,

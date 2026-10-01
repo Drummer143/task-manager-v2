@@ -4,12 +4,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tokio_cron_scheduler::{Job, JobScheduler};
 use tracing::{error, info};
 
-use crate::{
-    redis::transaction::TransactionRepository,
-    types::app_state::AppState,
-};
+use crate::{redis::transaction::TransactionRepository, types::app_state::AppState};
 
-pub async fn init_transaction_cleanup_worker(state: Arc<AppState>, cron_expression: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn init_transaction_cleanup_worker(
+    state: Arc<AppState>,
+    cron_expression: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let sched = JobScheduler::new().await?;
 
     let job = Job::new_async(cron_expression, move |_uuid, mut _l| {
@@ -31,17 +31,18 @@ pub async fn init_transaction_cleanup_worker(state: Arc<AppState>, cron_expressi
 
 async fn run_cleanup(state: &AppState) -> Result<(), Box<dyn std::error::Error>> {
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as f64;
-    
+
     // Find all transactions inactive for > 1 hour (3600 seconds)
     let one_hour_ago = now - 3600.0;
-    
-    let inactive_txs = match TransactionRepository::get_inactive_transactions(&state.redis, one_hour_ago).await {
-        Ok(txs) => txs,
-        Err(e) => {
-            error!("Failed to get inactive transactions: {:?}", e);
-            return Err(Box::new(std::io::Error::other(format!("{:?}", e))));
-        }
-    };
+
+    let inactive_txs =
+        match TransactionRepository::get_inactive_transactions(&state.redis, one_hour_ago).await {
+            Ok(txs) => txs,
+            Err(e) => {
+                error!("Failed to get inactive transactions: {:?}", e);
+                return Err(Box::new(std::io::Error::other(format!("{:?}", e))));
+            }
+        };
 
     let twenty_four_hours_ago = now - (24.0 * 3600.0);
 
@@ -57,19 +58,25 @@ async fn run_cleanup(state: &AppState) -> Result<(), Box<dyn std::error::Error>>
                 }
                 // If not found, perhaps it was already deleted, so we should clean up ZSET just in case
                 let mut conn = state.redis.get().await?;
-                let _ = deadpool_redis::redis::AsyncCommands::zrem::<_, _, ()>(&mut conn, "tx_activity", tx_id.to_string()).await;
+                let _ = deadpool_redis::redis::AsyncCommands::zrem::<_, _, ()>(
+                    &mut conn,
+                    "tx_activity",
+                    tx_id.to_string(),
+                )
+                .await;
                 continue;
             }
         };
 
         // Check how many chunks were uploaded
-        let uploaded_chunks = match TransactionRepository::get_uploaded_chunks_count(&state.redis, tx_id).await {
-            Ok(count) => count,
-            Err(e) => {
-                error!("Error getting chunk count for tx {}: {:?}", tx_id, e);
-                continue;
-            }
-        };
+        let uploaded_chunks =
+            match TransactionRepository::get_uploaded_chunks_count(&state.redis, tx_id).await {
+                Ok(count) => count,
+                Err(e) => {
+                    error!("Error getting chunk count for tx {}: {:?}", tx_id, e);
+                    continue;
+                }
+            };
 
         let mut should_delete = false;
 
@@ -79,7 +86,12 @@ async fn run_cleanup(state: &AppState) -> Result<(), Box<dyn std::error::Error>>
         } else {
             // Delete if some chunks uploaded but inactive > 24 hours
             let mut conn = state.redis.get().await?;
-            let score: Option<f64> = deadpool_redis::redis::AsyncCommands::zscore(&mut conn, "tx_activity", tx_id.to_string()).await?;
+            let score: Option<f64> = deadpool_redis::redis::AsyncCommands::zscore(
+                &mut conn,
+                "tx_activity",
+                tx_id.to_string(),
+            )
+            .await?;
             if let Some(s) = score
                 && s < twenty_four_hours_ago
             {
@@ -90,11 +102,15 @@ async fn run_cleanup(state: &AppState) -> Result<(), Box<dyn std::error::Error>>
         if should_delete {
             // Remove temp file
             if let crate::redis::transaction::TransactionType::ChunkedUpload { path_to_file }
-                | crate::redis::transaction::TransactionType::WholeFileUpload { path_to_file } = meta.transaction_type
+            | crate::redis::transaction::TransactionType::WholeFileUpload { path_to_file } =
+                meta.transaction_type
                 && let Err(e) = tokio::fs::remove_file(&path_to_file).await
                 && e.kind() != std::io::ErrorKind::NotFound
             {
-                error!("Failed to remove temp file {} for tx {}: {}", path_to_file, tx_id, e);
+                error!(
+                    "Failed to remove temp file {} for tx {}: {}",
+                    path_to_file, tx_id, e
+                );
             }
 
             // Remove from Redis
@@ -105,7 +121,7 @@ async fn run_cleanup(state: &AppState) -> Result<(), Box<dyn std::error::Error>>
             }
         }
     }
-    
+
     if deleted_count > 0 {
         info!("Deleted {} inactive transactions.", deleted_count);
     }

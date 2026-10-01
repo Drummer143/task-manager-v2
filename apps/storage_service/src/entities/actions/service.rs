@@ -145,7 +145,9 @@ impl ActionsService {
 
                 if let Err(error) = file.set_len(body.size).await {
                     if error.kind() == std::io::ErrorKind::OutOfMemory {
-                        return Err(ApiError::new(ErrorCode::InsufficientStorage).with_source(error));
+                        return Err(
+                            ApiError::new(ErrorCode::InsufficientStorage).with_source(error)
+                        );
                     }
 
                     return Err(ApiError::internal(error));
@@ -366,10 +368,7 @@ impl ActionsService {
         if let Err(error) = result
             && error.kind() != std::io::ErrorKind::NotFound
         {
-            return Err(ApiError::internal(format!(
-                "error remove file: {}",
-                error
-            )));
+            return Err(ApiError::internal(format!("error remove file: {}", error)));
         }
 
         let mime_type = Self::detect_mime_type(&body, &meta.filename);
@@ -417,9 +416,7 @@ impl ActionsService {
                 .map_err(ApiError::internal)?;
         }
 
-        file.write_all(&body)
-            .await
-            .map_err(ApiError::internal)?;
+        file.write_all(&body).await.map_err(ApiError::internal)?;
 
         // Mark chunk as uploaded
         let chunk_index = TransactionRepository::chunk_index_from_offset(chunk_start);
@@ -592,10 +589,7 @@ impl ActionsService {
         Ok(response)
     }
 
-    pub async fn upload_cancel(
-        state: &AppState,
-        transaction_id: Uuid,
-    ) -> Result<(), ApiError> {
+    pub async fn upload_cancel(state: &AppState, transaction_id: Uuid) -> Result<(), ApiError> {
         let meta = TransactionRepository::get(&state.redis, transaction_id).await?;
 
         // Delete temp file if it exists
@@ -621,9 +615,11 @@ impl ActionsService {
         let meta = TransactionRepository::get(&state.redis, transaction_id).await?;
 
         match meta.transaction_type {
-            TransactionType::VerifyRanges { .. } => Err(ApiError::new(ErrorCode::UploadWrongStep {
-                current_step: meta.transaction_type.step_name().into(),
-            })),
+            TransactionType::VerifyRanges { .. } => {
+                Err(ApiError::new(ErrorCode::UploadWrongStep {
+                    current_step: meta.transaction_type.step_name().into(),
+                }))
+            }
             TransactionType::ChunkedUpload {
                 path_to_file: path_to_temp_file,
             }

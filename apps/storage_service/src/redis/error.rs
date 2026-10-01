@@ -50,7 +50,10 @@ mod tests {
 
     #[test]
     fn missing_transaction_is_not_found() {
-        assert_eq!(ApiError::from(RedisError::NotFound).code(), &ErrorCode::NotFound);
+        assert_eq!(
+            ApiError::from(RedisError::NotFound).code(),
+            &ErrorCode::NotFound
+        );
     }
 
     #[test]

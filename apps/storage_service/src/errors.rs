@@ -132,7 +132,10 @@ mod tests {
 
     #[test]
     fn missing_row_is_not_found() {
-        assert_eq!(db_error(sqlx::Error::RowNotFound).code(), &ErrorCode::NotFound);
+        assert_eq!(
+            db_error(sqlx::Error::RowNotFound).code(),
+            &ErrorCode::NotFound
+        );
     }
 
     #[test]

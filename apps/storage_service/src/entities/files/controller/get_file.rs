@@ -1,3 +1,5 @@
+use crate::db::blobs::BlobsRepository;
+use crate::errors::{GetFileErrors, db_error};
 use axum::{
     Extension,
     body::Body,
@@ -9,8 +11,6 @@ use error_handlers::{
     extract::{ApiPath, ApiQuery},
 };
 use serde::Deserialize;
-use crate::db::blobs::BlobsRepository;
-use crate::errors::{GetFileErrors, db_error};
 use std::{path::PathBuf, str};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
@@ -88,9 +88,7 @@ pub async fn get_file(
         HeaderValue::from_str(&format!("attachment; filename={}", file_name)).unwrap(),
     );
 
-    let file = File::open(&blob_path)
-        .await
-        .map_err(ApiError::internal)?;
+    let file = File::open(&blob_path).await.map_err(ApiError::internal)?;
 
     let body = Body::from_stream(tokio_util::io::ReaderStream::new(file));
 
@@ -179,9 +177,7 @@ async fn serve_partial_content(
     file_size: u64,
     mut headers: HeaderMap,
 ) -> Result<(StatusCode, HeaderMap, Body), ApiError> {
-    let mut file = File::open(path_buf)
-        .await
-        .map_err(ApiError::internal)?;
+    let mut file = File::open(path_buf).await.map_err(ApiError::internal)?;
 
     file.seek(std::io::SeekFrom::Start(range.start))
         .await

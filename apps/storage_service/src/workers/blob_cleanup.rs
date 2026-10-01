@@ -1,12 +1,9 @@
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tokio_cron_scheduler::{Job, JobScheduler};
 use tracing::{error, info};
 
-use crate::{
-    db::blobs::BlobsRepository,
-    types::app_state::AppState,
-};
+use crate::{db::blobs::BlobsRepository, types::app_state::AppState};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,7 +17,10 @@ struct CheckBlobsResponse {
     existing_blob_ids: Vec<String>,
 }
 
-pub async fn init_blob_cleanup_worker(state: Arc<AppState>, cron_expression: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn init_blob_cleanup_worker(
+    state: Arc<AppState>,
+    cron_expression: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let sched = JobScheduler::new().await?;
 
     let job = Job::new_async(cron_expression, move |_uuid, mut _l| {
@@ -60,19 +60,26 @@ async fn run_blob_cleanup(state: &AppState) -> Result<(), Box<dyn std::error::Er
         let blob_ids_str: Vec<String> = blob_ids.iter().map(|id| id.to_string()).collect();
 
         // Check with main service
-        let response = match client.post(format!("{}/internal/assets/check-blobs", main_service_url))
-            .json(&CheckBlobsDto { blob_ids: blob_ids_str })
+        let response = match client
+            .post(format!("{}/internal/assets/check-blobs", main_service_url))
+            .json(&CheckBlobsDto {
+                blob_ids: blob_ids_str,
+            })
             .send()
-            .await {
-                Ok(resp) => resp,
-                Err(e) => {
-                    error!("Failed to check blobs with main service: {}", e);
-                    break; // Abort cleanup on network error to be safe
-                }
-            };
+            .await
+        {
+            Ok(resp) => resp,
+            Err(e) => {
+                error!("Failed to check blobs with main service: {}", e);
+                break; // Abort cleanup on network error to be safe
+            }
+        };
 
         if !response.status().is_success() {
-            error!("Failed to check blobs with main service, status: {}", response.status());
+            error!(
+                "Failed to check blobs with main service, status: {}",
+                response.status()
+            );
             break; // Abort cleanup on API error
         }
 
@@ -84,7 +91,8 @@ async fn run_blob_cleanup(state: &AppState) -> Result<(), Box<dyn std::error::Er
             }
         };
 
-        let existing_ids_set: std::collections::HashSet<String> = check_response.existing_blob_ids.into_iter().collect();
+        let existing_ids_set: std::collections::HashSet<String> =
+            check_response.existing_blob_ids.into_iter().collect();
 
         let mut to_delete = Vec::new();
         for id in blob_ids.iter() {
@@ -103,7 +111,10 @@ async fn run_blob_cleanup(state: &AppState) -> Result<(), Box<dyn std::error::Er
                 if let Err(e) = tokio::fs::remove_file(&blob.path).await
                     && e.kind() != std::io::ErrorKind::NotFound
                 {
-                    error!("Failed to delete file {} for blob {}: {}", blob.path, blob.id, e);
+                    error!(
+                        "Failed to delete file {} for blob {}: {}",
+                        blob.path, blob.id, e
+                    );
                 }
                 total_deleted += 1;
             }

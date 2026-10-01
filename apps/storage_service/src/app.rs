@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use axum::http;
 use types::app_state::InternalAuthState;
-use utoipa::OpenApi;
 use utils::types::jwks::JwkSet;
+use utoipa::OpenApi;
 
 pub mod db;
 pub mod db_connections;
@@ -58,9 +58,8 @@ pub async fn build() -> axum::Router {
     )
     .await;
 
-    migrator::migrator::migrate(migrator::MigrationDirection::Up)
-        .await
-        .expect("Failed to run migrations");
+    // The schema (including `blobs`) is migrated by main_service, the only service that owns
+    // migrations; storage expects the database to be up to date when it starts.
 
     let static_folder_path = std::path::PathBuf::from(
         std::env::var("STATIC_FOLDER_PATH").expect("STATIC_FOLDER_PATH not found"),
@@ -110,16 +109,19 @@ pub async fn build() -> axum::Router {
 
     let arc_state = Arc::new(app_state.clone());
 
-    let transaction_cleanup_cron = std::env::var("TRANSACTION_CLEANUP_CRON")
-        .unwrap_or_else(|_| "0 1/5 * * * *".to_string());
-        
-    let blob_cleanup_cron = std::env::var("BLOB_CLEANUP_CRON")
-        .unwrap_or_else(|_| "0 0 3 * * * *".to_string());
+    let transaction_cleanup_cron =
+        std::env::var("TRANSACTION_CLEANUP_CRON").unwrap_or_else(|_| "0 1/5 * * * *".to_string());
 
-    workers::transaction_cleanup::init_transaction_cleanup_worker(arc_state.clone(), &transaction_cleanup_cron)
-        .await
-        .expect("Failed to init transaction cleanup worker");
-        
+    let blob_cleanup_cron =
+        std::env::var("BLOB_CLEANUP_CRON").unwrap_or_else(|_| "0 0 3 * * * *".to_string());
+
+    workers::transaction_cleanup::init_transaction_cleanup_worker(
+        arc_state.clone(),
+        &transaction_cleanup_cron,
+    )
+    .await
+    .expect("Failed to init transaction cleanup worker");
+
     workers::blob_cleanup::init_blob_cleanup_worker(arc_state, &blob_cleanup_cron)
         .await
         .expect("Failed to init blob cleanup worker");

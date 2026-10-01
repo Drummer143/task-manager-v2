@@ -87,10 +87,10 @@ impl TransactionRepository {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs() as f64;
-            
+
         conn.zadd::<_, _, _, ()>(Self::activity_zset_key(), transaction_id.to_string(), now)
             .await?;
-            
+
         Ok(())
     }
 
@@ -110,7 +110,7 @@ impl TransactionRepository {
                 uuids.push(uuid);
             }
         }
-        
+
         Ok(uuids)
     }
 
@@ -184,7 +184,7 @@ impl TransactionRepository {
 
         conn.del::<_, ()>(&[&meta_key, &chunks_key, &active_key])
             .await?;
-            
+
         conn.zrem::<_, _, ()>(Self::activity_zset_key(), transaction_id.to_string())
             .await?;
 

@@ -1,0 +1,40 @@
+{
+	"name": "backend-utils",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"projectType": "library",
+	"sourceRoot": "packages/rust/utils/src",
+	"tags": ["backend", "rust"],
+	"targets": {
+		"build": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"cwd": ".",
+				"command": "cargo check -p utils"
+			}
+		},
+		"test": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"cwd": ".",
+				"command": "cargo test -p utils"
+			},
+			"configurations": {
+				"production": {
+					"command": "cargo test -p utils --release"
+				}
+			}
+		},
+		"lint": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": ".",
+				"command": "cargo clippy -p utils -- -D warnings"
+			}
+		}
+	}
+}
