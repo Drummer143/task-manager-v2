@@ -1,0 +1,40 @@
+{
+	"name": "sql",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"projectType": "library",
+	"sourceRoot": "libs/backend/sql/src",
+	"tags": ["backend", "rust"],
+	"targets": {
+		"build": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"cwd": ".",
+				"command": "cargo check -p sql"
+			}
+		},
+		"test": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"cwd": ".",
+				"command": "cargo test -p sql"
+			},
+			"configurations": {
+				"production": {
+					"command": "cargo test -p sql --release"
+				}
+			}
+		},
+		"lint": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": ".",
+				"command": "cargo clippy -p sql -- -D warnings"
+			}
+		}
+	}
+}

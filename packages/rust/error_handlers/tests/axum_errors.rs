@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post},
 };
 use error_handlers::{
-    extract::{ApiJson, ApiPath, ApiQuery},
+    extract::{ApiBytes, ApiJson, ApiPath, ApiQuery},
     fallback,
 };
 use serde::Deserialize;
@@ -30,6 +30,10 @@ fn app() -> Router {
         .route(
             "/items",
             post(|ApiJson(p): ApiJson<Payload>| async move { p.name }),
+        )
+        .route(
+            "/raw",
+            post(|ApiBytes(bytes): ApiBytes| async move { bytes.len().to_string() }),
         )
         .route(
             "/list",
@@ -180,4 +184,11 @@ async fn wrong_method_is_405_with_allow_header() {
 
     let (status, ct, json) = send(Method::DELETE, "/items", None, "").await;
     assert_problem(status, ct, &json, "METHOD_NOT_ALLOWED");
+}
+
+#[tokio::test]
+async fn oversized_raw_body_is_payload_too_large() {
+    let (status, ct, json) = send(Method::POST, "/raw", None, &"x".repeat(200)).await;
+    assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+    assert_problem(status, ct, &json, "PAYLOAD_TOO_LARGE");
 }

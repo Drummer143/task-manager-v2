@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, HashMap};
 use serde::Serialize;
 use serde_json::{Value, json};
 use utoipa::{
-    IntoResponses, PartialSchema,
+    PartialSchema,
     openapi::{
         Ref, RefOr,
         content::ContentBuilder,
@@ -113,14 +113,37 @@ pub fn responses_for(codes: &[ErrorCode]) -> BTreeMap<String, RefOr<Response>> {
         .collect()
 }
 
-macro_rules! error_set {
-    ($(#[$meta:meta])* $name:ident => [$($code:expr),+ $(,)?]) => {
-        $(#[$meta])*
-        pub struct $name;
+/// Re-exports the macro below relies on, so callers do not need to import them.
+#[doc(hidden)]
+pub mod __private {
+    pub use std::collections::BTreeMap;
+    pub use utoipa::{
+        IntoResponses,
+        openapi::{RefOr, response::Response},
+    };
+}
 
-        impl IntoResponses for $name {
-            fn responses() -> BTreeMap<String, RefOr<Response>> {
-                responses_for(&[$($code),+])
+/// Declares a unit struct implementing `utoipa::IntoResponses` for a list of codes, for use in
+/// `#[utoipa::path(responses(.., MyErrors))]`.
+///
+/// ```ignore
+/// error_handlers::error_set!(
+///     /// What the upload endpoint can return.
+///     pub UploadErrors => [ErrorCode::Unauthorized, ErrorCode::FileTooLarge { max_bytes: 1, actual_bytes: 2 }]
+/// );
+/// ```
+#[macro_export]
+macro_rules! error_set {
+    ($(#[$meta:meta])* $vis:vis $name:ident => [$($code:expr),+ $(,)?]) => {
+        $(#[$meta])*
+        $vis struct $name;
+
+        impl $crate::openapi::__private::IntoResponses for $name {
+            fn responses() -> $crate::openapi::__private::BTreeMap<
+                String,
+                $crate::openapi::__private::RefOr<$crate::openapi::__private::Response>,
+            > {
+                $crate::openapi::responses_for(&[$($code),+])
             }
         }
     };
@@ -128,7 +151,7 @@ macro_rules! error_set {
 
 error_set!(
     /// `401`, `403`, `500` and `504`: what any authenticated endpoint can return.
-    CommonErrors => [
+    pub CommonErrors => [
         ErrorCode::Unauthorized,
         ErrorCode::Forbidden,
         ErrorCode::Internal,
@@ -140,7 +163,7 @@ error_set!(
     ///
     /// Responses are keyed by status, so an endpoint that also documents another `413` code
     /// (e.g. `FILE_TOO_LARGE`) must declare both in one [`responses_for`] call instead.
-    RequestErrors => [
+    pub RequestErrors => [
         ErrorCode::MalformedRequest,
         ErrorCode::UnsupportedMediaType,
         ErrorCode::PayloadTooLarge
@@ -148,15 +171,15 @@ error_set!(
 );
 error_set!(
     /// `422 VALIDATION_FAILED` with per-field errors.
-    ValidationErrors => [ErrorCode::ValidationFailed]
+    pub ValidationErrors => [ErrorCode::ValidationFailed]
 );
 error_set!(
     /// `404 NOT_FOUND`.
-    NotFoundError => [ErrorCode::NotFound]
+    pub NotFoundError => [ErrorCode::NotFound]
 );
 error_set!(
     /// `409 CONFLICT`.
-    ConflictError => [ErrorCode::Conflict]
+    pub ConflictError => [ErrorCode::Conflict]
 );
 
 /// One row of the error code catalog.

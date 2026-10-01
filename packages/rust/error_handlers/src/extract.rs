@@ -2,9 +2,10 @@
 //! so malformed requests get the same `application/problem+json` body as every other error.
 
 use axum::{
+    body::Bytes,
     extract::{
         FromRequest, FromRequestParts, Path, Query, Request,
-        rejection::{JsonRejection, PathRejection, QueryRejection},
+        rejection::{BytesRejection, JsonRejection, PathRejection, QueryRejection},
     },
     http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
@@ -31,6 +32,12 @@ where
 
 impl From<JsonRejection> for ApiError {
     fn from(rejection: JsonRejection) -> Self {
+        from_rejection(rejection.status(), rejection)
+    }
+}
+
+impl From<BytesRejection> for ApiError {
+    fn from(rejection: BytesRejection) -> Self {
         from_rejection(rejection.status(), rejection)
     }
 }
@@ -101,5 +108,21 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Path(value) = Path::<T>::from_request_parts(parts, state).await?;
         Ok(Self(value))
+    }
+}
+
+/// [`axum::body::Bytes`] with [`ApiError`] rejections: a body over `DefaultBodyLimit` becomes
+/// `PAYLOAD_TOO_LARGE`.
+#[derive(Debug, Clone, Default)]
+pub struct ApiBytes(pub Bytes);
+
+impl<S> FromRequest<S> for ApiBytes
+where
+    S: Send + Sync,
+{
+    type Rejection = ApiError;
+
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+        Ok(Self(Bytes::from_request(req, state).await?))
     }
 }

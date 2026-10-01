@@ -179,5 +179,135 @@
       "status": 413,
       "type": "urn:task-manager:error:file-too-large"
     }
+  },
+  {
+    "code": "UPLOAD_TOKEN_INVALID",
+    "status": 403,
+    "type": "urn:task-manager:error:upload-token-invalid",
+    "description": "The upload token is invalid, expired, or was issued to another user.",
+    "params": [],
+    "example": {
+      "code": "UPLOAD_TOKEN_INVALID",
+      "status": 403,
+      "type": "urn:task-manager:error:upload-token-invalid"
+    }
+  },
+  {
+    "code": "UPLOAD_WRONG_STEP",
+    "status": 409,
+    "type": "urn:task-manager:error:upload-wrong-step",
+    "description": "The upload transaction is not in the step this endpoint serves.",
+    "params": [
+      "current_step"
+    ],
+    "example": {
+      "code": "UPLOAD_WRONG_STEP",
+      "params": {
+        "current_step": "verify_ranges"
+      },
+      "status": 409,
+      "type": "urn:task-manager:error:upload-wrong-step"
+    }
+  },
+  {
+    "code": "UPLOAD_INCOMPLETE",
+    "status": 409,
+    "type": "urn:task-manager:error:upload-incomplete",
+    "description": "Not all chunks of the upload have been received yet.",
+    "params": [],
+    "example": {
+      "code": "UPLOAD_INCOMPLETE",
+      "status": 409,
+      "type": "urn:task-manager:error:upload-incomplete"
+    }
+  },
+  {
+    "code": "FILE_SIZE_MISMATCH",
+    "status": 422,
+    "type": "urn:task-manager:error:file-size-mismatch",
+    "description": "The size of the uploaded content differs from the size announced at upload init.",
+    "params": [
+      "actual_bytes",
+      "expected_bytes"
+    ],
+    "example": {
+      "code": "FILE_SIZE_MISMATCH",
+      "params": {
+        "actual_bytes": 1048000,
+        "expected_bytes": 1048576
+      },
+      "status": 422,
+      "type": "urn:task-manager:error:file-size-mismatch"
+    }
+  },
+  {
+    "code": "FILE_HASH_MISMATCH",
+    "status": 422,
+    "type": "urn:task-manager:error:file-hash-mismatch",
+    "description": "The content hash of the uploaded file differs from the hash announced at upload init.",
+    "params": [],
+    "example": {
+      "code": "FILE_HASH_MISMATCH",
+      "status": 422,
+      "type": "urn:task-manager:error:file-hash-mismatch"
+    }
+  },
+  {
+    "code": "INVALID_CHUNK_SIZE",
+    "status": 422,
+    "type": "urn:task-manager:error:invalid-chunk-size",
+    "description": "A chunk has a size that does not match its `Content-Range` or exceeds the chunk limit.",
+    "params": [
+      "max_bytes"
+    ],
+    "example": {
+      "code": "INVALID_CHUNK_SIZE",
+      "params": {
+        "max_bytes": 5242880
+      },
+      "status": 422,
+      "type": "urn:task-manager:error:invalid-chunk-size"
+    }
+  },
+  {
+    "code": "TOO_MANY_CONCURRENT_UPLOADS",
+    "status": 429,
+    "type": "urn:task-manager:error:too-many-concurrent-uploads",
+    "description": "Too many chunks of this upload are in flight; retry shortly.",
+    "params": [
+      "max_concurrent"
+    ],
+    "example": {
+      "code": "TOO_MANY_CONCURRENT_UPLOADS",
+      "params": {
+        "max_concurrent": 3
+      },
+      "status": 429,
+      "type": "urn:task-manager:error:too-many-concurrent-uploads"
+    }
+  },
+  {
+    "code": "VERIFICATION_FAILED",
+    "status": 422,
+    "type": "urn:task-manager:error:verification-failed",
+    "description": "Ownership verification of an already stored file failed.",
+    "params": [],
+    "example": {
+      "code": "VERIFICATION_FAILED",
+      "status": 422,
+      "type": "urn:task-manager:error:verification-failed"
+    }
+  },
+  {
+    "code": "INSUFFICIENT_STORAGE",
+    "status": 507,
+    "type": "urn:task-manager:error:insufficient-storage",
+    "description": "The server has no room left to store the file.",
+    "params": [],
+    "example": {
+      "code": "INSUFFICIENT_STORAGE",
+      "status": 507,
+      "type": "urn:task-manager:error:insufficient-storage"
+    }
   }
 ]

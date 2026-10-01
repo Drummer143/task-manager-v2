@@ -1,10 +1,10 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Every error the API can return.
 ///
 /// Serialized as `{"code": "FILE_TOO_LARGE", "params": {...}}`; variants without data have no
 /// `params`. Codes are a public contract: never rename one, only add or deprecate.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[serde(tag = "code", content = "params", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorCode {
@@ -41,6 +41,38 @@ pub enum ErrorCode {
         /// Size of the uploaded file in bytes.
         actual_bytes: u64,
     },
+    /// The upload token is invalid, expired, or was issued to another user.
+    UploadTokenInvalid,
+    /// The upload transaction is not in the step this endpoint serves.
+    UploadWrongStep {
+        /// Step the transaction is currently in: `chunked_upload`, `whole_file_upload` or `verify_ranges`.
+        current_step: String,
+    },
+    /// Not all chunks of the upload have been received yet.
+    UploadIncomplete,
+    /// The size of the uploaded content differs from the size announced at upload init.
+    FileSizeMismatch {
+        /// Size announced at upload init, in bytes.
+        expected_bytes: u64,
+        /// Size actually received, in bytes.
+        actual_bytes: u64,
+    },
+    /// The content hash of the uploaded file differs from the hash announced at upload init.
+    FileHashMismatch,
+    /// A chunk has a size that does not match its `Content-Range` or exceeds the chunk limit.
+    InvalidChunkSize {
+        /// Maximum allowed chunk size in bytes.
+        max_bytes: u64,
+    },
+    /// Too many chunks of this upload are in flight; retry shortly.
+    TooManyConcurrentUploads {
+        /// Maximum number of chunks that may be uploaded concurrently.
+        max_concurrent: u64,
+    },
+    /// Ownership verification of an already stored file failed.
+    VerificationFailed,
+    /// The server has no room left to store the file.
+    InsufficientStorage,
 }
 
 impl ErrorCode {
@@ -64,22 +96,46 @@ impl ErrorCode {
                 max_bytes: 5_242_880,
                 actual_bytes: 9_437_184,
             },
+            Self::UploadTokenInvalid,
+            Self::UploadWrongStep {
+                current_step: "verify_ranges".into(),
+            },
+            Self::UploadIncomplete,
+            Self::FileSizeMismatch {
+                expected_bytes: 1_048_576,
+                actual_bytes: 1_048_000,
+            },
+            Self::FileHashMismatch,
+            Self::InvalidChunkSize {
+                max_bytes: 5_242_880,
+            },
+            Self::TooManyConcurrentUploads { max_concurrent: 3 },
+            Self::VerificationFailed,
+            Self::InsufficientStorage,
         ]
     }
 
     /// HTTP status this code is returned with.
     pub fn status(&self) -> u16 {
         match self {
-            Self::ValidationFailed | Self::Required | Self::InvalidFormat => 422,
+            Self::ValidationFailed
+            | Self::Required
+            | Self::InvalidFormat
+            | Self::FileSizeMismatch { .. }
+            | Self::FileHashMismatch
+            | Self::InvalidChunkSize { .. }
+            | Self::VerificationFailed => 422,
             Self::NotFound => 404,
-            Self::Conflict => 409,
+            Self::Conflict | Self::UploadWrongStep { .. } | Self::UploadIncomplete => 409,
             Self::Unauthorized => 401,
-            Self::Forbidden => 403,
+            Self::Forbidden | Self::UploadTokenInvalid => 403,
             Self::Internal => 500,
             Self::MalformedRequest => 400,
             Self::UnsupportedMediaType => 415,
             Self::MethodNotAllowed => 405,
             Self::Timeout => 504,
+            Self::TooManyConcurrentUploads { .. } => 429,
+            Self::InsufficientStorage => 507,
             Self::PayloadTooLarge | Self::FileTooLarge { .. } => 413,
         }
     }
@@ -101,6 +157,15 @@ impl ErrorCode {
             Self::MethodNotAllowed => "METHOD_NOT_ALLOWED",
             Self::Timeout => "TIMEOUT",
             Self::FileTooLarge { .. } => "FILE_TOO_LARGE",
+            Self::UploadTokenInvalid => "UPLOAD_TOKEN_INVALID",
+            Self::UploadWrongStep { .. } => "UPLOAD_WRONG_STEP",
+            Self::UploadIncomplete => "UPLOAD_INCOMPLETE",
+            Self::FileSizeMismatch { .. } => "FILE_SIZE_MISMATCH",
+            Self::FileHashMismatch => "FILE_HASH_MISMATCH",
+            Self::InvalidChunkSize { .. } => "INVALID_CHUNK_SIZE",
+            Self::TooManyConcurrentUploads { .. } => "TOO_MANY_CONCURRENT_UPLOADS",
+            Self::VerificationFailed => "VERIFICATION_FAILED",
+            Self::InsufficientStorage => "INSUFFICIENT_STORAGE",
         }
     }
 
@@ -134,6 +199,15 @@ mod tests {
         names.sort_unstable();
         names.dedup();
         assert_eq!(names.len(), ErrorCode::examples().len());
+    }
+
+    #[test]
+    fn every_code_survives_a_json_round_trip() {
+        for code in ErrorCode::examples() {
+            let json = serde_json::to_string(&code).unwrap();
+            let back: ErrorCode = serde_json::from_str(&json).unwrap();
+            assert_eq!(back, code, "{json}");
+        }
     }
 
     #[test]

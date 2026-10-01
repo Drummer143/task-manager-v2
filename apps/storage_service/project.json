@@ -1,0 +1,66 @@
+{
+	"name": "storage",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"projectType": "application",
+	"sourceRoot": "apps/backend/storage/src",
+	"tags": ["backend", "rust"],
+	"targets": {
+		"build": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"outputs": ["{workspaceRoot}/target/debug/storage", "{workspaceRoot}/target/release/storage"],
+			"options": {
+				"cwd": ".",
+				"command": "cargo build -p storage"
+			},
+			"configurations": {
+				"production": {
+					"command": "cargo build -p storage --release"
+				}
+			}
+		},
+		"test": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"cwd": ".",
+				"command": "cargo test -p storage"
+			},
+			"configurations": {
+				"production": {
+					"command": "cargo test -p storage --release"
+				}
+			}
+		},
+		"lint": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": ".",
+				"command": "cargo clippy -p storage -- -D warnings"
+			}
+		},
+		"export-openapi": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"outputs": ["{workspaceRoot}/libs/frontend/api/specs/openapi-storage.json"],
+			"options": {
+				"cwd": ".",
+				"command": "cargo run --bin export-openapi-storage -- libs/frontend/api/specs/openapi-storage.json"
+			}
+		},
+		"dev": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": ".",
+				"command": "cargo run --bin storage"
+			},
+			"configurations": {
+				"production": {
+					"command": "cargo run --bin storage --release"
+				}
+			}
+		}
+	}
+}

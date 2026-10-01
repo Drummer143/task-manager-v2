@@ -1,9 +1,9 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::ErrorCode;
 
 /// Error attached to a single request field.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct FieldError {
     /// Name of the offending field, e.g. `avatar`.
@@ -24,7 +24,7 @@ impl FieldError {
 /// Public JSON body of every error response (`application/problem+json`).
 ///
 /// There is deliberately no message field: clients localize from `code` and `params`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ErrorBody {
     /// Stable URI identifying the class of problem.
@@ -35,9 +35,9 @@ pub struct ErrorBody {
     #[serde(flatten)]
     pub code: ErrorCode,
     /// Per-field errors, present for validation failures.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub errors: Vec<FieldError>,
     /// Correlation id to quote when reporting a problem.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trace_id: Option<String>,
 }

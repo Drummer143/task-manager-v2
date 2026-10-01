@@ -3,7 +3,9 @@ resolver = "3"
 members = [
     "apps/main_service",
     "apps/storage_service",
+
     "packages/rust/error_handlers",
+    "packages/rust/sql_models",
 ]
 
 [workspace.package]
@@ -14,9 +16,23 @@ publish = false
 [workspace.dependencies]
 anyhow = "1.0.104"
 axum = "0.8.9"
+chrono = { version = "0.4.45", features = ["serde"] }
+error_handlers = { path = "packages/rust/error_handlers" }
+jsonwebtoken = { version = "11.1.0", default-features = false, features = [
+    "rust_crypto",
+] }
+mimalloc = { version = "0.1.52", default-features = false }
+reqwest = { version = "0.13.5", default-features = false, features = [
+    "charset",
+    "http2",
+    "json",
+    "rustls",
+    "system-proxy",
+] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
-sqlx = { version = "0.9.0", default-features = false, features = [
+sql_models = { path = "packages/rust/sql_models" }
+sqlx ={ version = "0.9.0", default-features = false, features = [
     "runtime-tokio",
     "tls-rustls-ring-webpki",
     "postgres",
@@ -34,7 +50,8 @@ tower-http = { version = "0.7.1", features = ["catch-panic"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 utoipa = "6.0.0"
-uuid = { version = "1.26.1", features = ["v4"] }
+utoipa-swagger-ui = "10.0.1"
+uuid ={ version = "1.26.1", features = ["v4"] }
 
 [profile.release]
 lto = "thin"

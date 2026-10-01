@@ -2,24 +2,14 @@
 
 use error_handlers::{
     ErrorBody, ErrorCode, FieldError,
-    openapi::{CommonErrors, NotFoundError, ValidationErrors, responses_for},
+    openapi::{CommonErrors, NotFoundError, ValidationErrors},
 };
-use utoipa::{IntoResponses, OpenApi};
+use utoipa::OpenApi;
 
-/// Domain-specific set declared next to the handler that needs it.
-struct UploadErrors;
-
-impl IntoResponses for UploadErrors {
-    fn responses() -> std::collections::BTreeMap<
-        String,
-        utoipa::openapi::RefOr<utoipa::openapi::response::Response>,
-    > {
-        responses_for(&[ErrorCode::FileTooLarge {
-            max_bytes: 5_242_880,
-            actual_bytes: 9_437_184,
-        }])
-    }
-}
+// Domain-specific set declared next to the handler that needs it.
+error_handlers::error_set!(
+    UploadErrors => [ErrorCode::FileTooLarge { max_bytes: 5_242_880, actual_bytes: 9_437_184 }]
+);
 
 #[utoipa::path(
     put,

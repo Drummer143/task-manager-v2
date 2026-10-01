@@ -1,0 +1,11 @@
+[package]
+name = "sql_models"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chrono.workspace = true
+serde.workspace = true
+sqlx = { workspace = true, features = ["chrono", "uuid"] }
+utoipa = { workspace = true, features = ["chrono", "uuid"] }
+uuid = { workspace = true, features = ["serde"] }

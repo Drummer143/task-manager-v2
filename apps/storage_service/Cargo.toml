@@ -1,0 +1,45 @@
+[package]
+name = "storage"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "storage_app"
+path = "src/app.rs"
+
+[[bin]]
+name = "storage"
+path = "src/main.rs"
+
+[[bin]]
+name = "export-openapi-storage"
+path = "src/bin/export_openapi.rs"
+
+[dependencies]
+axum = { workspace = true, features = ["macros", "multipart"] }
+axum-extra = { version = "0.12.6", features = ["typed-header"] }
+blake3 = { version = "1.8.7", features = ["rayon"] }
+deadpool-redis = "0.23.1"
+dotenvy = "0.15.7"
+error_handlers = { workspace = true, features = ["axum", "openapi"] }
+infer = "0.22.0"
+jsonwebtoken.workspace = true
+memmap2 = "0.9.11"
+mimalloc.workspace = true
+mime_guess = "2.0.5"
+rand = "0.10.3"
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sql_models.workspace = true
+sqlx = { workspace = true, features = ["chrono", "uuid"] }
+syntect = "5.3.0"
+tokio = { workspace = true, features = ["full"] }
+tokio-cron-scheduler = "0.15.1"
+tokio-util = "0.7.19"
+tower-http = { workspace = true, features = ["cors", "fs", "trace"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+utoipa = { workspace = true, features = ["chrono", "uuid"] }
+utoipa-swagger-ui = { workspace = true, features = ["axum"] }
+uuid = { workspace = true, features = ["serde"] }
