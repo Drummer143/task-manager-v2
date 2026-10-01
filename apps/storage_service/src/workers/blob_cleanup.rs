@@ -45,9 +45,6 @@ async fn run_blob_cleanup(state: &AppState) -> Result<(), Box<dyn std::error::Er
     let limit = 1000;
     let mut total_deleted = 0;
 
-    let client = reqwest::Client::new();
-    let main_service_url = &state.main_service_url;
-
     loop {
         let blob_ids = BlobsRepository::get_all_blob_ids(&state.postgres, limit, offset)
             .await
@@ -60,8 +57,9 @@ async fn run_blob_cleanup(state: &AppState) -> Result<(), Box<dyn std::error::Er
         let blob_ids_str: Vec<String> = blob_ids.iter().map(|id| id.to_string()).collect();
 
         // Check with main service
-        let response = match client
-            .post(format!("{}/internal/assets/check-blobs", main_service_url))
+        let response = match state
+            .main
+            .post("/internal/assets/check-blobs")
             .json(&CheckBlobsDto {
                 blob_ids: blob_ids_str,
             })

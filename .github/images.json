@@ -30,6 +30,21 @@
     ]
   },
   {
+    "name": "storage-service",
+    "dockerfile": "docker/Dockerfile.rust",
+    "compose_service": "storage-service",
+    "build_args": "APP_NAME=storage",
+    "paths": [
+      "apps/storage_service/**",
+      "packages/rust/**",
+      "Cargo.toml",
+      "Cargo.lock",
+      "rust-toolchain.toml",
+      ".dockerignore",
+      "docker/Dockerfile.rust"
+    ]
+  },
+  {
     "name": "socket-server",
     "dockerfile": "docker/Dockerfile.elixir",
     "compose_service": "socket-server",

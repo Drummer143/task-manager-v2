@@ -73,6 +73,17 @@ pub enum ErrorCode {
     VerificationFailed,
     /// The server has no room left to store the file.
     InsufficientStorage,
+    /// The signed file link is malformed, has a bad signature, or belongs to another file.
+    FileLinkInvalid,
+    /// The signed file link has expired; request a new one.
+    FileLinkExpired,
+    /// A request carries more items than a single call may process.
+    TooManyItems {
+        /// Maximum number of items per request.
+        max_items: u64,
+    },
+    /// A service this one depends on did not answer or answered with something unusable.
+    UpstreamUnavailable,
 }
 
 impl ErrorCode {
@@ -112,6 +123,10 @@ impl ErrorCode {
             Self::TooManyConcurrentUploads { max_concurrent: 3 },
             Self::VerificationFailed,
             Self::InsufficientStorage,
+            Self::FileLinkInvalid,
+            Self::FileLinkExpired,
+            Self::TooManyItems { max_items: 200 },
+            Self::UpstreamUnavailable,
         ]
     }
 
@@ -124,11 +139,15 @@ impl ErrorCode {
             | Self::FileSizeMismatch { .. }
             | Self::FileHashMismatch
             | Self::InvalidChunkSize { .. }
-            | Self::VerificationFailed => 422,
+            | Self::VerificationFailed
+            | Self::TooManyItems { .. } => 422,
             Self::NotFound => 404,
             Self::Conflict | Self::UploadWrongStep { .. } | Self::UploadIncomplete => 409,
             Self::Unauthorized => 401,
-            Self::Forbidden | Self::UploadTokenInvalid => 403,
+            Self::Forbidden
+            | Self::UploadTokenInvalid
+            | Self::FileLinkInvalid
+            | Self::FileLinkExpired => 403,
             Self::Internal => 500,
             Self::MalformedRequest => 400,
             Self::UnsupportedMediaType => 415,
@@ -136,6 +155,7 @@ impl ErrorCode {
             Self::Timeout => 504,
             Self::TooManyConcurrentUploads { .. } => 429,
             Self::InsufficientStorage => 507,
+            Self::UpstreamUnavailable => 502,
             Self::PayloadTooLarge | Self::FileTooLarge { .. } => 413,
         }
     }
@@ -166,6 +186,10 @@ impl ErrorCode {
             Self::TooManyConcurrentUploads { .. } => "TOO_MANY_CONCURRENT_UPLOADS",
             Self::VerificationFailed => "VERIFICATION_FAILED",
             Self::InsufficientStorage => "INSUFFICIENT_STORAGE",
+            Self::FileLinkInvalid => "FILE_LINK_INVALID",
+            Self::FileLinkExpired => "FILE_LINK_EXPIRED",
+            Self::TooManyItems { .. } => "TOO_MANY_ITEMS",
+            Self::UpstreamUnavailable => "UPSTREAM_UNAVAILABLE",
         }
     }
 

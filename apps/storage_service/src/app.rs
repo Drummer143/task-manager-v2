@@ -9,8 +9,13 @@ pub mod db;
 pub mod db_connections;
 pub mod entities;
 pub mod errors;
+pub mod main_client;
 pub mod redis;
 pub mod swagger;
+#[cfg(test)]
+mod test_support;
+#[cfg(test)]
+mod access_tests;
 pub mod types;
 pub mod workers;
 
@@ -69,6 +74,24 @@ pub async fn build() -> axum::Router {
 
     let main_service_url = std::env::var("MAIN_SERVICE_URL").expect("MAIN_SERVICE_URL not found");
 
+    // One secret for calls in both directions between backend services; guards `/internal/*`.
+    let service_auth = utils::service_auth::ServiceAuthState::new(
+        std::env::var("INTERNAL_SERVICE_TOKEN").expect("INTERNAL_SERVICE_TOKEN not found"),
+    );
+
+    // Signs private file links; only this service knows it. At least 32 bytes.
+    let file_links = entities::files::links::FileLinkConfig::new(
+        &std::env::var("FILE_LINK_SECRET").expect("FILE_LINK_SECRET not found"),
+        std::time::Duration::from_secs(
+            std::env::var("FILE_LINK_TTL_SECONDS")
+                .ok()
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(3600),
+        ),
+        // Where browsers reach this service, e.g. https://example.com/storage
+        &std::env::var("STORAGE_PUBLIC_URL").expect("STORAGE_PUBLIC_URL not found"),
+    );
+
     let jwks_url = std::env::var("AUTHENTIK_JWKS_URL").expect("AUTHENTIK_JWKS_URL must be set");
     let authentik_audience =
         std::env::var("AUTHENTIK_AUDIENCE").expect("AUTHENTIK_AUDIENCE must be set");
@@ -103,8 +126,10 @@ pub async fn build() -> axum::Router {
         assets_folder_path: Arc::new(assets_folder_path.to_str().unwrap().to_string()),
         temp_folder_path: Arc::new(temp_folder_path.to_str().unwrap().to_string()),
         jwt_secret: Arc::new(jwt_secret),
-        main_service_url: Arc::new(main_service_url),
         auth,
+        main: main_client::MainServiceClient::new(&main_service_url, service_auth.clone()),
+        service_auth,
+        file_links,
     };
 
     let arc_state = Arc::new(app_state.clone());
@@ -129,7 +154,7 @@ pub async fn build() -> axum::Router {
     let app = axum::Router::new()
         .merge(entities::actions::router::init(app_state.clone()))
         .merge(entities::files::router::init(app_state.clone()))
-        .merge(entities::internal::router::init())
+        .merge(entities::internal::router::init(app_state.clone()))
         .merge(
             utoipa_swagger_ui::SwaggerUi::new("/api")
                 .url("/api/openapi.json", swagger::ApiDoc::openapi()),

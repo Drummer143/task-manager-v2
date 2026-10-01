@@ -44,6 +44,7 @@ services:
         depends_on:
             - task-manager
             - socket-server
+            - storage-service
             - authentik_server
 
     postgres:
@@ -132,6 +133,27 @@ services:
             - net
         volumes:
             - rmqdata:/var/lib/rabbitmq
+
+    # Upload transactions of storage-service. Persisted so unfinished uploads survive a restart.
+    redis:
+        image: redis:7-alpine
+        restart: unless-stopped
+        container_name: redis
+        command: ["redis-server", "--appendonly", "yes"]
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+        deploy:
+            resources:
+                limits:
+                    memory: 128M
+                    cpus: "0.25"
+        networks:
+            - net
+        volumes:
+            - redisdata:/data
 
     authentik_server:
         image: ghcr.io/goauthentik/server:2026.8.3
@@ -224,6 +246,55 @@ services:
         networks:
             - net
 
+    # File storage: chunked, deduplicated uploads and downloads through signed or public links.
+    # Served by caddy under {$DOMAIN}/storage/* (only /files, /public/files and /actions; /internal/*
+    # is reachable from this network only). The port, 8082, is fixed in the binary and referenced
+    # by STORAGE_SERVICE_URL. The blobs table is created by the migrations main-service applies on
+    # startup; storage-service only starts after it, and fails requests until they are done.
+    storage-service:
+        restart: unless-stopped
+        container_name: storage-service
+        image: ghcr.io/drummer143/task-manager-v2/storage-service:${IMAGE_TAG:-latest}
+        build:
+            context: ..
+            dockerfile: docker/Dockerfile.rust
+            args:
+                APP_NAME: storage
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+            main-service:
+                condition: service_started
+            # fetches the JWKS at startup; the restart policy covers authentik still booting
+            authentik_server:
+                condition: service_started
+        environment:
+            DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+            REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+            STATIC_FOLDER_PATH: /static
+            MAIN_SERVICE_URL: http://main-service:8080
+            JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+            AUTHENTIK_JWKS_URL: ${AUTHENTIK_JWKS_URL:?AUTHENTIK_JWKS_URL is required}
+            AUTHENTIK_AUDIENCE: ${AUTHENTIK_AUDIENCE:?AUTHENTIK_AUDIENCE is required}
+            INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+            FILE_LINK_SECRET: ${FILE_LINK_SECRET:?FILE_LINK_SECRET is required}
+            FILE_LINK_TTL_SECONDS: ${FILE_LINK_TTL_SECONDS:-3600}
+            # Links point at the public route of caddy; the browser talks to the same origin as the
+            # frontend, so CORS only has to allow it
+            STORAGE_PUBLIC_URL: https://${DOMAIN:?DOMAIN is required}/storage
+            CORS_ORIGINS: https://${DOMAIN}
+        volumes:
+            - storage_data:/static
+        deploy:
+            resources:
+                limits:
+                    memory: 256M
+                    cpus: "1.0"
+        networks:
+            - net
+
     # Served by caddy under {$DOMAIN}/socket/*, same origin as the frontend,
     # so Phoenix check_origin passes with PHX_HOST = DOMAIN
     socket-server:
@@ -252,7 +323,9 @@ networks:
 
 volumes:
     pgdata:
+    redisdata:
     rmqdata:
+    storage_data:
     caddy_data:
     caddy_config:
     authentik_data:

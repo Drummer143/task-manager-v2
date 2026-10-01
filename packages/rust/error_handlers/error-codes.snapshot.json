@@ -309,5 +309,58 @@
       "status": 507,
       "type": "urn:task-manager:error:insufficient-storage"
     }
+  },
+  {
+    "code": "FILE_LINK_INVALID",
+    "status": 403,
+    "type": "urn:task-manager:error:file-link-invalid",
+    "description": "The signed file link is malformed, has a bad signature, or belongs to another file.",
+    "params": [],
+    "example": {
+      "code": "FILE_LINK_INVALID",
+      "status": 403,
+      "type": "urn:task-manager:error:file-link-invalid"
+    }
+  },
+  {
+    "code": "FILE_LINK_EXPIRED",
+    "status": 403,
+    "type": "urn:task-manager:error:file-link-expired",
+    "description": "The signed file link has expired; request a new one.",
+    "params": [],
+    "example": {
+      "code": "FILE_LINK_EXPIRED",
+      "status": 403,
+      "type": "urn:task-manager:error:file-link-expired"
+    }
+  },
+  {
+    "code": "TOO_MANY_ITEMS",
+    "status": 422,
+    "type": "urn:task-manager:error:too-many-items",
+    "description": "A request carries more items than a single call may process.",
+    "params": [
+      "max_items"
+    ],
+    "example": {
+      "code": "TOO_MANY_ITEMS",
+      "params": {
+        "max_items": 200
+      },
+      "status": 422,
+      "type": "urn:task-manager:error:too-many-items"
+    }
+  },
+  {
+    "code": "UPSTREAM_UNAVAILABLE",
+    "status": 502,
+    "type": "urn:task-manager:error:upstream-unavailable",
+    "description": "A service this one depends on did not answer or answered with something unusable.",
+    "params": [],
+    "example": {
+      "code": "UPSTREAM_UNAVAILABLE",
+      "status": 502,
+      "type": "urn:task-manager:error:upstream-unavailable"
+    }
   }
 ]

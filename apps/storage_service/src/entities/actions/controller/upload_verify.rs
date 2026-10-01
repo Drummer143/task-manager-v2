@@ -1,4 +1,4 @@
-use axum::{Json, extract::State};
+use axum::{Extension, Json, extract::State};
 use error_handlers::{
     ApiError,
     extract::{ApiJson, ApiPath},
@@ -29,10 +29,11 @@ use crate::{
 )]
 pub async fn upload_verify(
     State(state): State<AppState>,
+    Extension(user_id): Extension<Uuid>,
     ApiPath(transaction_id): ApiPath<Uuid>,
     ApiJson(body): ApiJson<UploadVerifyDto>,
 ) -> Result<Json<UploadSuccessResponse>, ApiError> {
-    ActionsService::upload_verify(&state, transaction_id, body)
+    ActionsService::upload_verify(&state, user_id, transaction_id, body)
         .await
         .map(Json)
 }

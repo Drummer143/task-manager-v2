@@ -18,8 +18,12 @@ RUN cargo chef cook --release --locked -p ${APP_NAME} --recipe-path recipe.json
 
 COPY . .
 RUN cargo build --release --locked -p ${APP_NAME} \
-    && cp target/release/${APP_NAME} /app/service
+    && cp target/release/${APP_NAME} /app/service \
+    && mkdir /app/static
 
 FROM ${RUNNER_IMAGE} AS runner
 COPY --from=builder /app/service /usr/local/bin/service
+# The runner has no shell to mkdir with. An empty /static owned by the nonroot user lets a named
+# volume mounted there be written by the service (Docker copies the ownership into a new volume).
+COPY --from=builder --chown=65532:65532 /app/static /static
 ENTRYPOINT ["/usr/local/bin/service"]

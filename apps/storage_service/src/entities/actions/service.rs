@@ -31,12 +31,21 @@ use crate::{
     },
     redis::{
         TransactionRepository,
-        transaction::{TransactionType, VerifyRange},
+        transaction::{NewTransaction, TransactionMeta, TransactionType, VerifyRange},
     },
     types::app_state::AppState,
 };
 
 pub struct ActionsService;
+
+/// Only the user who started an upload may continue, complete or cancel it.
+fn ensure_owner(meta: &TransactionMeta, user_id: Uuid) -> Result<(), ApiError> {
+    if meta.user_id == user_id {
+        Ok(())
+    } else {
+        Err(ApiError::new(ErrorCode::NotFound))
+    }
+}
 
 impl ActionsService {
     fn generate_challenge_ranges(
@@ -90,6 +99,18 @@ impl ActionsService {
         merged
     }
 
+    /// Loads a transaction that belongs to `user_id`. Someone else's transaction is reported as
+    /// missing, so a transaction id alone neither reveals that it exists nor lets anyone act on it.
+    async fn owned_transaction(
+        state: &AppState,
+        transaction_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<TransactionMeta, ApiError> {
+        let meta = TransactionRepository::get(&state.redis, transaction_id).await?;
+        ensure_owner(&meta, user_id)?;
+        Ok(meta)
+    }
+
     pub async fn upload_init(
         state: &AppState,
         user_id: Uuid,
@@ -118,13 +139,16 @@ impl ActionsService {
                 TransactionRepository::create(
                     &state.redis,
                     transaction_id,
-                    body.hash,
-                    body.size,
-                    TransactionType::VerifyRanges {
-                        ranges: repo_ranges,
+                    NewTransaction {
+                        hash: body.hash,
+                        size: body.size,
+                        transaction_type: TransactionType::VerifyRanges {
+                            ranges: repo_ranges,
+                        },
+                        token: body.upload_token,
+                        filename: token.claims.name,
+                        user_id,
                     },
-                    body.upload_token,
-                    token.claims.name,
                 )
                 .await?;
 
@@ -180,11 +204,14 @@ impl ActionsService {
                 TransactionRepository::create(
                     &state.redis,
                     transaction_id,
-                    body.hash,
-                    body.size,
-                    transaction_type,
-                    body.upload_token,
-                    token.claims.name,
+                    NewTransaction {
+                        hash: body.hash,
+                        size: body.size,
+                        transaction_type,
+                        token: body.upload_token,
+                        filename: token.claims.name,
+                        user_id,
+                    },
                 )
                 .await?;
 
@@ -196,10 +223,11 @@ impl ActionsService {
 
     pub async fn upload_verify(
         state: &AppState,
+        user_id: Uuid,
         transaction_id: Uuid,
         body: UploadVerifyDto,
     ) -> Result<UploadSuccessResponse, ApiError> {
-        let meta = TransactionRepository::get(&state.redis, transaction_id).await?;
+        let meta = Self::owned_transaction(state, transaction_id, user_id).await?;
 
         match meta.transaction_type {
             TransactionType::ChunkedUpload { .. } | TransactionType::WholeFileUpload { .. } => {
@@ -249,7 +277,7 @@ impl ActionsService {
                     TransactionRepository::delete(&state.redis, transaction_id).await?;
 
                     let asset =
-                        Self::fetch_create_asset(&state.main_service_url, blob, meta.token).await?;
+                        Self::fetch_create_asset(state, blob, meta.token).await?;
 
                     Ok(UploadSuccessResponse {
                         asset,
@@ -265,39 +293,42 @@ impl ActionsService {
     }
 
     pub async fn fetch_create_asset(
-        main_service_url: &str,
+        state: &AppState,
         blob: Blob,
         token: String,
     ) -> Result<AssetResponse, ApiError> {
-        let resp = reqwest::Client::new()
-            .post(format!("{}/assets", main_service_url))
+        let resp = state
+            .main
+            .post("/assets")
             .json(&serde_json::json!({
                 "blob": blob,
                 "token": token,
             }))
             .send()
             .await
-            .map_err(ApiError::internal)?;
+            .map_err(|e| ApiError::new(ErrorCode::UpstreamUnavailable).with_source(e))?;
 
-        if resp.status() != 200 {
-            // The main service speaks the same error contract, so its error is passed on as is.
+        if !resp.status().is_success() {
+            // The main service validates the upload token and speaks the same error contract, so
+            // its verdict is passed on as is.
             Err(match resp.json::<ErrorBody>().await {
                 Ok(body) => ApiError::from(body),
-                Err(e) => ApiError::internal(e),
+                Err(e) => ApiError::new(ErrorCode::UpstreamUnavailable).with_source(e),
             })
         } else {
             resp.json::<AssetResponse>()
                 .await
-                .map_err(ApiError::internal)
+                .map_err(|e| ApiError::new(ErrorCode::UpstreamUnavailable).with_source(e))
         }
     }
 
     pub async fn upload_whole_file(
         state: &AppState,
+        user_id: Uuid,
         transaction_id: Uuid,
         body: Bytes,
     ) -> Result<UploadSuccessResponse, ApiError> {
-        let meta = TransactionRepository::get(&state.redis, transaction_id).await?;
+        let meta = Self::owned_transaction(state, transaction_id, user_id).await?;
 
         let path_to_temp_file = match meta.transaction_type {
             TransactionType::WholeFileUpload { path_to_file } => Ok(path_to_file),
@@ -335,7 +366,7 @@ impl ActionsService {
         }?;
 
         if let Some(blob) = blob {
-            let asset = Self::fetch_create_asset(&state.main_service_url, blob, meta.token).await?;
+            let asset = Self::fetch_create_asset(state, blob, meta.token).await?;
 
             return Ok(UploadSuccessResponse {
                 asset,
@@ -387,7 +418,7 @@ impl ActionsService {
 
         TransactionRepository::delete(&state.redis, transaction_id).await?;
 
-        let asset = Self::fetch_create_asset(&state.main_service_url, blob, meta.token).await?;
+        let asset = Self::fetch_create_asset(state, blob, meta.token).await?;
 
         Ok(UploadSuccessResponse { asset, mime_type })
     }
@@ -501,11 +532,12 @@ impl ActionsService {
 
     pub async fn upload_chunk(
         state: &AppState,
+        user_id: Uuid,
         transaction_id: Uuid,
         bytes_range: (u64, u64),
         body: Bytes,
     ) -> Result<(), ApiError> {
-        let meta = TransactionRepository::get(&state.redis, transaction_id).await?;
+        let meta = Self::owned_transaction(state, transaction_id, user_id).await?;
 
         if !matches!(meta.transaction_type, TransactionType::ChunkedUpload { .. }) {
             return Err(ApiError::new(ErrorCode::UploadWrongStep {
@@ -560,9 +592,10 @@ impl ActionsService {
 
     pub async fn upload_status(
         state: &AppState,
+        user_id: Uuid,
         transaction_id: Uuid,
     ) -> Result<UploadStatusResponse, ApiError> {
-        let meta = TransactionRepository::get(&state.redis, transaction_id).await?;
+        let meta = Self::owned_transaction(state, transaction_id, user_id).await?;
 
         let response = match meta.transaction_type {
             TransactionType::ChunkedUpload { .. } => {
@@ -589,8 +622,12 @@ impl ActionsService {
         Ok(response)
     }
 
-    pub async fn upload_cancel(state: &AppState, transaction_id: Uuid) -> Result<(), ApiError> {
-        let meta = TransactionRepository::get(&state.redis, transaction_id).await?;
+    pub async fn upload_cancel(
+        state: &AppState,
+        user_id: Uuid,
+        transaction_id: Uuid,
+    ) -> Result<(), ApiError> {
+        let meta = Self::owned_transaction(state, transaction_id, user_id).await?;
 
         // Delete temp file if it exists
         if let TransactionType::ChunkedUpload { path_to_file }
@@ -610,9 +647,10 @@ impl ActionsService {
 
     pub async fn upload_complete(
         state: &AppState,
+        user_id: Uuid,
         transaction_id: Uuid,
     ) -> Result<UploadSuccessResponse, ApiError> {
-        let meta = TransactionRepository::get(&state.redis, transaction_id).await?;
+        let meta = Self::owned_transaction(state, transaction_id, user_id).await?;
 
         match meta.transaction_type {
             TransactionType::VerifyRanges { .. } => {
@@ -682,7 +720,7 @@ impl ActionsService {
                 .map_err(db_error)?;
 
                 let asset =
-                    Self::fetch_create_asset(&state.main_service_url, blob, meta.token).await?;
+                    Self::fetch_create_asset(state, blob, meta.token).await?;
 
                 Ok(UploadSuccessResponse {
                     asset,
@@ -690,5 +728,52 @@ impl ActionsService {
                 })
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn meta_owned_by(user_id: Uuid) -> TransactionMeta {
+        TransactionMeta {
+            hash: String::new(),
+            size: 0,
+            total_chunks: 0,
+            transaction_type: TransactionType::WholeFileUpload {
+                path_to_file: String::new(),
+            },
+            token: String::new(),
+            filename: String::new(),
+            user_id,
+            mime_type: String::new(),
+        }
+    }
+
+    #[test]
+    fn the_owner_may_act_on_the_transaction() {
+        let owner = Uuid::new_v4();
+
+        assert!(ensure_owner(&meta_owned_by(owner), owner).is_ok());
+    }
+
+    #[test]
+    fn another_user_gets_not_found_not_forbidden() {
+        let error = ensure_owner(&meta_owned_by(Uuid::new_v4()), Uuid::new_v4()).unwrap_err();
+
+        assert_eq!(error.code(), &ErrorCode::NotFound);
+    }
+
+    #[test]
+    fn transactions_saved_before_owners_existed_match_nobody() {
+        // They deserialize with the nil UUID; no real user has it.
+        let legacy: TransactionMeta = serde_json::from_str(
+            r#"{"hash":"h","size":1,"total_chunks":1,"token":"t","filename":"f",
+                "transaction_type":{"whole_file_upload":{"path_to_file":"p"}}}"#,
+        )
+        .unwrap();
+
+        assert_eq!(legacy.user_id, Uuid::nil());
+        assert!(ensure_owner(&legacy, Uuid::new_v4()).is_err());
     }
 }

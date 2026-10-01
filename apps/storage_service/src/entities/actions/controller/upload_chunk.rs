@@ -1,4 +1,4 @@
-use axum::extract::State;
+use axum::{Extension, extract::State};
 use axum_extra::{TypedHeader, typed_header::TypedHeaderRejection};
 use error_handlers::{
     ApiError, ErrorCode,
@@ -31,6 +31,7 @@ use crate::{
 )]
 pub async fn upload_chunk(
     State(state): State<AppState>,
+    Extension(user_id): Extension<Uuid>,
     content_range: Result<TypedHeader<axum_extra::headers::ContentRange>, TypedHeaderRejection>,
     ApiPath(transaction_id): ApiPath<Uuid>,
     ApiBytes(body): ApiBytes,
@@ -42,5 +43,5 @@ pub async fn upload_chunk(
         ApiError::new(ErrorCode::MalformedRequest).with_source("Content-Range has no bytes range")
     })?;
 
-    ActionsService::upload_chunk(&state, transaction_id, bytes_range, body).await
+    ActionsService::upload_chunk(&state, user_id, transaction_id, bytes_range, body).await
 }

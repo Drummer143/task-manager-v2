@@ -6,6 +6,17 @@
         reverse_proxy socket-server:4000
     }
 
+    # Storage lives under /storage (the prefix is stripped) and only exposes what a browser needs:
+    # uploads and file downloads. /internal/* and the Swagger UI stay on the private network, and
+    # anything else answers 404 here instead of reaching the service.
+    handle_path /storage/* {
+        @browser path /files/* /public/files/* /actions/*
+        handle @browser {
+            reverse_proxy storage-service:8082
+        }
+        respond 404
+    }
+
     handle {
         reverse_proxy task-manager:80
     }

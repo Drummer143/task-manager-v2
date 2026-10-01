@@ -3,7 +3,7 @@ use crate::{
     errors::UploadTransactionErrors,
     types::app_state::AppState,
 };
-use axum::{Json, extract::State};
+use axum::{Extension, Json, extract::State};
 use error_handlers::{ApiError, extract::ApiPath};
 use uuid::Uuid;
 
@@ -21,9 +21,10 @@ use uuid::Uuid;
 )]
 pub async fn upload_status(
     State(state): State<AppState>,
+    Extension(user_id): Extension<Uuid>,
     ApiPath(transaction_id): ApiPath<Uuid>,
 ) -> Result<Json<UploadStatusResponse>, ApiError> {
-    ActionsService::upload_status(&state, transaction_id)
+    ActionsService::upload_status(&state, user_id, transaction_id)
         .await
         .map(Json)
 }

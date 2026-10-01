@@ -27,6 +27,7 @@ jsonwebtoken.workspace = true
 memmap2 = "0.9.11"
 mimalloc.workspace = true
 mime_guess = "2.0.5"
+moka = { version = "0.12.16", features = ["future"] }
 rand = "0.10.3"
 reqwest.workspace = true
 serde.workspace = true
@@ -44,3 +45,6 @@ utils.workspace = true
 utoipa = { workspace = true, features = ["chrono", "uuid"] }
 utoipa-swagger-ui = { workspace = true, features = ["axum"] }
 uuid = { workspace = true, features = ["serde"] }
+
+[dev-dependencies]
+tower.workspace = true

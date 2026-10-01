@@ -3,7 +3,9 @@ use utils::swagger::SecurityAddon;
 #[derive(utoipa::OpenApi)]
 #[openapi(
     paths(
-        crate::entities::files::controller::get_file::get_file,
+        crate::entities::files::controller::get_file::get_signed_file,
+        crate::entities::files::controller::get_file::get_public_file,
+        crate::entities::files::controller::issue_links::issue_links,
 
         crate::entities::actions::controller::upload_init::upload_init,
         crate::entities::actions::controller::upload_verify::upload_verify,

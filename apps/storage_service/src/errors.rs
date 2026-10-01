@@ -104,12 +104,35 @@ error_set!(
 );
 
 error_set!(
-    /// `GET /files/{asset_id}`
-    pub GetFileErrors => [
-        ErrorCode::Unauthorized,
-        ErrorCode::Forbidden,
+    /// `GET /files/{asset_id}`: download through a signed link.
+    pub SignedFileErrors => [
+        ErrorCode::FileLinkInvalid,
+        ErrorCode::FileLinkExpired,
         ErrorCode::NotFound,
         ErrorCode::MalformedRequest,
+        ErrorCode::Internal,
+    ]
+);
+
+error_set!(
+    /// `GET /public/files/{asset_id}`: download of a public asset.
+    pub PublicFileErrors => [
+        ErrorCode::NotFound,
+        ErrorCode::MalformedRequest,
+        ErrorCode::UpstreamUnavailable,
+        ErrorCode::Internal,
+    ]
+);
+
+error_set!(
+    /// `POST /files/links`: batched link issuance.
+    pub FileLinksErrors => [
+        ErrorCode::Unauthorized,
+        ErrorCode::MalformedRequest,
+        ErrorCode::UnsupportedMediaType,
+        ErrorCode::PayloadTooLarge,
+        ErrorCode::TooManyItems { max_items: 200 },
+        ErrorCode::UpstreamUnavailable,
         ErrorCode::Internal,
     ]
 );

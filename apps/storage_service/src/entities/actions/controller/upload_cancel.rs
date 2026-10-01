@@ -2,7 +2,7 @@ use crate::{
     entities::actions::service::ActionsService, errors::UploadTransactionErrors,
     types::app_state::AppState,
 };
-use axum::extract::State;
+use axum::{Extension, extract::State};
 use error_handlers::{ApiError, extract::ApiPath};
 use uuid::Uuid;
 
@@ -20,7 +20,8 @@ use uuid::Uuid;
 )]
 pub async fn upload_cancel(
     State(state): State<AppState>,
+    Extension(user_id): Extension<Uuid>,
     ApiPath(transaction_id): ApiPath<Uuid>,
 ) -> Result<(), ApiError> {
-    ActionsService::upload_cancel(&state, transaction_id).await
+    ActionsService::upload_cancel(&state, user_id, transaction_id).await
 }

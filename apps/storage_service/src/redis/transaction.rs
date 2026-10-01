@@ -25,6 +25,10 @@ pub struct TransactionMeta {
     pub transaction_type: TransactionType,
     pub token: String,
     pub filename: String,
+    /// Owner of the upload; only they may continue, complete or cancel it. Transactions saved
+    /// before this field existed read back as the nil UUID, which matches nobody.
+    #[serde(default)]
+    pub user_id: Uuid,
     #[serde(default)]
     pub mime_type: String,
 }
@@ -52,6 +56,17 @@ impl TransactionType {
 pub struct VerifyRange {
     pub start: i64,
     pub end: i64,
+}
+
+/// What is known about an upload when it starts.
+pub struct NewTransaction {
+    pub hash: String,
+    pub size: u64,
+    pub transaction_type: TransactionType,
+    /// The upload token the main service issued; passed back to it on completion.
+    pub token: String,
+    pub filename: String,
+    pub user_id: Uuid,
 }
 
 pub struct TransactionRepository;
@@ -118,12 +133,16 @@ impl TransactionRepository {
     pub async fn create(
         pool: &Arc<deadpool_redis::Pool>,
         transaction_id: Uuid,
-        hash: String,
-        size: u64,
-        transaction_type: TransactionType,
-        token: String,
-        filename: String,
+        new: NewTransaction,
     ) -> Result<TransactionMeta, RedisError> {
+        let NewTransaction {
+            hash,
+            size,
+            transaction_type,
+            token,
+            filename,
+            user_id,
+        } = new;
         let mut conn = pool.get().await?;
 
         let total_chunks = size.div_ceil(CHUNK_SIZE);
@@ -136,6 +155,7 @@ impl TransactionRepository {
             token,
             mime_type: "application/octet-stream".into(),
             filename,
+            user_id,
         };
 
         let meta_json = serde_json::to_string(&meta)?;

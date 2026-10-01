@@ -9,10 +9,12 @@ error_handlers.workspace = true
 jsonwebtoken.workspace = true
 reqwest.workspace = true
 serde.workspace = true
+subtle = "2.6.1"
 tokio = { workspace = true, features = ["sync"] }
 tracing.workspace = true
-utoipa.workspace = true
+utoipa = { workspace = true, features = ["uuid"] }
 uuid = { workspace = true, features = ["serde"] }
 
-[features]
-test_auth_guard = []
+[dev-dependencies]
+serde_json.workspace = true
+tower.workspace = true
