@@ -15,8 +15,7 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let port = std::env::var("SELF_PORT").unwrap_or("3000".to_string());
-    let addr = format!("0.0.0.0:{}", port);
+    let addr = "0.0.0.0:8082";
 
     let app = storage_app::build().await;
 
