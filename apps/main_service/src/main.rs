@@ -1,9 +1,13 @@
 mod config;
 
 use anyhow::Context;
-use axum::Router;
+use axum::{
+    Router,
+    http::{Method, header},
+};
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing_subscriber::EnvFilter;
 
 use crate::config::Config;
@@ -33,7 +37,19 @@ async fn main() -> anyhow::Result<()> {
         .context("failed to run database migrations")?;
     tracing::info!("database migrations applied");
 
-    let app = Router::new().with_state(pool);
+    // The frontend calls the API from another origin; tokens travel in `Authorization`
+    let cors = CorsLayer::new()
+        .allow_origin(AllowOrigin::list(config.cors_origins.clone()))
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::PATCH,
+            Method::DELETE,
+        ])
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT]);
+
+    let app = Router::new().with_state(pool).layer(cors);
 
     let listener = TcpListener::bind(config.addr)
         .await

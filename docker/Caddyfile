@@ -1,24 +1,37 @@
 {$DOMAIN} {
     encode zstd gzip
+    reverse_proxy task-manager:80
+}
 
-    # Phoenix sockets live under /socket (e.g. /socket/websocket); the path is passed through as is
-    handle /socket/* {
-        reverse_proxy socket-server:4000
+# The REST backend. The frontend calls it cross-origin, so main-service answers CORS itself.
+# /internal/* (service-to-service endpoints) stays on the private network.
+api.{$DOMAIN} {
+    encode zstd gzip
+
+    handle /internal/* {
+        respond 404
     }
 
     handle {
-        reverse_proxy task-manager:80
+        reverse_proxy main-service:8080
     }
 }
 
+# Phoenix sockets (e.g. wss://socket.{$DOMAIN}/socket/websocket); paths are passed through as is.
+# The page's origin is checked by Phoenix (`check_origin`), not here.
+socket.{$DOMAIN} {
+    reverse_proxy socket-server:4000
+}
+
 # Storage has its own origin, so files uploaded by users can never run in the app's origin.
-# Only what a browser needs is exposed: uploads and file downloads. /internal/* and the Swagger UI
-# stay on the private network, and anything else answers 404 here instead of reaching the service.
+# Exposed: uploads, file downloads and the Swagger UI (/api, spec at /api/openapi.json).
+# /internal/* stays on the private network, and anything else answers 404 here instead of
+# reaching the service.
 # No `encode`: media is already compressed, and the service handles Range requests itself.
 storage.{$DOMAIN} {
-    @browser path /files/* /public/files/* /actions/*
+    @public path /files/* /public/files/* /actions/* /api /api/*
 
-    handle @browser {
+    handle @public {
         reverse_proxy storage-service:8082
     }
 
