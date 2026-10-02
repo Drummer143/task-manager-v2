@@ -11,7 +11,11 @@ async fn main() {
     use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
     tracing_subscriber::registry()
-        .with(EnvFilter::new("debug,lapin=warn,sqlx=warn"))
+        // RUST_LOG overrides it, e.g. RUST_LOG=debug while investigating
+        .with(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,lapin=warn,sqlx=warn")),
+        )
         .with(tracing_subscriber::fmt::layer())
         .init();
 

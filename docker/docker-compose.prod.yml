@@ -288,6 +288,8 @@ services:
             INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
             FILE_LINK_SECRET: ${FILE_LINK_SECRET:?FILE_LINK_SECRET is required}
             FILE_LINK_TTL_SECONDS: ${FILE_LINK_TTL_SECONDS:-3600}
+            # e.g. STORAGE_RUST_LOG=debug while investigating; no rebuild needed
+            RUST_LOG: ${STORAGE_RUST_LOG:-info,lapin=warn,sqlx=warn}
             # Links point at the public address of caddy. The frontend (https://DOMAIN) calls
             # storage cross-origin, so its origin must be allowed by CORS
             STORAGE_PUBLIC_URL: https://storage.${DOMAIN:?DOMAIN is required}
