@@ -1,6 +1,6 @@
 name: Deploy
 
-# Syncs docker/ and the prod .env to the VPS, then pulls and restarts images.
+# Syncs docker/ and the prod .env to the VPS, then pulls and restarts images and reloads caddy.
 # - images = 'all': every service in the compose file is pulled and brought up (unchanged ones keep running)
 # - images = list:  only those app services are pulled and recreated, dependencies are left as they are
 # A commit sha tag exists only for images built at that commit, so use it together with an image list
@@ -84,8 +84,8 @@ jobs:
           script: |
             set -eu
             mkdir -p ~/task-manager
-            # Drop the previous copy so removed files (e.g. authentik blueprints) do not linger
-            rm -rf ~/task-manager/docker
+            # A fresh upload area; docker/ itself is only updated in place in the last step
+            rm -rf ~/task-manager/.incoming
             umask 077
             printf '%s\n' "$PROD_ENV_FILE" > ~/task-manager/.env
 
@@ -96,7 +96,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "docker/"
-          target: "~/task-manager"
+          target: "~/task-manager/.incoming"
 
       - name: Pull and restart
         uses: appleboy/ssh-action@v1.2.5
@@ -115,6 +115,17 @@ jobs:
             cd ~/task-manager
             export IMAGE_TAG
 
+            # Running containers bind-mount files from docker/ (the Caddyfile, authentik blueprints).
+            # Replacing a file or directory would leave them on the deleted copy, so existing files
+            # are overwritten in place (cp keeps the inode) and only files gone from the repo are removed.
+            mkdir -p docker
+            cp -a .incoming/docker/. docker/
+            (cd docker && find . -type f) | while IFS= read -r file; do
+              [ -e ".incoming/docker/$file" ] || rm -f "docker/$file"
+            done
+            find docker -mindepth 1 -type d -empty -delete
+            rm -rf .incoming
+
             # Short-lived job token; logged out again whatever happens below
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
@@ -126,6 +137,11 @@ jobs:
             else
               $compose pull
               $compose up -d --remove-orphans
+            fi
+
+            # Caddy reads its config only at start or on reload; authentik watches blueprints itself
+            if [ -n "$($compose ps -q caddy)" ]; then
+              $compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
             fi
 
             $compose ps
