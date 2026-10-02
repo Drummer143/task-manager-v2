@@ -116,12 +116,15 @@ services:
         image: rabbitmq:management-alpine
         restart: unless-stopped
         container_name: rmq
+        # A port probe, not `rabbitmq-diagnostics`: the CLI boots its own Erlang VM, which takes over
+        # 10 s within the CPU limit below and so kept failing the timeout. The AMQP listener opens only
+        # once the broker has finished booting, so an open port means it is ready.
         healthcheck:
-            test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+            test: ["CMD", "nc", "-z", "127.0.0.1", "5672"]
             interval: 10s
             timeout: 5s
             retries: 10
-            start_period: 10s
+            start_period: 60s
         deploy:
             resources:
                 limits:
