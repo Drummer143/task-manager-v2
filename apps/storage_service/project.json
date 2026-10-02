@@ -2,7 +2,7 @@
 	"name": "storage",
 	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
 	"projectType": "application",
-	"sourceRoot": "apps/backend/storage/src",
+	"sourceRoot": "apps/storage_service/src",
 	"tags": ["backend", "rust"],
 	"targets": {
 		"build": {
@@ -44,10 +44,10 @@
 		"export-openapi": {
 			"cache": true,
 			"executor": "nx:run-commands",
-			"outputs": ["{workspaceRoot}/libs/frontend/api/specs/openapi-storage.json"],
+			"outputs": ["{workspaceRoot}/packages/frontend/api/specs/openapi-storage.json"],
 			"options": {
 				"cwd": ".",
-				"command": "cargo run --bin export-openapi-storage -- libs/frontend/api/specs/openapi-storage.json"
+				"command": "cargo run --bin export-openapi-storage -- packages/frontend/api/specs/openapi-storage.json"
 			}
 		},
 		"dev": {

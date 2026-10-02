@@ -1,0 +1,3224 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "storage",
+    "description": "",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/actions/upload/init": {
+      "post": {
+        "tags": [
+          "Upload file"
+        ],
+        "operationId": "upload_init",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadInitDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Upload chunked init",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadInitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`MALFORMED_REQUEST`: The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "MALFORMED_REQUEST": {
+                    "summary": "The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+                    "value": {
+                      "code": "MALFORMED_REQUEST",
+                      "status": 400,
+                      "type": "urn:task-manager:error:malformed-request"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`UNAUTHORIZED`: Authentication is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNAUTHORIZED": {
+                    "summary": "Authentication is missing or invalid.",
+                    "value": {
+                      "code": "UNAUTHORIZED",
+                      "status": 401,
+                      "type": "urn:task-manager:error:unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "One of: `FORBIDDEN`, `UPLOAD_TOKEN_INVALID`",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "The caller is not allowed to perform this action.",
+                    "value": {
+                      "code": "FORBIDDEN",
+                      "status": 403,
+                      "type": "urn:task-manager:error:forbidden"
+                    }
+                  },
+                  "UPLOAD_TOKEN_INVALID": {
+                    "summary": "The upload token is invalid, expired, or was issued to another user.",
+                    "value": {
+                      "code": "UPLOAD_TOKEN_INVALID",
+                      "status": 403,
+                      "type": "urn:task-manager:error:upload-token-invalid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`PAYLOAD_TOO_LARGE`: The request body exceeds the size limit of the endpoint.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "PAYLOAD_TOO_LARGE": {
+                    "summary": "The request body exceeds the size limit of the endpoint.",
+                    "value": {
+                      "code": "PAYLOAD_TOO_LARGE",
+                      "status": 413,
+                      "type": "urn:task-manager:error:payload-too-large"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`UNSUPPORTED_MEDIA_TYPE`: The request body has an unsupported `Content-Type`; JSON endpoints expect `application/json`.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNSUPPORTED_MEDIA_TYPE": {
+                    "summary": "The request body has an unsupported `Content-Type`; JSON endpoints expect `application/json`.",
+                    "value": {
+                      "code": "UNSUPPORTED_MEDIA_TYPE",
+                      "status": 415,
+                      "type": "urn:task-manager:error:unsupported-media-type"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL`: Unexpected server failure. Details are only available in server logs.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INTERNAL": {
+                    "summary": "Unexpected server failure. Details are only available in server logs.",
+                    "value": {
+                      "code": "INTERNAL",
+                      "status": 500,
+                      "type": "urn:task-manager:error:internal"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`INSUFFICIENT_STORAGE`: The server has no room left to store the file.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INSUFFICIENT_STORAGE": {
+                    "summary": "The server has no room left to store the file.",
+                    "value": {
+                      "code": "INSUFFICIENT_STORAGE",
+                      "status": 507,
+                      "type": "urn:task-manager:error:insufficient-storage"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actions/upload/{transaction_id}/cancel": {
+      "delete": {
+        "tags": [
+          "Upload file"
+        ],
+        "operationId": "upload_cancel",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "description": "Transaction ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upload cancelled"
+          },
+          "401": {
+            "description": "`UNAUTHORIZED`: Authentication is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNAUTHORIZED": {
+                    "summary": "Authentication is missing or invalid.",
+                    "value": {
+                      "code": "UNAUTHORIZED",
+                      "status": 401,
+                      "type": "urn:task-manager:error:unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN`: The caller is not allowed to perform this action.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "The caller is not allowed to perform this action.",
+                    "value": {
+                      "code": "FORBIDDEN",
+                      "status": 403,
+                      "type": "urn:task-manager:error:forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND`: The requested resource does not exist.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "NOT_FOUND": {
+                    "summary": "The requested resource does not exist.",
+                    "value": {
+                      "code": "NOT_FOUND",
+                      "status": 404,
+                      "type": "urn:task-manager:error:not-found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL`: Unexpected server failure. Details are only available in server logs.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INTERNAL": {
+                    "summary": "Unexpected server failure. Details are only available in server logs.",
+                    "value": {
+                      "code": "INTERNAL",
+                      "status": 500,
+                      "type": "urn:task-manager:error:internal"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actions/upload/{transaction_id}/chunk": {
+      "post": {
+        "tags": [
+          "Upload file"
+        ],
+        "operationId": "upload_chunk",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "description": "Transaction id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Content-Range",
+            "in": "header",
+            "description": "Format: bytes start-end/total (e.g. bytes 0-1024/5000)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "application/octet-stream"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "File uploaded successfully"
+          },
+          "400": {
+            "description": "`MALFORMED_REQUEST`: The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "MALFORMED_REQUEST": {
+                    "summary": "The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+                    "value": {
+                      "code": "MALFORMED_REQUEST",
+                      "status": 400,
+                      "type": "urn:task-manager:error:malformed-request"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`UNAUTHORIZED`: Authentication is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNAUTHORIZED": {
+                    "summary": "Authentication is missing or invalid.",
+                    "value": {
+                      "code": "UNAUTHORIZED",
+                      "status": 401,
+                      "type": "urn:task-manager:error:unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN`: The caller is not allowed to perform this action.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "The caller is not allowed to perform this action.",
+                    "value": {
+                      "code": "FORBIDDEN",
+                      "status": 403,
+                      "type": "urn:task-manager:error:forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND`: The requested resource does not exist.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "NOT_FOUND": {
+                    "summary": "The requested resource does not exist.",
+                    "value": {
+                      "code": "NOT_FOUND",
+                      "status": 404,
+                      "type": "urn:task-manager:error:not-found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`UPLOAD_WRONG_STEP`: The upload transaction is not in the step this endpoint serves.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UPLOAD_WRONG_STEP": {
+                    "summary": "The upload transaction is not in the step this endpoint serves.",
+                    "value": {
+                      "code": "UPLOAD_WRONG_STEP",
+                      "params": {
+                        "current_step": ""
+                      },
+                      "status": 409,
+                      "type": "urn:task-manager:error:upload-wrong-step"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`PAYLOAD_TOO_LARGE`: The request body exceeds the size limit of the endpoint.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "PAYLOAD_TOO_LARGE": {
+                    "summary": "The request body exceeds the size limit of the endpoint.",
+                    "value": {
+                      "code": "PAYLOAD_TOO_LARGE",
+                      "status": 413,
+                      "type": "urn:task-manager:error:payload-too-large"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`INVALID_CHUNK_SIZE`: A chunk has a size that does not match its `Content-Range` or exceeds the chunk limit.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INVALID_CHUNK_SIZE": {
+                    "summary": "A chunk has a size that does not match its `Content-Range` or exceeds the chunk limit.",
+                    "value": {
+                      "code": "INVALID_CHUNK_SIZE",
+                      "params": {
+                        "max_bytes": 5242880
+                      },
+                      "status": 422,
+                      "type": "urn:task-manager:error:invalid-chunk-size"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_CONCURRENT_UPLOADS`: Too many chunks of this upload are in flight; retry shortly.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "TOO_MANY_CONCURRENT_UPLOADS": {
+                    "summary": "Too many chunks of this upload are in flight; retry shortly.",
+                    "value": {
+                      "code": "TOO_MANY_CONCURRENT_UPLOADS",
+                      "params": {
+                        "max_concurrent": 3
+                      },
+                      "status": 429,
+                      "type": "urn:task-manager:error:too-many-concurrent-uploads"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL`: Unexpected server failure. Details are only available in server logs.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INTERNAL": {
+                    "summary": "Unexpected server failure. Details are only available in server logs.",
+                    "value": {
+                      "code": "INTERNAL",
+                      "status": 500,
+                      "type": "urn:task-manager:error:internal"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actions/upload/{transaction_id}/complete": {
+      "post": {
+        "tags": [
+          "Upload file"
+        ],
+        "operationId": "upload_complete",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "description": "Transaction ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upload completion result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`UNAUTHORIZED`: Authentication is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNAUTHORIZED": {
+                    "summary": "Authentication is missing or invalid.",
+                    "value": {
+                      "code": "UNAUTHORIZED",
+                      "status": 401,
+                      "type": "urn:task-manager:error:unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN`: The caller is not allowed to perform this action.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "The caller is not allowed to perform this action.",
+                    "value": {
+                      "code": "FORBIDDEN",
+                      "status": 403,
+                      "type": "urn:task-manager:error:forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND`: The requested resource does not exist.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "NOT_FOUND": {
+                    "summary": "The requested resource does not exist.",
+                    "value": {
+                      "code": "NOT_FOUND",
+                      "status": 404,
+                      "type": "urn:task-manager:error:not-found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "One of: `UPLOAD_WRONG_STEP`, `UPLOAD_INCOMPLETE`, `CONFLICT`",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "CONFLICT": {
+                    "summary": "The request conflicts with the current state of the resource.",
+                    "value": {
+                      "code": "CONFLICT",
+                      "status": 409,
+                      "type": "urn:task-manager:error:conflict"
+                    }
+                  },
+                  "UPLOAD_INCOMPLETE": {
+                    "summary": "Not all chunks of the upload have been received yet.",
+                    "value": {
+                      "code": "UPLOAD_INCOMPLETE",
+                      "status": 409,
+                      "type": "urn:task-manager:error:upload-incomplete"
+                    }
+                  },
+                  "UPLOAD_WRONG_STEP": {
+                    "summary": "The upload transaction is not in the step this endpoint serves.",
+                    "value": {
+                      "code": "UPLOAD_WRONG_STEP",
+                      "params": {
+                        "current_step": ""
+                      },
+                      "status": 409,
+                      "type": "urn:task-manager:error:upload-wrong-step"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`FILE_HASH_MISMATCH`: The content hash of the uploaded file differs from the hash announced at upload init.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FILE_HASH_MISMATCH": {
+                    "summary": "The content hash of the uploaded file differs from the hash announced at upload init.",
+                    "value": {
+                      "code": "FILE_HASH_MISMATCH",
+                      "status": 422,
+                      "type": "urn:task-manager:error:file-hash-mismatch"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL`: Unexpected server failure. Details are only available in server logs.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INTERNAL": {
+                    "summary": "Unexpected server failure. Details are only available in server logs.",
+                    "value": {
+                      "code": "INTERNAL",
+                      "status": 500,
+                      "type": "urn:task-manager:error:internal"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actions/upload/{transaction_id}/status": {
+      "get": {
+        "tags": [
+          "Upload file"
+        ],
+        "operationId": "upload_status",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "description": "Transaction ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upload status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`UNAUTHORIZED`: Authentication is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNAUTHORIZED": {
+                    "summary": "Authentication is missing or invalid.",
+                    "value": {
+                      "code": "UNAUTHORIZED",
+                      "status": 401,
+                      "type": "urn:task-manager:error:unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN`: The caller is not allowed to perform this action.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "The caller is not allowed to perform this action.",
+                    "value": {
+                      "code": "FORBIDDEN",
+                      "status": 403,
+                      "type": "urn:task-manager:error:forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND`: The requested resource does not exist.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "NOT_FOUND": {
+                    "summary": "The requested resource does not exist.",
+                    "value": {
+                      "code": "NOT_FOUND",
+                      "status": 404,
+                      "type": "urn:task-manager:error:not-found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL`: Unexpected server failure. Details are only available in server logs.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INTERNAL": {
+                    "summary": "Unexpected server failure. Details are only available in server logs.",
+                    "value": {
+                      "code": "INTERNAL",
+                      "status": 500,
+                      "type": "urn:task-manager:error:internal"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actions/upload/{transaction_id}/verify": {
+      "post": {
+        "tags": [
+          "Upload file"
+        ],
+        "operationId": "upload_verify",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "description": "Transaction ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadVerifyDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Verification result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`MALFORMED_REQUEST`: The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "MALFORMED_REQUEST": {
+                    "summary": "The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+                    "value": {
+                      "code": "MALFORMED_REQUEST",
+                      "status": 400,
+                      "type": "urn:task-manager:error:malformed-request"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`UNAUTHORIZED`: Authentication is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNAUTHORIZED": {
+                    "summary": "Authentication is missing or invalid.",
+                    "value": {
+                      "code": "UNAUTHORIZED",
+                      "status": 401,
+                      "type": "urn:task-manager:error:unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN`: The caller is not allowed to perform this action.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "The caller is not allowed to perform this action.",
+                    "value": {
+                      "code": "FORBIDDEN",
+                      "status": 403,
+                      "type": "urn:task-manager:error:forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND`: The requested resource does not exist.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "NOT_FOUND": {
+                    "summary": "The requested resource does not exist.",
+                    "value": {
+                      "code": "NOT_FOUND",
+                      "status": 404,
+                      "type": "urn:task-manager:error:not-found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`UPLOAD_WRONG_STEP`: The upload transaction is not in the step this endpoint serves.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UPLOAD_WRONG_STEP": {
+                    "summary": "The upload transaction is not in the step this endpoint serves.",
+                    "value": {
+                      "code": "UPLOAD_WRONG_STEP",
+                      "params": {
+                        "current_step": ""
+                      },
+                      "status": 409,
+                      "type": "urn:task-manager:error:upload-wrong-step"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`PAYLOAD_TOO_LARGE`: The request body exceeds the size limit of the endpoint.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "PAYLOAD_TOO_LARGE": {
+                    "summary": "The request body exceeds the size limit of the endpoint.",
+                    "value": {
+                      "code": "PAYLOAD_TOO_LARGE",
+                      "status": 413,
+                      "type": "urn:task-manager:error:payload-too-large"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`UNSUPPORTED_MEDIA_TYPE`: The request body has an unsupported `Content-Type`; JSON endpoints expect `application/json`.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNSUPPORTED_MEDIA_TYPE": {
+                    "summary": "The request body has an unsupported `Content-Type`; JSON endpoints expect `application/json`.",
+                    "value": {
+                      "code": "UNSUPPORTED_MEDIA_TYPE",
+                      "status": 415,
+                      "type": "urn:task-manager:error:unsupported-media-type"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VERIFICATION_FAILED`: Ownership verification of an already stored file failed.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "VERIFICATION_FAILED": {
+                    "summary": "Ownership verification of an already stored file failed.",
+                    "value": {
+                      "code": "VERIFICATION_FAILED",
+                      "status": 422,
+                      "type": "urn:task-manager:error:verification-failed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL`: Unexpected server failure. Details are only available in server logs.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INTERNAL": {
+                    "summary": "Unexpected server failure. Details are only available in server logs.",
+                    "value": {
+                      "code": "INTERNAL",
+                      "status": 500,
+                      "type": "urn:task-manager:error:internal"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actions/upload/{transaction_id}/whole-file": {
+      "post": {
+        "tags": [
+          "Upload file"
+        ],
+        "operationId": "upload_whole_file",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "description": "Transaction ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "File uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`UNAUTHORIZED`: Authentication is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNAUTHORIZED": {
+                    "summary": "Authentication is missing or invalid.",
+                    "value": {
+                      "code": "UNAUTHORIZED",
+                      "status": 401,
+                      "type": "urn:task-manager:error:unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN`: The caller is not allowed to perform this action.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "The caller is not allowed to perform this action.",
+                    "value": {
+                      "code": "FORBIDDEN",
+                      "status": 403,
+                      "type": "urn:task-manager:error:forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND`: The requested resource does not exist.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "NOT_FOUND": {
+                    "summary": "The requested resource does not exist.",
+                    "value": {
+                      "code": "NOT_FOUND",
+                      "status": 404,
+                      "type": "urn:task-manager:error:not-found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "One of: `UPLOAD_WRONG_STEP`, `CONFLICT`",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "CONFLICT": {
+                    "summary": "The request conflicts with the current state of the resource.",
+                    "value": {
+                      "code": "CONFLICT",
+                      "status": 409,
+                      "type": "urn:task-manager:error:conflict"
+                    }
+                  },
+                  "UPLOAD_WRONG_STEP": {
+                    "summary": "The upload transaction is not in the step this endpoint serves.",
+                    "value": {
+                      "code": "UPLOAD_WRONG_STEP",
+                      "params": {
+                        "current_step": ""
+                      },
+                      "status": 409,
+                      "type": "urn:task-manager:error:upload-wrong-step"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "One of: `PAYLOAD_TOO_LARGE`, `FILE_TOO_LARGE`",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FILE_TOO_LARGE": {
+                    "summary": "The uploaded file exceeds the size limit.",
+                    "value": {
+                      "code": "FILE_TOO_LARGE",
+                      "params": {
+                        "actual_bytes": 20971520,
+                        "max_bytes": 15728640
+                      },
+                      "status": 413,
+                      "type": "urn:task-manager:error:file-too-large"
+                    }
+                  },
+                  "PAYLOAD_TOO_LARGE": {
+                    "summary": "The request body exceeds the size limit of the endpoint.",
+                    "value": {
+                      "code": "PAYLOAD_TOO_LARGE",
+                      "status": 413,
+                      "type": "urn:task-manager:error:payload-too-large"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "One of: `FILE_SIZE_MISMATCH`, `FILE_HASH_MISMATCH`",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FILE_HASH_MISMATCH": {
+                    "summary": "The content hash of the uploaded file differs from the hash announced at upload init.",
+                    "value": {
+                      "code": "FILE_HASH_MISMATCH",
+                      "status": 422,
+                      "type": "urn:task-manager:error:file-hash-mismatch"
+                    }
+                  },
+                  "FILE_SIZE_MISMATCH": {
+                    "summary": "The size of the uploaded content differs from the size announced at upload init.",
+                    "value": {
+                      "code": "FILE_SIZE_MISMATCH",
+                      "params": {
+                        "actual_bytes": 1048000,
+                        "expected_bytes": 1048576
+                      },
+                      "status": 422,
+                      "type": "urn:task-manager:error:file-size-mismatch"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL`: Unexpected server failure. Details are only available in server logs.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INTERNAL": {
+                    "summary": "Unexpected server failure. Details are only available in server logs.",
+                    "value": {
+                      "code": "INTERNAL",
+                      "status": 500,
+                      "type": "urn:task-manager:error:internal"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/links": {
+      "post": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Issues download links for many assets at once.",
+        "description": "Public assets get a stable link, private ones a signed link that expires (see `expiresAt`).\nAssets the caller cannot read are listed in `unavailable`, indistinguishable from assets that\ndo not exist.",
+        "operationId": "issue_file_links",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileLinksRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Links for the assets the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileLinksResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`MALFORMED_REQUEST`: The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "MALFORMED_REQUEST": {
+                    "summary": "The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+                    "value": {
+                      "code": "MALFORMED_REQUEST",
+                      "status": 400,
+                      "type": "urn:task-manager:error:malformed-request"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`UNAUTHORIZED`: Authentication is missing or invalid.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNAUTHORIZED": {
+                    "summary": "Authentication is missing or invalid.",
+                    "value": {
+                      "code": "UNAUTHORIZED",
+                      "status": 401,
+                      "type": "urn:task-manager:error:unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`PAYLOAD_TOO_LARGE`: The request body exceeds the size limit of the endpoint.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "PAYLOAD_TOO_LARGE": {
+                    "summary": "The request body exceeds the size limit of the endpoint.",
+                    "value": {
+                      "code": "PAYLOAD_TOO_LARGE",
+                      "status": 413,
+                      "type": "urn:task-manager:error:payload-too-large"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`UNSUPPORTED_MEDIA_TYPE`: The request body has an unsupported `Content-Type`; JSON endpoints expect `application/json`.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UNSUPPORTED_MEDIA_TYPE": {
+                    "summary": "The request body has an unsupported `Content-Type`; JSON endpoints expect `application/json`.",
+                    "value": {
+                      "code": "UNSUPPORTED_MEDIA_TYPE",
+                      "status": 415,
+                      "type": "urn:task-manager:error:unsupported-media-type"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`TOO_MANY_ITEMS`: A request carries more items than a single call may process.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "TOO_MANY_ITEMS": {
+                    "summary": "A request carries more items than a single call may process.",
+                    "value": {
+                      "code": "TOO_MANY_ITEMS",
+                      "params": {
+                        "max_items": 200
+                      },
+                      "status": 422,
+                      "type": "urn:task-manager:error:too-many-items"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL`: Unexpected server failure. Details are only available in server logs.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INTERNAL": {
+                    "summary": "Unexpected server failure. Details are only available in server logs.",
+                    "value": {
+                      "code": "INTERNAL",
+                      "status": 500,
+                      "type": "urn:task-manager:error:internal"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`UPSTREAM_UNAVAILABLE`: A service this one depends on did not answer or answered with something unusable.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UPSTREAM_UNAVAILABLE": {
+                    "summary": "A service this one depends on did not answer or answered with something unusable.",
+                    "value": {
+                      "code": "UPSTREAM_UNAVAILABLE",
+                      "status": 502,
+                      "type": "urn:task-manager:error:upstream-unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/{asset_id}": {
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Downloads a private file through a signed link. The signature is the credential: no\n`Authorization` header is needed, so `<img>` and `<video>` tags work.",
+        "operationId": "get_signed_file",
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "description": "Asset ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sig",
+            "in": "query",
+            "description": "Token from a link issued by `POST /files/links`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "query",
+            "description": "Name offered on download; overrides the asset name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "description": "`true` forces a download instead of inline display",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File content",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partial content",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`MALFORMED_REQUEST`: The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "MALFORMED_REQUEST": {
+                    "summary": "The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+                    "value": {
+                      "code": "MALFORMED_REQUEST",
+                      "status": 400,
+                      "type": "urn:task-manager:error:malformed-request"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "One of: `FILE_LINK_INVALID`, `FILE_LINK_EXPIRED`",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "FILE_LINK_EXPIRED": {
+                    "summary": "The signed file link has expired; request a new one.",
+                    "value": {
+                      "code": "FILE_LINK_EXPIRED",
+                      "status": 403,
+                      "type": "urn:task-manager:error:file-link-expired"
+                    }
+                  },
+                  "FILE_LINK_INVALID": {
+                    "summary": "The signed file link is malformed, has a bad signature, or belongs to another file.",
+                    "value": {
+                      "code": "FILE_LINK_INVALID",
+                      "status": 403,
+                      "type": "urn:task-manager:error:file-link-invalid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND`: The requested resource does not exist.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "NOT_FOUND": {
+                    "summary": "The requested resource does not exist.",
+                    "value": {
+                      "code": "NOT_FOUND",
+                      "status": 404,
+                      "type": "urn:task-manager:error:not-found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL`: Unexpected server failure. Details are only available in server logs.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INTERNAL": {
+                    "summary": "Unexpected server failure. Details are only available in server logs.",
+                    "value": {
+                      "code": "INTERNAL",
+                      "status": 500,
+                      "type": "urn:task-manager:error:internal"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/files/{asset_id}": {
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Downloads a public file. No credentials are needed, and the link is the same for everyone,\nso published pages can embed it. Switching the asset back to private stops it working within\nabout a minute.",
+        "operationId": "get_public_file",
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "description": "Asset ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "query",
+            "description": "Name offered on download; overrides the asset name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "description": "`true` forces a download instead of inline display",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File content",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partial content",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`MALFORMED_REQUEST`: The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "MALFORMED_REQUEST": {
+                    "summary": "The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+                    "value": {
+                      "code": "MALFORMED_REQUEST",
+                      "status": 400,
+                      "type": "urn:task-manager:error:malformed-request"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND`: The requested resource does not exist.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "NOT_FOUND": {
+                    "summary": "The requested resource does not exist.",
+                    "value": {
+                      "code": "NOT_FOUND",
+                      "status": 404,
+                      "type": "urn:task-manager:error:not-found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL`: Unexpected server failure. Details are only available in server logs.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "INTERNAL": {
+                    "summary": "Unexpected server failure. Details are only available in server logs.",
+                    "value": {
+                      "code": "INTERNAL",
+                      "status": 500,
+                      "type": "urn:task-manager:error:internal"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`UPSTREAM_UNAVAILABLE`: A service this one depends on did not answer or answered with something unusable.",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Request id, equal to `trace_id` in the body. Quote it when reporting a problem."
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                },
+                "examples": {
+                  "UPSTREAM_UNAVAILABLE": {
+                    "summary": "A service this one depends on did not answer or answered with something unusable.",
+                    "value": {
+                      "code": "UPSTREAM_UNAVAILABLE",
+                      "status": 502,
+                      "type": "urn:task-manager:error:upstream-unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AssetResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "AssetVisibility": {
+        "type": "string",
+        "description": "Who may read an asset besides its owners.",
+        "enum": [
+          "public",
+          "private"
+        ]
+      },
+      "ErrorBody": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "status"
+            ],
+            "properties": {
+              "errors": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FieldError"
+                },
+                "description": "Per-field errors, present for validation failures."
+              },
+              "status": {
+                "type": "integer",
+                "format": "int32",
+                "description": "HTTP status, duplicated from the response.",
+                "minimum": 0
+              },
+              "trace_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Correlation id to quote when reporting a problem."
+              },
+              "type": {
+                "type": "string",
+                "description": "Stable URI identifying the class of problem."
+              }
+            }
+          }
+        ],
+        "description": "Public JSON body of every error response (`application/problem+json`).\n\nThere is deliberately no message field: clients localize from `code` and `params`."
+      },
+      "ErrorCode": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The request failed validation; see `errors` for per-field details.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALIDATION_FAILED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The requested resource does not exist.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "NOT_FOUND"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The request conflicts with the current state of the resource.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "CONFLICT"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Authentication is missing or invalid.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UNAUTHORIZED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The caller is not allowed to perform this action.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FORBIDDEN"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Unexpected server failure. Details are only available in server logs.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INTERNAL"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A required field is missing. Used in per-field errors.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "REQUIRED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A field has an invalid format. Used in per-field errors.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INVALID_FORMAT"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "MALFORMED_REQUEST"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The request body has an unsupported `Content-Type`; JSON endpoints expect `application/json`.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UNSUPPORTED_MEDIA_TYPE"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The request body exceeds the size limit of the endpoint.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "PAYLOAD_TOO_LARGE"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The HTTP method is not supported by this endpoint; see the `Allow` response header.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "METHOD_NOT_ALLOWED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The server did not finish handling the request in time. The request may be retried.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "TIMEOUT"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The uploaded file exceeds the size limit.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FILE_TOO_LARGE"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "The uploaded file exceeds the size limit.",
+                "required": [
+                  "max_bytes",
+                  "actual_bytes"
+                ],
+                "properties": {
+                  "actual_bytes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Size of the uploaded file in bytes.",
+                    "minimum": 0
+                  },
+                  "max_bytes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum allowed size in bytes.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The upload token is invalid, expired, or was issued to another user.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UPLOAD_TOKEN_INVALID"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The upload transaction is not in the step this endpoint serves.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UPLOAD_WRONG_STEP"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "The upload transaction is not in the step this endpoint serves.",
+                "required": [
+                  "current_step"
+                ],
+                "properties": {
+                  "current_step": {
+                    "type": "string",
+                    "description": "Step the transaction is currently in: `chunked_upload`, `whole_file_upload` or `verify_ranges`."
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Not all chunks of the upload have been received yet.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UPLOAD_INCOMPLETE"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The size of the uploaded content differs from the size announced at upload init.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FILE_SIZE_MISMATCH"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "The size of the uploaded content differs from the size announced at upload init.",
+                "required": [
+                  "expected_bytes",
+                  "actual_bytes"
+                ],
+                "properties": {
+                  "actual_bytes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Size actually received, in bytes.",
+                    "minimum": 0
+                  },
+                  "expected_bytes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Size announced at upload init, in bytes.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The content hash of the uploaded file differs from the hash announced at upload init.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FILE_HASH_MISMATCH"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A chunk has a size that does not match its `Content-Range` or exceeds the chunk limit.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INVALID_CHUNK_SIZE"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "A chunk has a size that does not match its `Content-Range` or exceeds the chunk limit.",
+                "required": [
+                  "max_bytes"
+                ],
+                "properties": {
+                  "max_bytes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum allowed chunk size in bytes.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Too many chunks of this upload are in flight; retry shortly.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "TOO_MANY_CONCURRENT_UPLOADS"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "Too many chunks of this upload are in flight; retry shortly.",
+                "required": [
+                  "max_concurrent"
+                ],
+                "properties": {
+                  "max_concurrent": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum number of chunks that may be uploaded concurrently.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Ownership verification of an already stored file failed.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VERIFICATION_FAILED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The server has no room left to store the file.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INSUFFICIENT_STORAGE"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The signed file link is malformed, has a bad signature, or belongs to another file.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FILE_LINK_INVALID"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The signed file link has expired; request a new one.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FILE_LINK_EXPIRED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A request carries more items than a single call may process.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "TOO_MANY_ITEMS"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "A request carries more items than a single call may process.",
+                "required": [
+                  "max_items"
+                ],
+                "properties": {
+                  "max_items": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum number of items per request.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A service this one depends on did not answer or answered with something unusable.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UPSTREAM_UNAVAILABLE"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Every error the API can return.\n\nSerialized as `{\"code\": \"FILE_TOO_LARGE\", \"params\": {...}}`; variants without data have no\n`params`. Codes are a public contract: never rename one, only add or deprecate."
+      },
+      "FieldError": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          {
+            "type": "object",
+            "required": [
+              "field"
+            ],
+            "properties": {
+              "field": {
+                "type": "string",
+                "description": "Name of the offending field, e.g. `avatar`."
+              }
+            }
+          }
+        ],
+        "description": "Error attached to a single request field."
+      },
+      "FileLink": {
+        "type": "object",
+        "required": [
+          "assetId",
+          "url",
+          "visibility"
+        ],
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expiresAt": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Seconds since the Unix epoch. `null` for public links, which do not expire.",
+            "minimum": 0
+          },
+          "url": {
+            "type": "string",
+            "description": "Absolute URL to fetch the file from; usable as `<img src>` or `<video src>`."
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/AssetVisibility"
+          }
+        }
+      },
+      "FileLinksRequest": {
+        "type": "object",
+        "required": [
+          "assetIds"
+        ],
+        "properties": {
+          "assetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Assets to get links for. At most 200 per request."
+          }
+        }
+      },
+      "FileLinksResponse": {
+        "type": "object",
+        "required": [
+          "links",
+          "unavailable"
+        ],
+        "properties": {
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileLink"
+            }
+          },
+          "unavailable": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Requested assets the caller may not read, or that do not exist."
+          }
+        }
+      },
+      "UploadChunkedResponse": {
+        "type": "object",
+        "required": [
+          "transactionId",
+          "maxConcurrentUploads",
+          "chunkSize"
+        ],
+        "properties": {
+          "chunkSize": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "maxConcurrentUploads": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "transactionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "UploadChunkedStatusResponse": {
+        "type": "object",
+        "required": [
+          "maxConcurrentUploads",
+          "chunkSize"
+        ],
+        "properties": {
+          "chunkSize": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "maxConcurrentUploads": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "missingChunks": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "UploadInitDto": {
+        "type": "object",
+        "required": [
+          "uploadToken",
+          "hash",
+          "size"
+        ],
+        "properties": {
+          "hash": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "uploadToken": {
+            "type": "string"
+          }
+        }
+      },
+      "UploadInitResponse": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "nextStep"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/UploadChunkedResponse"
+              },
+              "nextStep": {
+                "type": "string",
+                "enum": [
+                  "startUploadChunked"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "nextStep"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/UploadWholeFileResponse"
+              },
+              "nextStep": {
+                "type": "string",
+                "enum": [
+                  "startUploadWholeFile"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "nextStep"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/VerifyRangesResponse"
+              },
+              "nextStep": {
+                "type": "string",
+                "enum": [
+                  "verifyRanges"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "UploadStatusResponse": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "currentStep"
+            ],
+            "properties": {
+              "currentStep": {
+                "type": "string",
+                "enum": [
+                  "uploadChunked"
+                ]
+              },
+              "data": {
+                "$ref": "#/components/schemas/UploadChunkedStatusResponse"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "currentStep"
+            ],
+            "properties": {
+              "currentStep": {
+                "type": "string",
+                "enum": [
+                  "uploadWholeFile"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "currentStep"
+            ],
+            "properties": {
+              "currentStep": {
+                "type": "string",
+                "enum": [
+                  "verifyRanges"
+                ]
+              },
+              "data": {
+                "$ref": "#/components/schemas/VerifyRangesStatusResponse"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "currentStep"
+            ],
+            "properties": {
+              "currentStep": {
+                "type": "string",
+                "enum": [
+                  "complete"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "UploadSuccessResponse": {
+        "type": "object",
+        "required": [
+          "asset",
+          "mime_type"
+        ],
+        "properties": {
+          "asset": {
+            "$ref": "#/components/schemas/AssetResponse"
+          },
+          "mime_type": {
+            "type": "string"
+          }
+        }
+      },
+      "UploadVerifyDto": {
+        "type": "object",
+        "required": [
+          "ranges"
+        ],
+        "properties": {
+          "ranges": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "UploadWholeFileResponse": {
+        "type": "object",
+        "required": [
+          "transactionId"
+        ],
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "VerifyRange": {
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "end": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "start": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "VerifyRangesResponse": {
+        "type": "object",
+        "required": [
+          "transactionId",
+          "ranges"
+        ],
+        "properties": {
+          "ranges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerifyRange"
+            }
+          },
+          "transactionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "VerifyRangesStatusResponse": {
+        "type": "object",
+        "required": [
+          "ranges"
+        ],
+        "properties": {
+          "ranges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerifyRange"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer_auth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer_auth": []
+    }
+  ]
+}
