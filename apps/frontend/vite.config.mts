@@ -16,10 +16,12 @@ export default defineConfig(() => ({
     host: 'localhost',
   },
   plugins: [react(), nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
-  // Uncomment this if you are using workers.
-  // worker: {
-  //   plugins: () => [ nxViteTsPaths() ],
-  // },
+  // The upload worker (@task-manager-v2/uploader) imports workspace libs, and workers are bundled
+  // separately, so they need the path aliases too
+  worker: {
+    format: 'es' as const,
+    plugins: () => [nxViteTsPaths()],
+  },
   build: {
     outDir: '../../dist/apps/frontend',
     emptyOutDir: true,

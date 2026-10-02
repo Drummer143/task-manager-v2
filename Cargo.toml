@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "apps/main_service",
     "apps/storage_service",
+    "packages/rust/blake3_wasm",
     "packages/rust/error_handlers",
     "packages/rust/sql_models",
     "packages/rust/utils",

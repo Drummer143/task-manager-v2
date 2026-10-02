@@ -1,0 +1,57 @@
+{
+	"name": "blake3-wasm",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"projectType": "library",
+	"sourceRoot": "packages/rust/blake3_wasm/src",
+	"tags": ["rust", "wasm"],
+	"targets": {
+		"build": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"cwd": ".",
+				"command": "cargo check -p blake3_wasm"
+			}
+		},
+		"build-wasm": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "packages/rust/blake3_wasm",
+				"command": "node tools/build-wasm.mjs"
+			},
+			"inputs": [
+				"{projectRoot}/Cargo.toml",
+				"{projectRoot}/src/**/*",
+				"{projectRoot}/tools/build-wasm.mjs",
+				"{workspaceRoot}/Cargo.lock",
+				"{workspaceRoot}/rust-toolchain.toml"
+			],
+			"outputs": ["{workspaceRoot}/packages/frontend/uploader/src/hasher/wasm"]
+		},
+		"check-wasm": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "packages/rust/blake3_wasm",
+				"command": "node tools/build-wasm.mjs --check"
+			}
+		},
+		"test": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"cwd": ".",
+				"command": "cargo test -p blake3_wasm"
+			}
+		},
+		"lint": {
+			"cache": true,
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": ".",
+				"command": "cargo clippy -p blake3_wasm --all-targets -- -D warnings"
+			}
+		}
+	}
+}

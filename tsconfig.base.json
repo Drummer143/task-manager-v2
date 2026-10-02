@@ -22,7 +22,8 @@
       "@task-manager-v2/ui-kit/icons": ["./packages/frontend/ui-kit/src/icons/index.ts"],
       "@task-manager-v2/ui-kit/tokens.css": ["./packages/frontend/ui-kit/src/tokens/tokens.css"],
       "@task-manager-v2/api": ["./packages/frontend/api/src/index.ts"],
-      "@task-manager-v2/api/*": ["./packages/frontend/api/src/generated/*"]
+      "@task-manager-v2/api/*": ["./packages/frontend/api/src/generated/*"],
+      "@task-manager-v2/uploader": ["./packages/frontend/uploader/src/index.ts"]
     }
   }
 }

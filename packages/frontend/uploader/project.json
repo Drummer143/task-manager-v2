@@ -1,0 +1,11 @@
+{
+  "name": "uploader",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/frontend/uploader/src",
+  "projectType": "library",
+  "tags": [
+    "frontend"
+  ],
+  "// targets": "to see all targets run: nx show project uploader --web",
+  "targets": {}
+}
