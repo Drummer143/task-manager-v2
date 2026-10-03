@@ -4,6 +4,9 @@ import * as ReactDOM from 'react-dom/client';
 import '@task-manager-v2/ui-kit/tokens.css';
 import './styles.css';
 import App from './app/app';
+import { startRealtime } from './app/socket';
+
+startRealtime();
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
