@@ -184,6 +184,10 @@ export const Tree: React.FC<TreeProps> = ({
     if (next) {
       setLoads(next);
     }
+    // Runs when the visible rows change. `loads` is this effect's own output and
+    // `loadChildren` is often a new function every parent render: re-running on them would
+    // only repeat the pass over rows already handled
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodeRows, index]);
 
   const retryLoad = (id: string) =>
@@ -206,6 +210,9 @@ export const Tree: React.FC<TreeProps> = ({
     if (closed.length > 0) {
       setOpen(closed, true);
     }
+    // Only when the open page (or its path) changes: `activeAncestors` is a new array every
+    // render, and a branch the user closed later must stay closed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, activeAncestorsKey]);
 
   const revealedActive = useRef<string | undefined>(undefined);

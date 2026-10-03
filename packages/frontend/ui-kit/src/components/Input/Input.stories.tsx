@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ComponentProps, CSSProperties, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import React, { ComponentProps, CSSProperties, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Input } from './Input';
 import { FieldInput } from './FieldInput';
 import { InlineInput, type InlineEditStart, type InlineSaveStatus } from './InlineInput';
@@ -88,21 +88,23 @@ export const Fields: Story = {
   ),
 };
 
+const ErrorOnBlurDemo: React.FC = () => {
+  const [value, setValue] = useState('');
+  const error = value && !value.startsWith('TM-') ? 'No task with this ID' : undefined;
+
+  return (
+    <div style={{ width: cssVar('panel-width') }}>
+      <Input aria-label="Task id" placeholder="TM-248" value={value} onValueChange={setValue} error={error} />
+    </div>
+  );
+};
+
 /**
  * The error waits for blur: type an id without "TM-" — nothing red while
  * typing; leave the field and the line appears. Fix it — it goes at once.
  */
 export const ErrorOnBlur: Story = {
-  render: () => {
-    const [value, setValue] = useState('');
-    const error = value && !value.startsWith('TM-') ? 'No task with this ID' : undefined;
-
-    return (
-      <div style={{ width: cssVar('panel-width') }}>
-        <Input aria-label="Task id" placeholder="TM-248" value={value} onValueChange={setValue} error={error} />
-      </div>
-    );
-  },
+  render: () => <ErrorOnBlurDemo />,
 };
 
 /** On a dark surface: 6% light base, light border, accent-400 focus, danger-300 errors. */
@@ -349,37 +351,39 @@ export const InlineOnInverseSurface: Story = {
   ),
 };
 
+const TitleAndColumnNameDemo: React.FC = () => {
+  const [title, setTitle] = useState('AppShell: shell hotkeys and resize');
+  const [name, setName] = useState('In progress');
+  const [editing, setEditing] = useState<'title' | 'name' | null>(null);
+
+  return (
+    <div style={{ display: 'grid', gap: cssVar('sp-6'), width: cssVar('panel-width') }}>
+      <InlineInput
+        aria-label="Task title"
+        size="title"
+        multiline
+        required
+        value={title}
+        editing={editing === 'title'}
+        onEditingChange={(next) => setEditing(next ? 'title' : null)}
+        onCommit={setTitle}
+      />
+      <div style={{ width: cssVar('column-width') }}>
+        <InlineInput
+          aria-label="Status name"
+          size="label"
+          required
+          value={name}
+          editing={editing === 'name'}
+          onEditingChange={(next) => setEditing(next ? 'name' : null)}
+          onCommit={setName}
+        />
+      </div>
+    </div>
+  );
+};
+
 /** Two more sizes: the panel title (22 px, wraps) and a column name (label). */
 export const TitleAndColumnName: Story = {
-  render: () => {
-    const [title, setTitle] = useState('AppShell: shell hotkeys and resize');
-    const [name, setName] = useState('In progress');
-    const [editing, setEditing] = useState<'title' | 'name' | null>(null);
-
-    return (
-      <div style={{ display: 'grid', gap: cssVar('sp-6'), width: cssVar('panel-width') }}>
-        <InlineInput
-          aria-label="Task title"
-          size="title"
-          multiline
-          required
-          value={title}
-          editing={editing === 'title'}
-          onEditingChange={(next) => setEditing(next ? 'title' : null)}
-          onCommit={setTitle}
-        />
-        <div style={{ width: cssVar('column-width') }}>
-          <InlineInput
-            aria-label="Status name"
-            size="label"
-            required
-            value={name}
-            editing={editing === 'name'}
-            onEditingChange={(next) => setEditing(next ? 'name' : null)}
-            onCommit={setName}
-          />
-        </div>
-      </div>
-    );
-  },
+  render: () => <TitleAndColumnNameDemo />,
 };

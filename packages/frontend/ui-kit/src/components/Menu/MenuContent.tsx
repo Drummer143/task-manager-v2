@@ -228,6 +228,8 @@ const SubmenuRow: React.FC<{ item: MenuSubmenuItem; level: MenuLevelContext; slo
   useEffect(() => {
     setChild(service);
     setParent(parentService);
+    // The setters come from `api` objects that are new every render (see above)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service, parentService]);
 
   const childLevel = childLevelOf(api, service, level);

@@ -7,11 +7,11 @@ name: Test
 # - elixir:   socket_server (no RabbitMQ or authentik needed: config/test.exs turns them off)
 # - frontend: typecheck, lint and tests, the generated API client and the committed Wasm hasher
 
+# Pull requests only: opened, new commits pushed, reopened
 on:
   pull_request:
-  push:
-    branches: [main]
 
+# A new push to the PR cancels the run for the previous commit
 concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
@@ -121,9 +121,8 @@ jobs:
       - name: Typecheck and test
         run: pnpm nx run-many -t typecheck,test -p frontend,ui-kit,uploader,api --skip-sync
 
-      # ui-kit is left out until its existing lint errors are fixed
       - name: Lint
-        run: pnpm nx run-many -t lint -p frontend,uploader,api --skip-sync
+        run: pnpm nx run-many -t lint -p frontend,ui-kit,uploader,api --skip-sync
 
       - name: Generated API client is up to date
         run: |

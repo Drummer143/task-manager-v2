@@ -362,6 +362,7 @@ const InlineEditor: React.FC<InlineEditorProps> = ({
       editor.setSelectionRange(editor.value.length, editor.value.length);
     }
     // Once, when the edit starts: `start` is read at mount on purpose.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cancel = useCallback(() => {

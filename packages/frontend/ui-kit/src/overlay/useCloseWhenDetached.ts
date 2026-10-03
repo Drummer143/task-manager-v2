@@ -26,5 +26,6 @@ export const useCloseWhenDetached = (open: boolean, getTrigger: () => Element | 
 
     return () => observer.disconnect();
     // getTrigger reads the DOM by a stable id — only `open` matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 };

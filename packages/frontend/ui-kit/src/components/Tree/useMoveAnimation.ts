@@ -64,7 +64,7 @@ export const useMoveAnimation = (containerRef: React.RefObject<HTMLElement | nul
       row.style.transition = '';
       row.style.transform = '';
     }
-  }, [rows]);
+  }, [rows, containerRef]);
 
   return capture;
 };

@@ -40,6 +40,7 @@ export const useSearch = (sources: PaletteSource[], query: string, scoped: boole
 
     return { key, controller, sync, pending };
     // `key` covers the sources, the scope and the query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   useEffect(() => {

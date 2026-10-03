@@ -78,6 +78,7 @@ export const useMenuRoot = ({
   useEffect(() => {
     syncAsyncOpen(api.open);
     // Only the open state matters; the setter is recreated every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api.open]);
 
   useExclusiveOverlay(api.open, close);

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
+import React, { CSSProperties, ReactNode, useEffect, useRef, useState, type ComponentProps } from 'react';
 import { IconButton } from './IconButton';
 import type { ButtonSize, ButtonVariant } from './types';
 import { Surface } from '../Surface';
@@ -190,31 +190,33 @@ export const CollapsedSidebar: Story = {
   ),
 };
 
+const BusyDemo: React.FC<ComponentProps<typeof IconButton>> = (args) => {
+  const [loading, setLoading] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  return (
+    <div style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'center' }}>
+      <IconButton
+        {...args}
+        icon={<Glyph name="link" />}
+        label="Copy link"
+        keys="mod+shift+c"
+        loading={loading}
+        onClick={() => {
+          setLoading(true);
+          timer.current = setTimeout(() => setLoading(false), 1500);
+        }}
+      />
+      <Caption>Click: busy for 1.5 s. The square keeps its size.</Caption>
+    </div>
+  );
+};
+
 /** Busy: an icon-sized spinner replaces the icon after 200 ms; the square does not change size. */
 export const Busy: Story = {
-  render: (args) => {
-    const [loading, setLoading] = useState(false);
-    const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-    useEffect(() => () => clearTimeout(timer.current), []);
-
-    return (
-      <div style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'center' }}>
-        <IconButton
-          {...args}
-          icon={<Glyph name="link" />}
-          label="Copy link"
-          keys="mod+shift+c"
-          loading={loading}
-          onClick={() => {
-            setLoading(true);
-            timer.current = setTimeout(() => setLoading(false), 1500);
-          }}
-        />
-        <Caption>Click: busy for 1.5 s. The square keeps its size.</Caption>
-      </div>
-    );
-  },
+  render: (args) => <BusyDemo {...args} />,
 };
 
 /** Height follows the density and the square follows the height. */

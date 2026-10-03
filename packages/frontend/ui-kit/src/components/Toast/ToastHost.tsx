@@ -344,12 +344,16 @@ const Announcer: React.FC = () => {
     const say = action.kind === 'error' ? setAssertive : setPolite;
 
     say((current) => ({ key: current.key + 1, text }));
+    // Keyed by the stage: a re-render showing the same toast must not announce it again
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionStage]);
 
   useEffect(() => {
     if (notice) {
       setPolite((current) => ({ key: current.key + 1, text: notice.notification.announcement }));
     }
+    // Keyed by the notification: announced once, not on every re-render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notice?.key]);
 
   return (

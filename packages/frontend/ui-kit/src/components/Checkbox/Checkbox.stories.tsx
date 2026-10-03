@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ComponentProps, CSSProperties, ReactNode, useState } from 'react';
+import React, { ComponentProps, CSSProperties, ReactNode, useState } from 'react';
 import { Checkbox, type CheckboxChecked } from './Checkbox';
 import { Surface } from '../Surface';
 import { cssVar } from '../../tokens';
@@ -89,49 +89,51 @@ export const Variants: Story = {
 
 const TASKS = ['Hotkey registry', 'Token layer', 'AppShell', 'Tooltip host', 'Button', 'Input', 'Checkbox'];
 
+const SelectAllDemo: React.FC = () => {
+  const [selected, setSelected] = useState<Set<number>>(() => new Set([0, 2, 5]));
+  const [anchor, setAnchor] = useState<number | null>(null);
+  const all: CheckboxChecked = selected.size === 0 ? false : selected.size === TASKS.length ? true : 'mixed';
+
+  return (
+    <div style={{ display: 'grid', justifyItems: 'start' }}>
+      <Checkbox
+        label={`All tasks · ${selected.size}`}
+        checked={all}
+        onCheckedChange={(next) => setSelected(next ? new Set(TASKS.map((_, index) => index)) : new Set())}
+      />
+      <div style={{ display: 'grid', paddingInlineStart: cssVar('sp-6') }}>
+        {TASKS.map((task, index) => (
+          <Checkbox
+            key={task}
+            label={task}
+            checked={selected.has(index)}
+            onCheckedChange={(next, { shiftKey }) => {
+              setSelected((current) => {
+                const copy = new Set(current);
+                const [from, to] = shiftKey && anchor !== null ? [Math.min(anchor, index), Math.max(anchor, index)] : [index, index];
+
+                for (let row = from; row <= to; row++) {
+                  if (next) copy.add(row);
+                  else copy.delete(row);
+                }
+
+                return copy;
+              });
+              setAnchor(index);
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 /**
  * "Select all" over a group: from mixed a click checks all (spec 05).
  * Shift+click on a row reports shiftKey — here it selects the range from the last click.
  */
 export const SelectAll: Story = {
-  render: () => {
-    const [selected, setSelected] = useState<Set<number>>(() => new Set([0, 2, 5]));
-    const [anchor, setAnchor] = useState<number | null>(null);
-    const all: CheckboxChecked = selected.size === 0 ? false : selected.size === TASKS.length ? true : 'mixed';
-
-    return (
-      <div style={{ display: 'grid', justifyItems: 'start' }}>
-        <Checkbox
-          label={`All tasks · ${selected.size}`}
-          checked={all}
-          onCheckedChange={(next) => setSelected(next ? new Set(TASKS.map((_, index) => index)) : new Set())}
-        />
-        <div style={{ display: 'grid', paddingInlineStart: cssVar('sp-6') }}>
-          {TASKS.map((task, index) => (
-            <Checkbox
-              key={task}
-              label={task}
-              checked={selected.has(index)}
-              onCheckedChange={(next, { shiftKey }) => {
-                setSelected((current) => {
-                  const copy = new Set(current);
-                  const [from, to] = shiftKey && anchor !== null ? [Math.min(anchor, index), Math.max(anchor, index)] : [index, index];
-
-                  for (let row = from; row <= to; row++) {
-                    if (next) copy.add(row);
-                    else copy.delete(row);
-                  }
-
-                  return copy;
-                });
-                setAnchor(index);
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  },
+  render: () => <SelectAllDemo />,
 };
 
 /** On a dark surface (the selection bar's "select all"): light outline, accent-400 outline and accent-300 mark. */

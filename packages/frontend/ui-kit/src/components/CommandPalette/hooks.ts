@@ -29,10 +29,11 @@ export const usePaletteCreate = (create: PaletteCreate) => {
   });
 
   useEffect(() => {
-    usePaletteStore.getState().setCreate(entry.current);
+    const registered = entry.current;
+    usePaletteStore.getState().setCreate(registered);
 
     return () => {
-      if (usePaletteStore.getState().create === entry.current) {
+      if (usePaletteStore.getState().create === registered) {
         usePaletteStore.getState().setCreate(null);
       }
     };

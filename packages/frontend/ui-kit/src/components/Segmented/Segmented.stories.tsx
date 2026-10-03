@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { CSSProperties, ReactNode, useState } from 'react';
+import React, { CSSProperties, ReactNode, useState } from 'react';
 import { Segmented, type SegmentedOption } from './Segmented';
 import { Surface } from '../Surface';
 import { cssVar } from '../../tokens';
@@ -110,34 +110,36 @@ export const Gallery: Story = {
   ),
 };
 
+const LiveDemo: React.FC = () => {
+  const [density, setDensity] = useState<Density>('default');
+
+  return (
+    <div style={{ display: 'grid', gap: cssVar('sp-5'), justifyItems: 'start' }}>
+      <Segmented<Density>
+        aria-label="Density"
+        size="sm"
+        value={density}
+        onValueChange={setDensity}
+        options={[
+          { value: 'compact', label: 'Compact' },
+          { value: 'default', label: 'Default' },
+          { value: 'comfortable', label: 'Comfortable', disabledReason: 'Only for documents' },
+        ]}
+      />
+      <div data-density={density} style={{ display: 'grid', gap: cssVar('sp-3') }}>
+        <Owned options={VIEWS} initial="board" />
+        <Caption>The view switcher follows the density: {density}.</Caption>
+      </div>
+    </div>
+  );
+};
+
 /**
  * Keyboard: Tab into the group, ←/→ choose and apply at once, the unavailable
  * one is skipped. The choice here drives the density of the preview below.
  */
 export const Live: Story = {
-  render: () => {
-    const [density, setDensity] = useState<Density>('default');
-
-    return (
-      <div style={{ display: 'grid', gap: cssVar('sp-5'), justifyItems: 'start' }}>
-        <Segmented<Density>
-          aria-label="Density"
-          size="sm"
-          value={density}
-          onValueChange={setDensity}
-          options={[
-            { value: 'compact', label: 'Compact' },
-            { value: 'default', label: 'Default' },
-            { value: 'comfortable', label: 'Comfortable', disabledReason: 'Only for documents' },
-          ]}
-        />
-        <div data-density={density} style={{ display: 'grid', gap: cssVar('sp-3') }}>
-          <Owned options={VIEWS} initial="board" />
-          <Caption>The view switcher follows the density: {density}.</Caption>
-        </div>
-      </div>
-    );
-  },
+  render: () => <LiveDemo />,
 };
 
 /** On a dark surface: 6% light base, light dividers, accent-400 outline and accent-300 text. */

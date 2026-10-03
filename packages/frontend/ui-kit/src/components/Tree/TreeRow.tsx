@@ -173,6 +173,9 @@ export const TreeRow: React.FC<TreeRowProps> = memo(
     return (
       <div
         id={domId}
+        // The open page is `aria-current="page"` (spec Tree); there is no selection to report.
+        // ARIA 1.2 does not require aria-selected on a treeitem, the rule follows ARIA 1.1
+        // eslint-disable-next-line jsx-a11y/role-has-required-aria-props
         role="treeitem"
         aria-level={depth + 1}
         aria-posinset={row.index + 1}

@@ -1,6 +1,6 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
 import Spinner, { type SpinnerSize, type SpinnerVariant } from './Spinner';
-import { CSSProperties, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import React, { CSSProperties, ReactNode, useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
 import { useDelayedFlag } from '../../hooks/useDelayedFlag';
 import { Surface } from '../Surface';
 import { cssVar, raw } from '../../tokens';
@@ -165,60 +165,62 @@ export const ReducedMotion: Story = {
   ),
 };
 
+const WithDelayDemo: React.FC<ComponentProps<typeof Spinner>> = (args) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const show = useDelayedFlag(isVisible, { delay: 1000, minVisible: 5000 });
+
+  const run = useCallback(() => {
+    clearTimeout(timeout.current);
+    setIsVisible(true);
+
+    timeout.current = setTimeout(() => {
+      setIsVisible(false);
+    }, 2000);
+  }, []);
+
+  useEffect(() => {
+    run();
+
+    return () => {
+      clearTimeout(timeout.current);
+    };
+  }, [run]);
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+        alignItems: 'center',
+      }}
+    >
+      <p>
+        {isVisible
+          ? show
+            ? 'Spinner visible'
+            : 'Waiting delay before showing'
+          : show
+            ? 'Spinner visible (minVisible active)'
+            : 'Spinner hidden'}
+      </p>
+
+      {!isVisible && !show && <button onClick={run}>Show</button>}
+
+      {show && <Spinner {...args} />}
+    </div>
+  );
+};
+
 export const WithDelay: Story = {
   args: {
     label: 'Loading',
     variant: 'neutral',
     size: 'sm',
   },
-  render: (args) => {
-    const [isVisible, setIsVisible] = useState(false);
-    const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-    const show = useDelayedFlag(isVisible, { delay: 1000, minVisible: 5000 });
-
-    const run = useCallback(() => {
-      clearTimeout(timeout.current);
-      setIsVisible(true);
-
-      timeout.current = setTimeout(() => {
-        setIsVisible(false);
-      }, 2000);
-    }, []);
-
-    useEffect(() => {
-      run();
-
-      return () => {
-        clearTimeout(timeout.current);
-      };
-    }, [run]);
-
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          alignItems: 'center',
-        }}
-      >
-        <p>
-          {isVisible
-            ? show
-              ? 'Spinner visible'
-              : 'Waiting delay before showing'
-            : show
-              ? 'Spinner visible (minVisible active)'
-              : 'Spinner hidden'}
-        </p>
-
-        {!isVisible && !show && <button onClick={run}>Show</button>}
-
-        {show && <Spinner {...args} />}
-      </div>
-    );
-  },
+  render: (args) => <WithDelayDemo {...args} />,
 };
 
 const REQUESTS = [
@@ -227,64 +229,66 @@ const REQUESTS = [
   { name: 'Slow', ms: 1500 },
 ];
 
-export const LiveTimings: Story = {
-  render: (args) => {
-    const [busy, setBusy] = useState(false);
-    const [log, setLog] = useState('Press a button to run a request');
-    const visible = useDelayedFlag(busy);
+const LiveTimingsDemo: React.FC<ComponentProps<typeof Spinner>> = (args) => {
+  const [busy, setBusy] = useState(false);
+  const [log, setLog] = useState('Press a button to run a request');
+  const visible = useDelayedFlag(busy);
 
-    const request = useRef<{ name: string; ms: number } | null>(null);
-    const shownAt = useRef<number | null>(null);
+  const request = useRef<{ name: string; ms: number } | null>(null);
+  const shownAt = useRef<number | null>(null);
 
-    const wasShown = useRef(false);
-    const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const wasShown = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-    useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => () => clearTimeout(timer.current), []);
 
-    useEffect(() => {
-      if (visible) {
-        shownAt.current = performance.now();
-        wasShown.current = true;
-      } else if (shownAt.current !== null && request.current) {
-        const shown = Math.round(performance.now() - shownAt.current);
-        setLog(`${request.current.name} · ${request.current.ms} ms request → spinner on screen ${shown} ms`);
-        shownAt.current = null;
-      }
-    }, [visible]);
+  useEffect(() => {
+    if (visible) {
+      shownAt.current = performance.now();
+      wasShown.current = true;
+    } else if (shownAt.current !== null && request.current) {
+      const shown = Math.round(performance.now() - shownAt.current);
+      setLog(`${request.current.name} · ${request.current.ms} ms request → spinner on screen ${shown} ms`);
+      shownAt.current = null;
+    }
+  }, [visible]);
 
-    useEffect(() => {
-      if (!busy && !visible && !wasShown.current && request.current) {
-        setLog(`${request.current.name} · ${request.current.ms} ms request → no spinner at all`);
-      }
-    }, [busy, visible]);
+  useEffect(() => {
+    if (!busy && !visible && !wasShown.current && request.current) {
+      setLog(`${request.current.name} · ${request.current.ms} ms request → no spinner at all`);
+    }
+  }, [busy, visible]);
 
-    const run = (next: { name: string; ms: number }) => {
-      clearTimeout(timer.current);
-      request.current = next;
-      wasShown.current = false;
-      setLog(`${next.name} · running…`);
-      setBusy(true);
-      timer.current = setTimeout(() => setBusy(false), next.ms);
-    };
+  const run = (next: { name: string; ms: number }) => {
+    clearTimeout(timer.current);
+    request.current = next;
+    wasShown.current = false;
+    setLog(`${next.name} · running…`);
+    setBusy(true);
+    timer.current = setTimeout(() => setBusy(false), next.ms);
+  };
 
-    return (
-      <div style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start', fontSize: cssVar('type-body') }}>
-        <div style={row}>
-          {REQUESTS.map((item) => (
-            <button key={item.name} type="button" disabled={busy || visible} onClick={() => run(item)}>
-              {item.name} · {item.ms} ms
-            </button>
-          ))}
-        </div>
-
-        <div style={{ ...row, height: cssVar('control-height'), fontVariantNumeric: cssVar('num-tabular') }}>
-          <Caption>busy: {String(busy)}</Caption>
-          <Caption>visible: {String(visible)}</Caption>
-          {visible && <Spinner {...args} />}
-        </div>
-
-        <Caption>{log}</Caption>
+  return (
+    <div style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start', fontSize: cssVar('type-body') }}>
+      <div style={row}>
+        {REQUESTS.map((item) => (
+          <button key={item.name} type="button" disabled={busy || visible} onClick={() => run(item)}>
+            {item.name} · {item.ms} ms
+          </button>
+        ))}
       </div>
-    );
-  },
+
+      <div style={{ ...row, height: cssVar('control-height'), fontVariantNumeric: cssVar('num-tabular') }}>
+        <Caption>busy: {String(busy)}</Caption>
+        <Caption>visible: {String(visible)}</Caption>
+        {visible && <Spinner {...args} />}
+      </div>
+
+      <Caption>{log}</Caption>
+    </div>
+  );
+};
+
+export const LiveTimings: Story = {
+  render: (args) => <LiveTimingsDemo {...args} />,
 };

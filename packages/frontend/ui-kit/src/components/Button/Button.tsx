@@ -164,7 +164,9 @@ export const Button: React.FC<ButtonProps> = ({
         target={target}
         rel={relFor(target, rel)}
         download={download}
-      />
+      >
+        {common.children}
+      </a>
     );
   }
 

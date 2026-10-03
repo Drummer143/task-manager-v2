@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ReactNode, useState } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { palette, usePaletteCreate, usePaletteSource } from './hooks';
 import { filterByLabel } from './matchLabel';
 import type { PaletteItem, PaletteSource } from './types';
@@ -153,6 +153,27 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+const LiveDemo: React.FC = () => {
+  const [last, setLast] = useState('—');
+  const [selected, setSelected] = useState(false);
+
+  return (
+    <div style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start' }}>
+      <Screen log={setLast} selected={selected} />
+      <div style={{ display: 'flex', gap: cssVar('sp-5'), alignItems: 'center' }}>
+        <Button keys="mod+k" onClick={palette.open}>
+          Open palette
+        </Button>
+        <Checkbox label="2 tasks selected on the board" checked={selected} onCheckedChange={setSelected} />
+      </div>
+      <input placeholder="⌘K works from here too" aria-label="Any field" />
+      <Caption>
+        Last: {last} · <Kbd keys="mod+k" variant="inline" /> to open
+      </Caption>
+    </div>
+  );
+};
+
 /**
  * ⌘K / Ctrl+K anywhere — also from a text field; again — close. Empty: recent
  * and frequent. "mov" — commands; ">" only commands, "#" tasks, "@" people
@@ -162,24 +183,5 @@ type Story = StoryObj;
  * the status as a second step (Backspace in the empty field goes back).
  */
 export const Live: Story = {
-  render: () => {
-    const [last, setLast] = useState('—');
-    const [selected, setSelected] = useState(false);
-
-    return (
-      <div style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start' }}>
-        <Screen log={setLast} selected={selected} />
-        <div style={{ display: 'flex', gap: cssVar('sp-5'), alignItems: 'center' }}>
-          <Button keys="mod+k" onClick={palette.open}>
-            Open palette
-          </Button>
-          <Checkbox label="2 tasks selected on the board" checked={selected} onCheckedChange={setSelected} />
-        </div>
-        <input placeholder="⌘K works from here too" aria-label="Any field" />
-        <Caption>
-          Last: {last} · <Kbd keys="mod+k" variant="inline" /> to open
-        </Caption>
-      </div>
-    );
-  },
+  render: () => <LiveDemo />,
 };

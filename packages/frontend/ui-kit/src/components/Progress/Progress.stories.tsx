@@ -1,5 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
-import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
+import React, { CSSProperties, ReactNode, useEffect, useRef, useState, type ComponentProps } from 'react';
 import Progress from './Progress';
 import { Surface } from '../Surface';
 import { cssVar, raw } from '../../tokens';
@@ -88,37 +88,39 @@ export const Determinate: Story = {
   },
 };
 
+const WithValueDemo: React.FC<ComponentProps<typeof Progress>> = (args) => {
+  const [progressValue, setProgressValue] = useState(args.value ?? 0);
+
+  useEffect(() => {
+    if (args.value !== undefined) {
+      setProgressValue(args.value);
+    }
+  }, [args.value]);
+
+  return (
+    <div style={{ ...frame, display: 'grid', gap: cssVar('sp-4') }}>
+      <Progress {...args} value={progressValue} />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: cssVar('sp-4') }}>
+        {/* Wraps to 0 only after reaching 100 — watch the rollback jump. */}
+        <button
+          type="button"
+          onClick={() => setProgressValue((prev) => (prev >= 1 ? 0 : Math.min(1, Math.round((prev + 0.2) * 100) / 100)))}
+        >
+          + 20%
+        </button>
+        <Caption>{percent(progressValue)}</Caption>
+      </div>
+    </div>
+  );
+};
+
 /**
  * Growth animates over --progress-transition; the rollback after 100% jumps to
  * 0 without sliding back, so progress never seems to be lost.
  */
 export const WithValue: Story = {
-  render: (args) => {
-    const [progressValue, setProgressValue] = useState(args.value ?? 0);
-
-    useEffect(() => {
-      if (args.value !== undefined) {
-        setProgressValue(args.value);
-      }
-    }, [args.value]);
-
-    return (
-      <div style={{ ...frame, display: 'grid', gap: cssVar('sp-4') }}>
-        <Progress {...args} value={progressValue} />
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: cssVar('sp-4') }}>
-          {/* Wraps to 0 only after reaching 100 — watch the rollback jump. */}
-          <button
-            type="button"
-            onClick={() => setProgressValue((prev) => (prev >= 1 ? 0 : Math.min(1, Math.round((prev + 0.2) * 100) / 100)))}
-          >
-            + 20%
-          </button>
-          <Caption>{percent(progressValue)}</Caption>
-        </div>
-      </div>
-    );
-  },
+  render: (args) => <WithValueDemo {...args} />,
 };
 
 /** Every state in one place — the acceptance stand. */
@@ -131,39 +133,41 @@ export const Gallery: Story = {
   ),
 };
 
+const UnknownThenKnownDemo: React.FC = () => {
+  const [value, setValue] = useState<number | undefined>(undefined);
+  const [run, setRun] = useState(0);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    setValue(undefined);
+
+    // 1.5 s of unknown size, then 20% steps every 600 ms.
+    const steps = [0.2, 0.4, 0.6, 0.8, 1];
+    timers.current = steps.map((step, index) => setTimeout(() => setValue(step), 1500 + index * 600));
+
+    return () => timers.current.forEach(clearTimeout);
+  }, [run]);
+
+  return (
+    <div style={{ ...frame, display: 'grid', gap: cssVar('sp-4') }}>
+      <Progress label="Uploading attachment" value={value} />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: cssVar('sp-4') }}>
+        <button type="button" onClick={() => setRun((prev) => prev + 1)}>
+          Restart
+        </button>
+        <Caption>{value === undefined ? 'size unknown' : percent(value)}</Caption>
+      </div>
+    </div>
+  );
+};
+
 /**
  * One component for both modes: an upload starts before its size is known and
  * switches to determinate in place — no remount, no jump, no second delay.
  */
 export const UnknownThenKnown: Story = {
-  render: () => {
-    const [value, setValue] = useState<number | undefined>(undefined);
-    const [run, setRun] = useState(0);
-    const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-    useEffect(() => {
-      setValue(undefined);
-
-      // 1.5 s of unknown size, then 20% steps every 600 ms.
-      const steps = [0.2, 0.4, 0.6, 0.8, 1];
-      timers.current = steps.map((step, index) => setTimeout(() => setValue(step), 1500 + index * 600));
-
-      return () => timers.current.forEach(clearTimeout);
-    }, [run]);
-
-    return (
-      <div style={{ ...frame, display: 'grid', gap: cssVar('sp-4') }}>
-        <Progress label="Uploading attachment" value={value} />
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: cssVar('sp-4') }}>
-          <button type="button" onClick={() => setRun((prev) => prev + 1)}>
-            Restart
-          </button>
-          <Caption>{value === undefined ? 'size unknown' : percent(value)}</Caption>
-        </div>
-      </div>
-    );
-  },
+  render: () => <UnknownThenKnownDemo />,
 };
 
 /** Real places from the spec: under the canvas header, and in an attachment row. */
@@ -230,6 +234,33 @@ export const OnInverseSurface: Story = {
   ),
 };
 
+const ReducedMotionDemo: React.FC = () => {
+  const [value, setValue] = useState(0.2);
+  const next = () => setValue((prev) => (prev >= 1 ? 0 : Math.min(1, Math.round((prev + 0.4) * 100) / 100)));
+
+  return (
+    <div style={{ ...stand, padding: 0 }}>
+      <Caption>normal</Caption>
+      <Progress label="Uploading attachment" value={value} />
+
+      <Caption>reduced · jump</Caption>
+      <div style={{ '--progress-transition': '0ms' } as CSSProperties}>
+        <Progress label="Uploading attachment" value={value} />
+      </div>
+
+      <Caption>indeterminate</Caption>
+      <Progress label="Loading board" />
+
+      <span />
+      <div>
+        <button type="button" onClick={next}>
+          Next value
+        </button>
+      </div>
+    </div>
+  );
+};
+
 /**
  * prefers-reduced-motion: determinate jumps without animation; indeterminate
  * becomes a full-width bar breathing 30 ↔ 60%. The breathing needs the real
@@ -238,32 +269,23 @@ export const OnInverseSurface: Story = {
  * token override tokens.css applies under the media query.
  */
 export const ReducedMotion: Story = {
-  render: () => {
-    const [value, setValue] = useState(0.2);
-    const next = () => setValue((prev) => (prev >= 1 ? 0 : Math.min(1, Math.round((prev + 0.4) * 100) / 100)));
+  render: () => <ReducedMotionDemo />,
+};
 
-    return (
-      <div style={{ ...stand, padding: 0 }}>
-        <Caption>normal</Caption>
-        <Progress label="Uploading attachment" value={value} />
+const DelayDemo: React.FC<ComponentProps<typeof Progress>> = (args) => {
+  const [mount, setMount] = useState(0);
 
-        <Caption>reduced · jump</Caption>
-        <div style={{ '--progress-transition': '0ms' } as CSSProperties}>
-          <Progress label="Uploading attachment" value={value} />
-        </div>
-
-        <Caption>indeterminate</Caption>
-        <Progress label="Loading board" />
-
-        <span />
-        <div>
-          <button type="button" onClick={next}>
-            Next value
-          </button>
-        </div>
+  return (
+    <div style={{ ...frame, display: 'grid', gap: cssVar('sp-4') }}>
+      <Progress key={mount} {...args} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: cssVar('sp-4') }}>
+        <button type="button" onClick={() => setMount((prev) => prev + 1)}>
+          Remount
+        </button>
+        <Caption>appears after {args.delay ?? raw['spinner-delay']} ms</Caption>
       </div>
-    );
-  },
+    </div>
+  );
 };
 
 /**
@@ -273,19 +295,5 @@ export const ReducedMotion: Story = {
  */
 export const Delay: Story = {
   args: { label: 'Loading board', value: undefined },
-  render: (args) => {
-    const [mount, setMount] = useState(0);
-
-    return (
-      <div style={{ ...frame, display: 'grid', gap: cssVar('sp-4') }}>
-        <Progress key={mount} {...args} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: cssVar('sp-4') }}>
-          <button type="button" onClick={() => setMount((prev) => prev + 1)}>
-            Remount
-          </button>
-          <Caption>appears after {args.delay ?? raw['spinner-delay']} ms</Caption>
-        </div>
-      </div>
-    );
-  },
+  render: (args) => <DelayDemo {...args} />,
 };
