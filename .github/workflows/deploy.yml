@@ -139,9 +139,24 @@ jobs:
               $compose up -d --remove-orphans
             fi
 
-            # Caddy reads its config only at start or on reload; authentik watches blueprints itself
+            # Caddy reads its config only at start or on reload
             if [ -n "$($compose ps -q caddy)" ]; then
               $compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+            fi
+
+            # authentik is meant to notice changed blueprints, but does not reliably pick up files
+            # updated in place, so they are applied explicitly. The worker may have just been
+            # recreated: wait until it is healthy (migrations done) first.
+            worker=$($compose ps -q authentik_worker)
+            if [ -n "$worker" ]; then
+              for _ in $(seq 60); do
+                [ "$(docker inspect -f '{{.State.Health.Status}}' "$worker")" = healthy ] && break
+                sleep 5
+              done
+              for blueprint in docker/authentik/blueprints/*.yaml; do
+                echo "Applying blueprint $(basename "$blueprint")"
+                $compose exec -T authentik_worker ak apply_blueprint "/blueprints/custom/$(basename "$blueprint")"
+              done
             fi
 
             $compose ps
