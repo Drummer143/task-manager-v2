@@ -22,6 +22,7 @@ error_handlers = { path = "packages/rust/error_handlers" }
 jsonwebtoken = { version = "11.1.0", default-features = false, features = [
     "rust_crypto",
 ] }
+lapin = "4.12.0"
 mimalloc = { version = "0.1.52", default-features = false }
 reqwest = { version = "0.13.5", default-features = false, features = [
     "charset",

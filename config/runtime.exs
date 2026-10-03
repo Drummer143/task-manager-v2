@@ -23,6 +23,15 @@ end
 config :socket_server, SocketServerWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("SOCKET_SERVER_PORT", "4000"))]
 
+# Tests run without RabbitMQ and authentik (see :external_services in config/test.exs)
+if config_env() != :test do
+  config :socket_server,
+    amqp_url: System.fetch_env!("AMQP_URL"),
+    jwks_url: System.fetch_env!("AUTHENTIK_JWKS_URL"),
+    issuer: System.fetch_env!("AUTHENTIK_ISSUER"),
+    audience: System.fetch_env!("AUTHENTIK_AUDIENCE")
+end
+
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you

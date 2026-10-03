@@ -13,6 +13,7 @@ pub struct Config {
     pub database_url: String,
     pub database_max_connections: u32,
     pub addr: SocketAddr,
+    pub amqp_url: String,
     /// Browser origins allowed to call the API (the frontend lives on another host).
     pub cors_origins: Vec<HeaderValue>,
     /// Shared with authentik, which sends it with every user sync webhook.
@@ -27,6 +28,9 @@ pub struct Config {
     /// Off when running against a shared database (the SSH tunnel to the VPS): migrations of a
     /// local branch must not reach it.
     pub run_migrations: bool,
+    /// Mounts `POST /notifications`, which lets any signed-in user notify anyone: for testing
+    /// the notification pipeline only, never in production.
+    pub debug_notifications: bool,
 }
 
 impl Config {
@@ -36,8 +40,10 @@ impl Config {
 
     fn from_lookup(lookup: impl Fn(&str) -> Option<String>) -> anyhow::Result<Self> {
         let database_url = required(&lookup, "DATABASE_URL")?;
+        let amqp_url = required(&lookup, "AMQP_URL")?;
         let user_sync_webhook_token = required(&lookup, "USER_SYNC_WEBHOOK_TOKEN")?;
         let run_migrations = parse_or(&lookup, "RUN_MIGRATIONS", true)?;
+        let debug_notifications = parse_or(&lookup, "DEBUG_NOTIFICATIONS", false)?;
         let authentik_jwks_url = required(&lookup, "AUTHENTIK_JWKS_URL")?;
         let authentik_audience = required(&lookup, "AUTHENTIK_AUDIENCE")?;
         let authentik_issuer = lookup("AUTHENTIK_ISSUER").filter(|v| !v.is_empty());
@@ -65,6 +71,7 @@ impl Config {
 
         Ok(Self {
             database_url,
+            amqp_url,
             database_max_connections,
             addr: SocketAddr::new(host, port),
             cors_origins,
@@ -73,6 +80,7 @@ impl Config {
             authentik_audience,
             authentik_issuer,
             run_migrations,
+            debug_notifications,
         })
     }
 }
@@ -110,29 +118,34 @@ mod tests {
     }
 
     const DB: (&str, &str) = ("DATABASE_URL", "postgres://localhost/db");
+    const AMQP: (&str, &str) = ("AMQP_URL", "amqp://localhost:5672");
     const TOKEN: (&str, &str) = ("USER_SYNC_WEBHOOK_TOKEN", "webhook-token");
     const JWKS: (&str, &str) = ("AUTHENTIK_JWKS_URL", "https://auth.test/jwks/");
     const AUD: (&str, &str) = ("AUTHENTIK_AUDIENCE", "client");
 
     #[test]
-    fn requires_the_database_url_and_the_webhook_token() {
-        assert!(config(&[TOKEN, JWKS, AUD]).is_err());
-        assert!(config(&[("DATABASE_URL", ""), TOKEN, JWKS, AUD]).is_err());
-        assert!(config(&[DB, JWKS, AUD]).is_err());
-        assert!(config(&[DB, ("USER_SYNC_WEBHOOK_TOKEN", ""), JWKS, AUD]).is_err());
-        assert!(config(&[DB, TOKEN, AUD]).is_err());
-        assert!(config(&[DB, TOKEN, JWKS]).is_err());
+    fn requires_the_database_amqp_and_auth_settings() {
+        assert!(config(&[AMQP, TOKEN, JWKS, AUD]).is_err());
+        assert!(config(&[("DATABASE_URL", ""), AMQP, TOKEN, JWKS, AUD]).is_err());
+        assert!(config(&[DB, AMQP, JWKS, AUD]).is_err());
+        assert!(config(&[DB, AMQP, ("USER_SYNC_WEBHOOK_TOKEN", ""), JWKS, AUD]).is_err());
+        assert!(config(&[DB, AMQP, TOKEN, AUD]).is_err());
+        assert!(config(&[DB, AMQP, TOKEN, JWKS]).is_err());
+        assert!(config(&[DB, TOKEN, JWKS, AUD]).is_err());
+        assert!(config(&[DB, ("AMQP_URL", ""), TOKEN, JWKS, AUD]).is_err());
     }
 
     #[test]
     fn applies_defaults() {
-        let config = config(&[DB, TOKEN, JWKS, AUD]).unwrap();
+        let config = config(&[DB, AMQP, TOKEN, JWKS, AUD]).unwrap();
 
         assert_eq!(config.addr, SocketAddr::from(([0, 0, 0, 0], DEFAULT_PORT)));
         assert_eq!(config.database_max_connections, DEFAULT_MAX_CONNECTIONS);
         assert_eq!(config.cors_origins.len(), 2);
+        assert_eq!(config.amqp_url, "amqp://localhost:5672");
         assert_eq!(config.user_sync_webhook_token, "webhook-token");
         assert!(config.run_migrations);
+        assert!(!config.debug_notifications);
         assert_eq!(config.authentik_issuer, None);
     }
 
@@ -140,10 +153,12 @@ mod tests {
     fn reads_overrides() {
         let config = config(&[
             DB,
+            AMQP,
             TOKEN,
             JWKS,
             AUD,
             ("RUN_MIGRATIONS", "false"),
+            ("DEBUG_NOTIFICATIONS", "true"),
             ("AUTHENTIK_ISSUER", "https://auth.test/application/o/app/"),
             ("MAIN_SERVICE_HOST", "127.0.0.1"),
             ("MAIN_SERVICE_PORT", "9090"),
@@ -158,6 +173,7 @@ mod tests {
         assert_eq!(config.addr, SocketAddr::from(([127, 0, 0, 1], 9090)));
         assert_eq!(config.database_max_connections, 3);
         assert!(!config.run_migrations);
+        assert!(config.debug_notifications);
         assert_eq!(
             config.authentik_issuer.as_deref(),
             Some("https://auth.test/application/o/app/")
@@ -170,11 +186,22 @@ mod tests {
 
     #[test]
     fn rejects_invalid_values() {
-        assert!(config(&[DB, TOKEN, JWKS, AUD, ("MAIN_SERVICE_PORT", "http")]).is_err());
-        assert!(config(&[DB, TOKEN, JWKS, AUD, ("MAIN_SERVICE_HOST", "localhost:1")]).is_err());
+        assert!(config(&[DB, AMQP, TOKEN, JWKS, AUD, ("MAIN_SERVICE_PORT", "http")]).is_err());
         assert!(
             config(&[
                 DB,
+                AMQP,
+                TOKEN,
+                JWKS,
+                AUD,
+                ("MAIN_SERVICE_HOST", "localhost:1")
+            ])
+            .is_err()
+        );
+        assert!(
+            config(&[
+                DB,
+                AMQP,
                 TOKEN,
                 JWKS,
                 AUD,
@@ -182,6 +209,6 @@ mod tests {
             ])
             .is_err()
         );
-        assert!(config(&[DB, TOKEN, JWKS, AUD, ("RUN_MIGRATIONS", "no")]).is_err());
+        assert!(config(&[DB, AMQP, TOKEN, JWKS, AUD, ("RUN_MIGRATIONS", "no")]).is_err());
     }
 }

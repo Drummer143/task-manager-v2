@@ -1,15 +1,11 @@
-mod config;
-mod me;
-mod repos;
-mod webhooks;
-
 use anyhow::Context;
 use axum::{
     Router,
     http::{Method, header},
 };
+use mimalloc::MiMalloc;
 use sqlx::postgres::PgPoolOptions;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing_subscriber::EnvFilter;
@@ -18,7 +14,13 @@ use utils::{
     auth_middleware::InternalAuthState, service_auth::ServiceAuthState, types::jwks::JwkSet,
 };
 
-use crate::config::Config;
+use main_app::{
+    app_state::AppState, config::Config, me, notifications, signals, swagger::ApiDoc, webhooks,
+};
+use utoipa::OpenApi;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -38,7 +40,22 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("failed to connect to the database")?;
 
-    // Migrations live in ./migrations and are embedded into the binary
+    let lapin_connection_options = lapin::ConnectionProperties::default()
+        .enable_auto_recover()
+        .configure_backoff(|b| {
+            b.with_max_delay(Duration::from_secs(30))
+                .with_jitter()
+                .without_max_times()
+        });
+
+    let amqp_conn = lapin::Connection::connect(&config.amqp_url, lapin_connection_options)
+        .await
+        .context("failed to connect to AMQP")?;
+
+    let signals = signals::Signals::new(&amqp_conn)
+        .await
+        .context("failed to set up AMQP signals")?;
+
     if config.run_migrations {
         sqlx::migrate!()
             .run(&pool)
@@ -49,7 +66,6 @@ async fn main() -> anyhow::Result<()> {
         tracing::warn!("RUN_MIGRATIONS=false: the database schema is left as it is");
     }
 
-    // The frontend calls the API from another origin; tokens travel in `Authorization`
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::list(config.cors_origins.clone()))
         .allow_methods([
@@ -68,8 +84,6 @@ async fn main() -> anyhow::Result<()> {
         // The frontend shows it next to errors, so people can quote it
         .expose_headers([error_handlers::trace::REQUEST_ID_HEADER]);
 
-    // Keys are fetched on the first token with an unknown key id, so a slow authentik does not
-    // keep the service from starting
     let auth = InternalAuthState {
         jwks: Arc::new(tokio::sync::RwLock::new(JwkSet { keys: Vec::new() })),
         authentik_jwks_url: Arc::new(config.authentik_jwks_url.clone()),
@@ -77,14 +91,27 @@ async fn main() -> anyhow::Result<()> {
         authentik_issuer: config.authentik_issuer.clone().map(Arc::new),
     };
 
+    let state = AppState {
+        pool,
+        amqp_conn: Arc::new(amqp_conn),
+        signals,
+    };
+
     let app = Router::new()
+        .merge(notifications::router::router(
+            auth.clone(),
+            config.debug_notifications,
+        ))
         .merge(me::router(auth))
         .merge(webhooks::authentik::router(ServiceAuthState::new(
             config.user_sync_webhook_token.clone(),
         )))
+        .merge(
+            utoipa_swagger_ui::SwaggerUi::new("/api").url("/api/openapi.json", ApiDoc::openapi()),
+        )
         .fallback(error_handlers::fallback::not_found)
         .method_not_allowed_fallback(error_handlers::fallback::method_not_allowed)
-        .with_state(pool)
+        .with_state(state)
         .layer(cors)
         // Last, so it wraps everything: every response carries the id the logs use
         .layer(axum::middleware::from_fn(error_handlers::trace::request_id));

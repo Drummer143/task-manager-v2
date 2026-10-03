@@ -7,20 +7,33 @@ defmodule SocketServer.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      SocketServerWeb.Telemetry,
-      {DNSCluster, query: Application.get_env(:socket_server, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: SocketServer.PubSub},
-      # Start a worker by calling: SocketServer.Worker.start_link(arg)
-      # {SocketServer.Worker, arg},
-      # Start to serve requests, typically the last entry
-      SocketServerWeb.Endpoint
-    ]
+    # SocketServer.Repo is not started: there are no queries yet, and it needs postgrex and a
+    # database config first (add both with the chat)
+    children =
+      [
+        SocketServerWeb.Telemetry,
+        {DNSCluster, query: Application.get_env(:socket_server, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: SocketServer.PubSub}
+      ] ++
+        external_services() ++
+        [
+          # Start to serve requests, typically the last entry
+          SocketServerWeb.Endpoint
+        ]
 
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: SocketServer.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # The JWKS fetcher (authentik) and the RabbitMQ consumer; off in tests
+  defp external_services do
+    if Application.get_env(:socket_server, :external_services, true) do
+      [SocketServer.AuthVerifier.TokenStrategy, SocketServer.Notifications.Consumer]
+    else
+      []
+    end
   end
 
   # Tell Phoenix to update the endpoint configuration

@@ -18,7 +18,7 @@
     "generate-local": {
       "description": "Exports the specs from the services' code first, then generates",
       "executor": "nx:run-commands",
-      "dependsOn": ["storage:export-openapi"],
+      "dependsOn": ["storage:export-openapi", "main_service:export-openapi"],
       "options": {
         "cwd": "packages/frontend/api",
         "command": "orval --config ./orval.config.ts"

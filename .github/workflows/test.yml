@@ -1,0 +1,135 @@
+name: Test
+
+# Every service's tests, plus checks that the committed API contract matches the code:
+# - rust:     main_service and sql_models, including the Postgres tests (`#[sqlx::test]`, marked
+#             #[ignore] so a plain local `cargo test` without a database still passes), and the
+#             OpenAPI specs the services export
+# - elixir:   socket_server (no RabbitMQ or authentik needed: config/test.exs turns them off)
+# - frontend: typecheck, lint and tests, the generated API client and the committed Wasm hasher
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    services:
+      # Disposable: each database test gets a fresh database here. Never point DATABASE_URL in
+      # this job at a shared server
+      postgres:
+        # The same major version as docker/docker-compose.prod.yml
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgres://test:test@localhost:5432/postgres
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v7
+
+      # rustup on the runner installs the toolchain pinned in rust-toolchain.toml
+      - name: Toolchain
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Tests (with the database ones)
+        run: cargo test -p main_service -p sql_models -- --include-ignored
+
+      # The frontend's client is generated from these files: they must match the code
+      - name: OpenAPI specs are up to date
+        run: |
+          cargo run --bin export-openapi-main -- packages/frontend/api/specs/openapi-main.json
+          cargo run --bin export-openapi-storage -- packages/frontend/api/specs/openapi-storage.json
+          git diff --exit-code -- packages/frontend/api/specs \
+            || { echo "::error::Stale OpenAPI specs: run 'pnpm nx run api:generate-local' and commit the result"; exit 1; }
+
+  elixir:
+    name: Elixir
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v7
+
+      # The versions of docker/Dockerfile.elixir
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27"
+          elixir-version: "1.18.4"
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-otp27-elixir1.18.4-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ runner.os }}-otp27-elixir1.18.4-
+
+      - run: mix deps.get
+
+      - run: mix compile --warnings-as-errors
+
+      - run: mix format --check-formatted
+
+      - run: mix test
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    env:
+      NX_DAEMON: "false"
+    steps:
+      - uses: actions/checkout@v7
+
+      # The versions of docker/Dockerfile.frontend
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.5.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The hasher is built from packages/rust/blake3_wasm and committed; this needs only Node
+      - name: Wasm hasher is up to date
+        run: node packages/rust/blake3_wasm/tools/build-wasm.mjs --check
+
+      # --skip-sync: the tsconfig project references are out of sync (nx sync:check) and are
+      # not this job's to rewrite
+      - name: Typecheck and test
+        run: pnpm nx run-many -t typecheck,test -p frontend,ui-kit,uploader,api --skip-sync
+
+      # ui-kit is left out until its existing lint errors are fixed
+      - name: Lint
+        run: pnpm nx run-many -t lint -p frontend,uploader,api --skip-sync
+
+      - name: Generated API client is up to date
+        run: |
+          pnpm nx run api:generate --skip-sync
+          if [ -n "$(git status --porcelain -- packages/frontend/api/src/generated)" ]; then
+            git status --short -- packages/frontend/api/src/generated
+            echo "::error::Stale generated client: run 'pnpm nx run api:generate' and commit the result"
+            exit 1
+          fi

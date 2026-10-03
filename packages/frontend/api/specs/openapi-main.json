@@ -1,0 +1,1336 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "main_service",
+    "description": "",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/me": {
+      "get": {
+        "tags": [
+          "crate::me"
+        ],
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "description": "The signed-in user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "The user is deactivated"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "tags": [
+          "controllers::get_list"
+        ],
+        "operationId": "listNotifications",
+        "parameters": [
+          {
+            "name": "view",
+            "in": "query",
+            "description": "Inbox tab; `unread` by default.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "The Inbox tabs.",
+              "enum": [
+                "unread",
+                "all",
+                "done"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size, 1 to 100; 50 by default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "`nextCursor` of the previous page; none for the first page.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the tab, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query, e.g. an invalid cursor"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "controllers::create"
+        ],
+        "operationId": "createNotification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNotificationDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Notification created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "422": {
+            "description": "No user with this userId"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/notifications/archive": {
+      "post": {
+        "tags": [
+          "controllers::archive"
+        ],
+        "operationId": "archiveNotification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveNotificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Notification archived"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "No such notification of this user"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/notifications/read": {
+      "post": {
+        "tags": [
+          "controllers::read"
+        ],
+        "operationId": "readNotification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadNotificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Notification marked as read"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "No such notification of this user"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/notifications/summary": {
+      "get": {
+        "tags": [
+          "controllers::summary"
+        ],
+        "operationId": "getNotificationSummary",
+        "responses": {
+          "200": {
+            "description": "Notification summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/notifications/unarchive": {
+      "post": {
+        "tags": [
+          "controllers::unarchive"
+        ],
+        "operationId": "unarchiveNotification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnarchiveNotificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Notification unarchived"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "No such notification of this user"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/notifications/unread": {
+      "post": {
+        "tags": [
+          "controllers::unread"
+        ],
+        "operationId": "unreadNotification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnreadNotificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Notification marked as unread"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "No such notification of this user"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArchiveNotificationRequest": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CreateNotificationDto": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/NotificationKind"
+          },
+          {
+            "type": "object",
+            "required": [
+              "userId"
+            ],
+            "properties": {
+              "userId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ]
+      },
+      "ErrorBody": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          {
+            "type": "object",
+            "required": [
+              "type",
+              "status"
+            ],
+            "properties": {
+              "errors": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FieldError"
+                },
+                "description": "Per-field errors, present for validation failures."
+              },
+              "status": {
+                "type": "integer",
+                "format": "int32",
+                "description": "HTTP status, duplicated from the response.",
+                "minimum": 0
+              },
+              "trace_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Correlation id to quote when reporting a problem."
+              },
+              "type": {
+                "type": "string",
+                "description": "Stable URI identifying the class of problem."
+              }
+            }
+          }
+        ],
+        "description": "Public JSON body of every error response (`application/problem+json`).\n\nThere is deliberately no message field: clients localize from `code` and `params`."
+      },
+      "ErrorCode": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The request failed validation; see `errors` for per-field details.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALIDATION_FAILED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The requested resource does not exist.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "NOT_FOUND"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The request conflicts with the current state of the resource.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "CONFLICT"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Authentication is missing or invalid.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UNAUTHORIZED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The caller is not allowed to perform this action.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FORBIDDEN"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Unexpected server failure. Details are only available in server logs.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INTERNAL"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A required field is missing. Used in per-field errors.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "REQUIRED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A field has an invalid format. Used in per-field errors.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INVALID_FORMAT"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The request could not be parsed: malformed JSON, or a body, query or path parameter of the wrong shape.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "MALFORMED_REQUEST"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The request body has an unsupported `Content-Type`; JSON endpoints expect `application/json`.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UNSUPPORTED_MEDIA_TYPE"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The request body exceeds the size limit of the endpoint.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "PAYLOAD_TOO_LARGE"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The HTTP method is not supported by this endpoint; see the `Allow` response header.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "METHOD_NOT_ALLOWED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The server did not finish handling the request in time. The request may be retried.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "TIMEOUT"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The uploaded file exceeds the size limit.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FILE_TOO_LARGE"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "The uploaded file exceeds the size limit.",
+                "required": [
+                  "max_bytes",
+                  "actual_bytes"
+                ],
+                "properties": {
+                  "actual_bytes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Size of the uploaded file in bytes.",
+                    "minimum": 0
+                  },
+                  "max_bytes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum allowed size in bytes.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The upload token is invalid, expired, or was issued to another user.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UPLOAD_TOKEN_INVALID"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The upload transaction is not in the step this endpoint serves.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UPLOAD_WRONG_STEP"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "The upload transaction is not in the step this endpoint serves.",
+                "required": [
+                  "current_step"
+                ],
+                "properties": {
+                  "current_step": {
+                    "type": "string",
+                    "description": "Step the transaction is currently in: `chunked_upload`, `whole_file_upload` or `verify_ranges`."
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Not all chunks of the upload have been received yet.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UPLOAD_INCOMPLETE"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The size of the uploaded content differs from the size announced at upload init.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FILE_SIZE_MISMATCH"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "The size of the uploaded content differs from the size announced at upload init.",
+                "required": [
+                  "expected_bytes",
+                  "actual_bytes"
+                ],
+                "properties": {
+                  "actual_bytes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Size actually received, in bytes.",
+                    "minimum": 0
+                  },
+                  "expected_bytes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Size announced at upload init, in bytes.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The content hash of the uploaded file differs from the hash announced at upload init.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FILE_HASH_MISMATCH"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A chunk has a size that does not match its `Content-Range` or exceeds the chunk limit.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INVALID_CHUNK_SIZE"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "A chunk has a size that does not match its `Content-Range` or exceeds the chunk limit.",
+                "required": [
+                  "max_bytes"
+                ],
+                "properties": {
+                  "max_bytes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum allowed chunk size in bytes.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Too many chunks of this upload are in flight; retry shortly.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "TOO_MANY_CONCURRENT_UPLOADS"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "Too many chunks of this upload are in flight; retry shortly.",
+                "required": [
+                  "max_concurrent"
+                ],
+                "properties": {
+                  "max_concurrent": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum number of chunks that may be uploaded concurrently.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Ownership verification of an already stored file failed.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VERIFICATION_FAILED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The server has no room left to store the file.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INSUFFICIENT_STORAGE"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The signed file link is malformed, has a bad signature, or belongs to another file.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FILE_LINK_INVALID"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The signed file link has expired; request a new one.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FILE_LINK_EXPIRED"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A request carries more items than a single call may process.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "TOO_MANY_ITEMS"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "A request carries more items than a single call may process.",
+                "required": [
+                  "max_items"
+                ],
+                "properties": {
+                  "max_items": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum number of items per request.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A service this one depends on did not answer or answered with something unusable.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UPSTREAM_UNAVAILABLE"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Every error the API can return.\n\nSerialized as `{\"code\": \"FILE_TOO_LARGE\", \"params\": {...}}`; variants without data have no\n`params`. Codes are a public contract: never rename one, only add or deprecate."
+      },
+      "FieldError": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          {
+            "type": "object",
+            "required": [
+              "field"
+            ],
+            "properties": {
+              "field": {
+                "type": "string",
+                "description": "Name of the offending field, e.g. `avatar`."
+              }
+            }
+          }
+        ],
+        "description": "Error attached to a single request field."
+      },
+      "MeResponse": {
+        "type": "object",
+        "required": [
+          "user",
+          "workspaces",
+          "pendingInvites"
+        ],
+        "properties": {
+          "pendingInvites": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Invitations waiting for the user's email."
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Workspaces the user is a member of; there are none until workspaces exist."
+          }
+        }
+      },
+      "Notification": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/NotificationKind"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "userId",
+              "createdAt",
+              "updatedAt"
+            ],
+            "properties": {
+              "archivedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "readAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "userId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "workspaceId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "`None` until workspaces exist."
+              }
+            }
+          }
+        ]
+      },
+      "NotificationKind": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "facts",
+              "kind"
+            ],
+            "properties": {
+              "facts": {
+                "type": "object"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "assigned"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "facts",
+              "kind"
+            ],
+            "properties": {
+              "facts": {
+                "type": "object"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "unassigned"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "facts",
+              "kind"
+            ],
+            "properties": {
+              "facts": {
+                "type": "object"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "mentioned"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "facts",
+              "kind"
+            ],
+            "properties": {
+              "facts": {
+                "type": "object"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "commented"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "facts",
+              "kind"
+            ],
+            "properties": {
+              "facts": {
+                "type": "object"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "status_changed"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "facts",
+              "kind"
+            ],
+            "properties": {
+              "facts": {
+                "type": "object"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "due_soon"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "facts",
+              "kind"
+            ],
+            "properties": {
+              "facts": {
+                "type": "object"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "overdue"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "facts",
+              "kind"
+            ],
+            "properties": {
+              "facts": {
+                "type": "object"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "page_shared"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "facts",
+              "kind"
+            ],
+            "properties": {
+              "facts": {
+                "type": "object",
+                "required": [
+                  "message"
+                ],
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "debug"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "NotificationPage": {
+        "type": "object",
+        "description": "One page of a tab.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Notification"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pass it as `cursor` to get the next page; `null` on the last page."
+          }
+        }
+      },
+      "ReadNotificationRequest": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SummaryResponse": {
+        "type": "object",
+        "required": [
+          "workspaces"
+        ],
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceSummary"
+            }
+          }
+        }
+      },
+      "UnarchiveNotificationRequest": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "UnreadNotificationRequest": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "isActive",
+          "username",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "authentikId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "authentik's numeric user pk; `None` until the user sync webhook has arrived."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "authentik's user uuid."
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "picture": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`None` until the user has an avatar."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkspaceSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "unread"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unread": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer_auth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer_auth": []
+    }
+  ]
+}

@@ -43,12 +43,17 @@ defmodule SocketServer.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.8.15"},
-      {:telemetry_metrics, "~> 1.0"},
-      {:telemetry_poller, "~> 1.0"},
-      {:jason, "~> 1.2"},
+      {:bandit, "~> 1.5"},
+      {:broadway_rabbitmq, "~> 0.8.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:ecto_sql, "~> 3.10"},
+      {:jason, "~> 1.2"},
+      {:joken, "~> 2.6"},
+      {:joken_jwks, "~> 1.6"},
+      {:phoenix, "~> 1.8.15"},
+      {:phoenix_ecto, "~> 4.5"},
+      {:telemetry_metrics, "~> 1.0"},
+      {:telemetry_poller, "~> 1.0"}
     ]
   end
 
