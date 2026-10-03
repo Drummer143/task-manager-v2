@@ -8,8 +8,8 @@ use uuid::Uuid;
 pub struct User {
     /// authentik's user uuid.
     pub id: Uuid,
-    /// authentik's numeric user pk.
-    pub authentik_id: i32,
+    /// authentik's numeric user pk; `None` until the user sync webhook has arrived.
+    pub authentik_id: Option<i32>,
     pub is_active: bool,
     pub username: String,
 

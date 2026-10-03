@@ -2,6 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { WorkspacePage } from './WorkspacePage';
 
+// The header shows the account menu; signed out, it renders nothing
+vi.mock('react-oidc-context', () => ({ useAuth: () => ({ user: null }) }));
+
 function renderAt(entry: string) {
   const router = createMemoryRouter([{ path: '/w/:workspace/p/:page', element: <WorkspacePage /> }], {
     initialEntries: [entry],

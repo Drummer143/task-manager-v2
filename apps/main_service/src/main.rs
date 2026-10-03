@@ -1,4 +1,5 @@
 mod config;
+mod me;
 mod repos;
 mod webhooks;
 
@@ -8,10 +9,14 @@ use axum::{
     http::{Method, header},
 };
 use sqlx::postgres::PgPoolOptions;
+use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing_subscriber::EnvFilter;
-use utils::service_auth::ServiceAuthState;
+
+use utils::{
+    auth_middleware::InternalAuthState, service_auth::ServiceAuthState, types::jwks::JwkSet,
+};
 
 use crate::config::Config;
 
@@ -54,16 +59,35 @@ async fn main() -> anyhow::Result<()> {
             Method::PATCH,
             Method::DELETE,
         ])
-        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT]);
+        .allow_headers([
+            header::CONTENT_TYPE,
+            header::AUTHORIZATION,
+            header::ACCEPT,
+            error_handlers::trace::REQUEST_ID_HEADER,
+        ])
+        // The frontend shows it next to errors, so people can quote it
+        .expose_headers([error_handlers::trace::REQUEST_ID_HEADER]);
+
+    // Keys are fetched on the first token with an unknown key id, so a slow authentik does not
+    // keep the service from starting
+    let auth = InternalAuthState {
+        jwks: Arc::new(tokio::sync::RwLock::new(JwkSet { keys: Vec::new() })),
+        authentik_jwks_url: Arc::new(config.authentik_jwks_url.clone()),
+        authentik_audience: Arc::new(config.authentik_audience.clone()),
+        authentik_issuer: config.authentik_issuer.clone().map(Arc::new),
+    };
 
     let app = Router::new()
+        .merge(me::router(auth))
         .merge(webhooks::authentik::router(ServiceAuthState::new(
             config.user_sync_webhook_token.clone(),
         )))
         .fallback(error_handlers::fallback::not_found)
         .method_not_allowed_fallback(error_handlers::fallback::method_not_allowed)
         .with_state(pool)
-        .layer(cors);
+        .layer(cors)
+        // Last, so it wraps everything: every response carries the id the logs use
+        .layer(axum::middleware::from_fn(error_handlers::trace::request_id));
 
     let listener = TcpListener::bind(config.addr)
         .await

@@ -57,7 +57,7 @@ pub async fn user_sync(
         // sees for a user (for instance one created while it was down)
         UserSyncEvent::Created(user) | UserSyncEvent::Updated(user) => {
             let user = UsersRepository::upsert_from_authentik(&pool, user.into()).await?;
-            tracing::info!(user_id = %user.id, authentik_id = user.authentik_id, "user synced from authentik");
+            tracing::info!(user_id = %user.id, authentik_id = ?user.authentik_id, "user synced from authentik");
         }
         UserSyncEvent::Deleted { pk } => {
             if UsersRepository::delete_by_authentik_id(&pool, pk).await? {

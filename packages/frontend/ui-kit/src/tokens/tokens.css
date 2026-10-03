@@ -496,6 +496,11 @@
   /* What is being dragged stays in its place as a ghost of itself. */
   --drag-source-opacity: 0.45;
 
+  /* Sign-in screens (/login, /auth/callback, /join, /welcome): one centred column, no card. */
+  --auth-column-width: 360px;
+  /* Side margins of that column on a narrow screen. */
+  --auth-gutter: 20px;
+
   /* Toast (spec: Toast). One action toast at the bottom centre of the canvas;
      a notification in its own lane above it. */
   --toast-height: 40px;

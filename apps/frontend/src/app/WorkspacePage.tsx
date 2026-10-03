@@ -8,6 +8,7 @@ import {
   type ViewKind,
   type ViewState,
 } from '../shared/utils/view-state';
+import { AccountMenu } from './auth';
 
 const hairline = `${cssVar('border-width')} solid ${cssVar('border-hairline')}`;
 
@@ -106,6 +107,7 @@ export function WorkspacePage() {
         <Control active={assigneeFilter} onClick={toggleAssignee}>
           assignee: me
         </Control>
+        <AccountMenu />
       </div>
     </div>
   );

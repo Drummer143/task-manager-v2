@@ -107,6 +107,11 @@ pub async fn build() -> axum::Router {
         jwks: Arc::new(tokio::sync::RwLock::new(jwks)),
         authentik_jwks_url: Arc::new(jwks_url),
         authentik_audience: Arc::new(authentik_audience),
+        // Optional: without it any token signed by this authentik with the right audience passes
+        authentik_issuer: std::env::var("AUTHENTIK_ISSUER")
+            .ok()
+            .filter(|issuer| !issuer.is_empty())
+            .map(Arc::new),
     };
 
     let assets_folder_path = static_folder_path.join("assets");

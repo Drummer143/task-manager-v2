@@ -14,8 +14,10 @@
     "@zag-js/popover": "1.44.0",
     "@zag-js/react": "1.44.0",
     "axios": "^1.20.0",
+    "oidc-client-ts": "^3.5.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-oidc-context": "^3.3.1",
     "react-router-dom": "7.18.4",
     "zustand": "^5.0.15"
   },

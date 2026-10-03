@@ -61,6 +61,7 @@ impl AppState {
                 })),
                 authentik_jwks_url: Arc::new("http://127.0.0.1:1/jwks".into()),
                 authentik_audience: Arc::new("test".into()),
+                authentik_issuer: None,
             },
             main: MainServiceClient::new(main_service_url, service_auth.clone()),
             service_auth,

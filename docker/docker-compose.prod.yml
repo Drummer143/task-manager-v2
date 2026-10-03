@@ -16,6 +16,9 @@ x-authentik-env: &authentik-env
     AUTHENTIK_REDIRECT_URI_SILENT: ${AUTHENTIK_REDIRECT_URI_SILENT:?AUTHENTIK_REDIRECT_URI_SILENT is required}
     AUTHENTIK_REDIRECT_URI_2: ${AUTHENTIK_REDIRECT_URI_2:?AUTHENTIK_REDIRECT_URI_2 is required}
     AUTHENTIK_REDIRECT_URI_2_SILENT: ${AUTHENTIK_REDIRECT_URI_2_SILENT:?AUTHENTIK_REDIRECT_URI_2_SILENT is required}
+    # Where authentik may send the browser after sign-out (the frontend's /login)
+    AUTHENTIK_POST_LOGOUT_REDIRECT_URI: ${AUTHENTIK_POST_LOGOUT_REDIRECT_URI:?AUTHENTIK_POST_LOGOUT_REDIRECT_URI is required}
+    AUTHENTIK_POST_LOGOUT_REDIRECT_URI_2: ${AUTHENTIK_POST_LOGOUT_REDIRECT_URI_2:?AUTHENTIK_POST_LOGOUT_REDIRECT_URI_2 is required}
     AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC: ${AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC:?AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC is required}
     # Sent by the user sync webhook to main-service (the blueprint's headers mapping)
     USER_SYNC_WEBHOOK_TOKEN: ${USER_SYNC_WEBHOOK_TOKEN:?USER_SYNC_WEBHOOK_TOKEN is required}
@@ -219,8 +222,7 @@ services:
             args:
                 VITE_AUTHORITY: ${VITE_AUTHORITY:-}
                 VITE_CLIENT_ID: ${VITE_CLIENT_ID:-}
-                VITE_REDIRECT_URI: ${VITE_REDIRECT_URI:-}
-                VITE_POST_LOGOUT_REDIRECT_URI: ${VITE_POST_LOGOUT_REDIRECT_URI:-}
+                VITE_API_URL: ${VITE_API_URL:-}
         deploy:
             resources:
                 limits:
@@ -247,6 +249,10 @@ services:
             DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
             # authentik must send it with the user sync webhook
             USER_SYNC_WEBHOOK_TOKEN: ${USER_SYNC_WEBHOOK_TOKEN:?USER_SYNC_WEBHOOK_TOKEN is required}
+            # Access tokens from the frontend are verified against these (GET /me and the rest)
+            AUTHENTIK_JWKS_URL: ${AUTHENTIK_JWKS_URL:?AUTHENTIK_JWKS_URL is required}
+            AUTHENTIK_AUDIENCE: ${AUTHENTIK_AUDIENCE:?AUTHENTIK_AUDIENCE is required}
+            AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER:-}
             # Port is also referenced by AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC
             MAIN_SERVICE_HOST: 0.0.0.0
             MAIN_SERVICE_PORT: 8080
@@ -292,6 +298,7 @@ services:
             JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
             AUTHENTIK_JWKS_URL: ${AUTHENTIK_JWKS_URL:?AUTHENTIK_JWKS_URL is required}
             AUTHENTIK_AUDIENCE: ${AUTHENTIK_AUDIENCE:?AUTHENTIK_AUDIENCE is required}
+            AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER:-}
             INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
             FILE_LINK_SECRET: ${FILE_LINK_SECRET:?FILE_LINK_SECRET is required}
             FILE_LINK_TTL_SECONDS: ${FILE_LINK_TTL_SECONDS:-3600}

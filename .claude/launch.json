@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["nx", "storybook", "ui-kit", "--", "--port", "6006", "--no-open"],
       "port": 6006
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["nx", "run", "frontend:dev", "--skip-sync"],
+      "port": 1346
     }
   ]
 }

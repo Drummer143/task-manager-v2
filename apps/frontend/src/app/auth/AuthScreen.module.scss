@@ -1,0 +1,146 @@
+// Sign-in screens (design: Callback §02). One column in the middle of the page, no card: the
+// page background is the surface.
+
+.frame {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--auth-gutter);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+}
+
+.column {
+  width: 100%;
+  max-width: var(--auth-column-width);
+  display: grid;
+  gap: var(--sp-5);
+  justify-items: start;
+}
+
+.center {
+  justify-items: center;
+  text-align: center;
+}
+
+.fade {
+  animation: fade-in var(--dur-layer) var(--ease-out) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.wordmark {
+  font-size: var(--type-h2);
+  font-weight: var(--weight-strong);
+  letter-spacing: 0.01em;
+}
+
+.mark {
+  width: var(--avatar-md);
+  height: var(--avatar-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-width) solid currentColor;
+  border-radius: var(--radius-md);
+  font-size: var(--type-body);
+  font-weight: var(--weight-strong);
+}
+
+.danger {
+  color: var(--text-danger);
+}
+
+.accent {
+  color: var(--text-accent);
+}
+
+.neutral {
+  color: var(--text-secondary);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--type-h2);
+  font-weight: var(--weight-strong);
+  line-height: 1.2;
+  text-wrap: pretty;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.text {
+  margin: 0;
+  font-size: var(--type-body);
+  line-height: 1.55;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+
+  b {
+    color: var(--text-primary);
+    font-weight: var(--weight-strong);
+  }
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: var(--spinner-size-md);
+  font-size: var(--type-body);
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.details {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  padding-top: var(--sp-4);
+  border-top: var(--border-width) solid var(--border-hairline);
+  font-family: var(--font-mono);
+  font-size: var(--type-meta);
+  color: var(--text-muted);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.copy {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--text-accent);
+  text-decoration: underline;
+  text-underline-offset: var(--sp-1);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: var(--border-width-strong) solid var(--focus-ring);
+    outline-offset: var(--focus-offset);
+    border-radius: var(--radius-xs);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade {
+    animation: none;
+  }
+}

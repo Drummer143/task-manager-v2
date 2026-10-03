@@ -139,8 +139,7 @@ jobs:
           build-args: |
             VITE_AUTHORITY=${{ vars.VITE_AUTHORITY }}
             VITE_CLIENT_ID=${{ vars.VITE_CLIENT_ID }}
-            VITE_REDIRECT_URI=${{ vars.VITE_REDIRECT_URI }}
-            VITE_POST_LOGOUT_REDIRECT_URI=${{ vars.VITE_POST_LOGOUT_REDIRECT_URI }}
+            VITE_API_URL=${{ vars.VITE_API_URL }}
             ${{ matrix.image.build_args }}
           cache-from: type=gha,scope=${{ matrix.image.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}

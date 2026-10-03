@@ -14,9 +14,18 @@ use uuid::Uuid;
 
 use crate::types::jwks::JwkSet;
 
-#[derive(serde::Deserialize)]
+/// What handlers can read from a verified access token: `Extension<Claims>` (and the user id
+/// alone as `Extension<Uuid>`).
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Claims {
+    /// authentik's user uuid (`sub_mode: user_uuid`).
     pub sub: Uuid,
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub preferred_username: Option<String>,
+    #[serde(default)]
+    pub name: Option<String>,
 }
 
 pub async fn fetch_jwks(url: &str) -> Result<JwkSet, String> {
@@ -33,6 +42,9 @@ pub struct InternalAuthState {
     pub jwks: Arc<RwLock<JwkSet>>,
     pub authentik_jwks_url: Arc<String>,
     pub authentik_audience: Arc<String>,
+    /// The expected `iss`, e.g. `https://auth.example.com/application/o/task-manager/`. When set,
+    /// tokens of other authentik applications are refused even if they share the signing key.
+    pub authentik_issuer: Option<Arc<String>>,
 }
 
 pub async fn auth_guard(
@@ -88,6 +100,9 @@ pub async fn auth_guard(
     let mut validation = Validation::new(Algorithm::RS256);
     validation.leeway = 60;
     validation.set_audience(&[&state.authentik_audience]);
+    if let Some(issuer) = &state.authentik_issuer {
+        validation.set_issuer(&[issuer.as_str()]);
+    }
 
     let token_data = match decode::<Claims>(&token, &decoding_key, &validation) {
         Ok(data) => data,
@@ -95,6 +110,7 @@ pub async fn auth_guard(
     };
 
     req.extensions_mut().insert(token_data.claims.sub);
+    req.extensions_mut().insert(token_data.claims);
 
     next.run(req).await
 }
@@ -119,6 +135,7 @@ mod tests {
             jwks: Arc::new(RwLock::new(JwkSet { keys: Vec::new() })),
             authentik_jwks_url: Arc::new("http://127.0.0.1:1/jwks".into()),
             authentik_audience: Arc::new("test".into()),
+            authentik_issuer: None,
         };
         Router::new()
             .route("/protected", get(|| async { "ok" }))

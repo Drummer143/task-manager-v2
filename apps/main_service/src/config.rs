@@ -17,6 +17,13 @@ pub struct Config {
     pub cors_origins: Vec<HeaderValue>,
     /// Shared with authentik, which sends it with every user sync webhook.
     pub user_sync_webhook_token: String,
+    /// Where the keys that sign access tokens are published, e.g.
+    /// `https://auth.example.com/application/o/task-manager/jwks/`.
+    pub authentik_jwks_url: String,
+    /// The `aud` of access tokens: authentik's client id of the frontend.
+    pub authentik_audience: String,
+    /// The `iss` of access tokens; checked when set.
+    pub authentik_issuer: Option<String>,
     /// Off when running against a shared database (the SSH tunnel to the VPS): migrations of a
     /// local branch must not reach it.
     pub run_migrations: bool,
@@ -31,6 +38,9 @@ impl Config {
         let database_url = required(&lookup, "DATABASE_URL")?;
         let user_sync_webhook_token = required(&lookup, "USER_SYNC_WEBHOOK_TOKEN")?;
         let run_migrations = parse_or(&lookup, "RUN_MIGRATIONS", true)?;
+        let authentik_jwks_url = required(&lookup, "AUTHENTIK_JWKS_URL")?;
+        let authentik_audience = required(&lookup, "AUTHENTIK_AUDIENCE")?;
+        let authentik_issuer = lookup("AUTHENTIK_ISSUER").filter(|v| !v.is_empty());
 
         let host: IpAddr = parse_or(
             &lookup,
@@ -59,6 +69,9 @@ impl Config {
             addr: SocketAddr::new(host, port),
             cors_origins,
             user_sync_webhook_token,
+            authentik_jwks_url,
+            authentik_audience,
+            authentik_issuer,
             run_migrations,
         })
     }
@@ -98,24 +111,29 @@ mod tests {
 
     const DB: (&str, &str) = ("DATABASE_URL", "postgres://localhost/db");
     const TOKEN: (&str, &str) = ("USER_SYNC_WEBHOOK_TOKEN", "webhook-token");
+    const JWKS: (&str, &str) = ("AUTHENTIK_JWKS_URL", "https://auth.test/jwks/");
+    const AUD: (&str, &str) = ("AUTHENTIK_AUDIENCE", "client");
 
     #[test]
     fn requires_the_database_url_and_the_webhook_token() {
-        assert!(config(&[TOKEN]).is_err());
-        assert!(config(&[("DATABASE_URL", ""), TOKEN]).is_err());
-        assert!(config(&[DB]).is_err());
-        assert!(config(&[DB, ("USER_SYNC_WEBHOOK_TOKEN", "")]).is_err());
+        assert!(config(&[TOKEN, JWKS, AUD]).is_err());
+        assert!(config(&[("DATABASE_URL", ""), TOKEN, JWKS, AUD]).is_err());
+        assert!(config(&[DB, JWKS, AUD]).is_err());
+        assert!(config(&[DB, ("USER_SYNC_WEBHOOK_TOKEN", ""), JWKS, AUD]).is_err());
+        assert!(config(&[DB, TOKEN, AUD]).is_err());
+        assert!(config(&[DB, TOKEN, JWKS]).is_err());
     }
 
     #[test]
     fn applies_defaults() {
-        let config = config(&[DB, TOKEN]).unwrap();
+        let config = config(&[DB, TOKEN, JWKS, AUD]).unwrap();
 
         assert_eq!(config.addr, SocketAddr::from(([0, 0, 0, 0], DEFAULT_PORT)));
         assert_eq!(config.database_max_connections, DEFAULT_MAX_CONNECTIONS);
         assert_eq!(config.cors_origins.len(), 2);
         assert_eq!(config.user_sync_webhook_token, "webhook-token");
         assert!(config.run_migrations);
+        assert_eq!(config.authentik_issuer, None);
     }
 
     #[test]
@@ -123,7 +141,10 @@ mod tests {
         let config = config(&[
             DB,
             TOKEN,
+            JWKS,
+            AUD,
             ("RUN_MIGRATIONS", "false"),
+            ("AUTHENTIK_ISSUER", "https://auth.test/application/o/app/"),
             ("MAIN_SERVICE_HOST", "127.0.0.1"),
             ("MAIN_SERVICE_PORT", "9090"),
             ("DATABASE_MAX_CONNECTIONS", "3"),
@@ -138,6 +159,10 @@ mod tests {
         assert_eq!(config.database_max_connections, 3);
         assert!(!config.run_migrations);
         assert_eq!(
+            config.authentik_issuer.as_deref(),
+            Some("https://auth.test/application/o/app/")
+        );
+        assert_eq!(
             config.cors_origins,
             ["https://example.com", "https://app.example.com"]
         );
@@ -145,9 +170,18 @@ mod tests {
 
     #[test]
     fn rejects_invalid_values() {
-        assert!(config(&[DB, TOKEN, ("MAIN_SERVICE_PORT", "http")]).is_err());
-        assert!(config(&[DB, TOKEN, ("MAIN_SERVICE_HOST", "localhost:1")]).is_err());
-        assert!(config(&[DB, TOKEN, ("CORS_ORIGINS", "https://exa\nmple.com")]).is_err());
-        assert!(config(&[DB, TOKEN, ("RUN_MIGRATIONS", "no")]).is_err());
+        assert!(config(&[DB, TOKEN, JWKS, AUD, ("MAIN_SERVICE_PORT", "http")]).is_err());
+        assert!(config(&[DB, TOKEN, JWKS, AUD, ("MAIN_SERVICE_HOST", "localhost:1")]).is_err());
+        assert!(
+            config(&[
+                DB,
+                TOKEN,
+                JWKS,
+                AUD,
+                ("CORS_ORIGINS", "https://exa\nmple.com")
+            ])
+            .is_err()
+        );
+        assert!(config(&[DB, TOKEN, JWKS, AUD, ("RUN_MIGRATIONS", "no")]).is_err());
     }
 }

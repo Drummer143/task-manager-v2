@@ -60,6 +60,11 @@ storybook-static
 .env
 .env.site
 .env.tunnel
+# Vite's per-machine env files (e.g. apps/frontend/.env.local)
+*.local
+
+# Dev HTTPS certificates (scripts/generate-certs.ps1)
+/certs/
 
 # Rust
 /target/
