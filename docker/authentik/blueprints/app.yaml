@@ -332,6 +332,12 @@ entries:
           name: Task Manager Provider
           client_id: !Env "AUTHENTIK_CLIENT_ID"
           client_type: public
+          # Allowed flows. Empty by default for providers created by a blueprint, which makes
+          # authentik refuse every sign-in ("The request is otherwise malformed"). The frontend
+          # signs in with a code (+ PKCE) and renews tokens with the refresh token.
+          grant_types:
+              - authorization_code
+              - refresh_token
           authentication_flow: !KeyOf auth-flow-combined
           access_token_validity: minutes=15
           sub_mode: user_uuid
