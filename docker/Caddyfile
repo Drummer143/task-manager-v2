@@ -4,11 +4,13 @@
 }
 
 # The REST backend. The frontend calls it cross-origin, so main-service answers CORS itself.
-# /internal/* (service-to-service endpoints) stays on the private network.
+# /internal/* (service-to-service endpoints) and /webhooks/* (authentik calls them over the
+# private network) stay off the internet.
 api.{$DOMAIN} {
     encode zstd gzip
 
-    handle /internal/* {
+    @private path /internal/* /webhooks/*
+    handle @private {
         respond 404
     }
 

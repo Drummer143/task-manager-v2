@@ -17,6 +17,8 @@ x-authentik-env: &authentik-env
     AUTHENTIK_REDIRECT_URI_2: ${AUTHENTIK_REDIRECT_URI_2:?AUTHENTIK_REDIRECT_URI_2 is required}
     AUTHENTIK_REDIRECT_URI_2_SILENT: ${AUTHENTIK_REDIRECT_URI_2_SILENT:?AUTHENTIK_REDIRECT_URI_2_SILENT is required}
     AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC: ${AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC:?AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC is required}
+    # Sent by the user sync webhook to main-service (the blueprint's headers mapping)
+    USER_SYNC_WEBHOOK_TOKEN: ${USER_SYNC_WEBHOOK_TOKEN:?USER_SYNC_WEBHOOK_TOKEN is required}
 
 x-authentik-depends-on: &authentik-depends-on
     postgres:
@@ -144,6 +146,9 @@ services:
         restart: unless-stopped
         container_name: redis
         command: ["redis-server", "--appendonly", "yes"]
+        # Loopback only: reachable from the VPS itself, which is what the SSH tunnel uses
+        ports:
+            - "127.0.0.1:6379:6379"
         healthcheck:
             test: ["CMD", "redis-cli", "ping"]
             interval: 10s
@@ -240,6 +245,8 @@ services:
                 condition: service_healthy
         environment:
             DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+            # authentik must send it with the user sync webhook
+            USER_SYNC_WEBHOOK_TOKEN: ${USER_SYNC_WEBHOOK_TOKEN:?USER_SYNC_WEBHOOK_TOKEN is required}
             # Port is also referenced by AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC
             MAIN_SERVICE_HOST: 0.0.0.0
             MAIN_SERVICE_PORT: 8080

@@ -132,24 +132,34 @@ pub async fn build() -> axum::Router {
         file_links,
     };
 
-    let arc_state = Arc::new(app_state.clone());
+    // Off when running against shared databases (the SSH tunnel to the VPS): the cleanups delete
+    // transactions and blobs, and those belong to the deployed storage-service
+    let run_background_workers = std::env::var("RUN_BACKGROUND_WORKERS")
+        .map(|value| value != "false")
+        .unwrap_or(true);
 
-    let transaction_cleanup_cron =
-        std::env::var("TRANSACTION_CLEANUP_CRON").unwrap_or_else(|_| "0 1/5 * * * *".to_string());
+    if run_background_workers {
+        let arc_state = Arc::new(app_state.clone());
 
-    let blob_cleanup_cron =
-        std::env::var("BLOB_CLEANUP_CRON").unwrap_or_else(|_| "0 0 3 * * * *".to_string());
+        let transaction_cleanup_cron = std::env::var("TRANSACTION_CLEANUP_CRON")
+            .unwrap_or_else(|_| "0 1/5 * * * *".to_string());
 
-    workers::transaction_cleanup::init_transaction_cleanup_worker(
-        arc_state.clone(),
-        &transaction_cleanup_cron,
-    )
-    .await
-    .expect("Failed to init transaction cleanup worker");
+        let blob_cleanup_cron =
+            std::env::var("BLOB_CLEANUP_CRON").unwrap_or_else(|_| "0 0 3 * * * *".to_string());
 
-    workers::blob_cleanup::init_blob_cleanup_worker(arc_state, &blob_cleanup_cron)
+        workers::transaction_cleanup::init_transaction_cleanup_worker(
+            arc_state.clone(),
+            &transaction_cleanup_cron,
+        )
         .await
-        .expect("Failed to init blob cleanup worker");
+        .expect("Failed to init transaction cleanup worker");
+
+        workers::blob_cleanup::init_blob_cleanup_worker(arc_state, &blob_cleanup_cron)
+            .await
+            .expect("Failed to init blob cleanup worker");
+    } else {
+        tracing::warn!("RUN_BACKGROUND_WORKERS=false: cleanup workers are not started");
+    }
 
     let app = axum::Router::new()
         .merge(entities::actions::router::init(app_state.clone()))

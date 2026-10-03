@@ -49,8 +49,7 @@ entries:
                 target_action = action_map[raw_action]
 
                 if target_action == "user_deleted":
-                    # При удалении мы знаем только PK. 
-                    # UUID и Email достать невозможно, так как записи нет.
+                    # The user is already gone: only its pk is known, no uuid or email
                     return {
                         "event": "user_deleted",
                         "payload": {
@@ -78,6 +77,20 @@ entries:
 
                 return None
 
+    # HEADERS MAPPER: authenticates the webhook to main-service. The token is read from the
+    # worker's environment when sending, so it is not stored in authentik's database.
+
+    - model: authentik_events.notificationwebhookmapping
+      id: user-sync-with-backed-headers-mapping
+      identifiers:
+          name: user-sync-with-backed-headers-mapping
+      attrs:
+          name: user-sync-with-backed-headers-mapping
+          expression: |
+                import os
+
+                return {"Authorization": "Bearer " + os.environ["USER_SYNC_WEBHOOK_TOKEN"]}
+
     # NOTIFICATION TRANSPORT
 
     - model: authentik_events.notificationtransport
@@ -89,7 +102,9 @@ entries:
           mode: webhook
           webhook_url: !Env AUTHENTIK_NOTIFICATION_WEBHOOK_USER_SYNC
           send_once: true
-          webhook_mapping: !KeyOf user-sync-with-backed-mapping
+          # Formerly `webhook_mapping`; authentik silently ignores fields it does not know here
+          webhook_mapping_body: !KeyOf user-sync-with-backed-mapping
+          webhook_mapping_headers: !KeyOf user-sync-with-backed-headers-mapping
 
     # NOTIFICATION RULE
 

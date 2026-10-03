@@ -1681,11 +1681,19 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "chrono",
+ "error_handlers",
+ "serde",
+ "serde_json",
+ "sql_models",
  "sqlx",
  "tokio",
+ "tower",
  "tower-http 0.7.1",
  "tracing",
  "tracing-subscriber",
+ "utils",
+ "uuid",
 ]
 
 [[package]]

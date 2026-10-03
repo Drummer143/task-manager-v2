@@ -15,6 +15,11 @@ pub struct Config {
     pub addr: SocketAddr,
     /// Browser origins allowed to call the API (the frontend lives on another host).
     pub cors_origins: Vec<HeaderValue>,
+    /// Shared with authentik, which sends it with every user sync webhook.
+    pub user_sync_webhook_token: String,
+    /// Off when running against a shared database (the SSH tunnel to the VPS): migrations of a
+    /// local branch must not reach it.
+    pub run_migrations: bool,
 }
 
 impl Config {
@@ -23,9 +28,9 @@ impl Config {
     }
 
     fn from_lookup(lookup: impl Fn(&str) -> Option<String>) -> anyhow::Result<Self> {
-        let Some(database_url) = lookup("DATABASE_URL").filter(|v| !v.is_empty()) else {
-            bail!("DATABASE_URL is required");
-        };
+        let database_url = required(&lookup, "DATABASE_URL")?;
+        let user_sync_webhook_token = required(&lookup, "USER_SYNC_WEBHOOK_TOKEN")?;
+        let run_migrations = parse_or(&lookup, "RUN_MIGRATIONS", true)?;
 
         let host: IpAddr = parse_or(
             &lookup,
@@ -53,7 +58,16 @@ impl Config {
             database_max_connections,
             addr: SocketAddr::new(host, port),
             cors_origins,
+            user_sync_webhook_token,
+            run_migrations,
         })
+    }
+}
+
+fn required(lookup: &impl Fn(&str) -> Option<String>, key: &str) -> anyhow::Result<String> {
+    match lookup(key).filter(|v| !v.is_empty()) {
+        Some(value) => Ok(value),
+        None => bail!("{key} is required"),
     }
 }
 
@@ -82,25 +96,34 @@ mod tests {
         Config::from_lookup(|key| vars.get(key).cloned())
     }
 
+    const DB: (&str, &str) = ("DATABASE_URL", "postgres://localhost/db");
+    const TOKEN: (&str, &str) = ("USER_SYNC_WEBHOOK_TOKEN", "webhook-token");
+
     #[test]
-    fn requires_database_url() {
-        assert!(config(&[]).is_err());
-        assert!(config(&[("DATABASE_URL", "")]).is_err());
+    fn requires_the_database_url_and_the_webhook_token() {
+        assert!(config(&[TOKEN]).is_err());
+        assert!(config(&[("DATABASE_URL", ""), TOKEN]).is_err());
+        assert!(config(&[DB]).is_err());
+        assert!(config(&[DB, ("USER_SYNC_WEBHOOK_TOKEN", "")]).is_err());
     }
 
     #[test]
     fn applies_defaults() {
-        let config = config(&[("DATABASE_URL", "postgres://localhost/db")]).unwrap();
+        let config = config(&[DB, TOKEN]).unwrap();
 
         assert_eq!(config.addr, SocketAddr::from(([0, 0, 0, 0], DEFAULT_PORT)));
         assert_eq!(config.database_max_connections, DEFAULT_MAX_CONNECTIONS);
         assert_eq!(config.cors_origins.len(), 2);
+        assert_eq!(config.user_sync_webhook_token, "webhook-token");
+        assert!(config.run_migrations);
     }
 
     #[test]
     fn reads_overrides() {
         let config = config(&[
-            ("DATABASE_URL", "postgres://localhost/db"),
+            DB,
+            TOKEN,
+            ("RUN_MIGRATIONS", "false"),
             ("MAIN_SERVICE_HOST", "127.0.0.1"),
             ("MAIN_SERVICE_PORT", "9090"),
             ("DATABASE_MAX_CONNECTIONS", "3"),
@@ -113,6 +136,7 @@ mod tests {
 
         assert_eq!(config.addr, SocketAddr::from(([127, 0, 0, 1], 9090)));
         assert_eq!(config.database_max_connections, 3);
+        assert!(!config.run_migrations);
         assert_eq!(
             config.cors_origins,
             ["https://example.com", "https://app.example.com"]
@@ -121,10 +145,9 @@ mod tests {
 
     #[test]
     fn rejects_invalid_values() {
-        let base = ("DATABASE_URL", "postgres://localhost/db");
-
-        assert!(config(&[base, ("MAIN_SERVICE_PORT", "http")]).is_err());
-        assert!(config(&[base, ("MAIN_SERVICE_HOST", "localhost:1")]).is_err());
-        assert!(config(&[base, ("CORS_ORIGINS", "https://exa\nmple.com")]).is_err());
+        assert!(config(&[DB, TOKEN, ("MAIN_SERVICE_PORT", "http")]).is_err());
+        assert!(config(&[DB, TOKEN, ("MAIN_SERVICE_HOST", "localhost:1")]).is_err());
+        assert!(config(&[DB, TOKEN, ("CORS_ORIGINS", "https://exa\nmple.com")]).is_err());
+        assert!(config(&[DB, TOKEN, ("RUN_MIGRATIONS", "no")]).is_err());
     }
 }

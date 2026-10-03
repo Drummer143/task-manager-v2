@@ -6,17 +6,18 @@ use uuid::Uuid;
 #[derive(Debug, Serialize, Deserialize, FromRow, utoipa::ToSchema, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
+    /// authentik's user uuid.
     pub id: Uuid,
+    /// authentik's numeric user pk.
+    pub authentik_id: i32,
     pub is_active: bool,
     pub username: String,
-    pub authentik_id: i32,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
-    pub picture: String,
-    pub is_avatar_default: bool,
+    /// `None` until the user has an avatar.
+    pub picture: Option<String>,
 
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub deleted_at: Option<DateTime<Utc>>,
 }

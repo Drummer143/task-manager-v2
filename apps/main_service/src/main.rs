@@ -1,4 +1,6 @@
 mod config;
+mod repos;
+mod webhooks;
 
 use anyhow::Context;
 use axum::{
@@ -9,6 +11,7 @@ use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing_subscriber::EnvFilter;
+use utils::service_auth::ServiceAuthState;
 
 use crate::config::Config;
 
@@ -31,11 +34,15 @@ async fn main() -> anyhow::Result<()> {
         .context("failed to connect to the database")?;
 
     // Migrations live in ./migrations and are embedded into the binary
-    sqlx::migrate!()
-        .run(&pool)
-        .await
-        .context("failed to run database migrations")?;
-    tracing::info!("database migrations applied");
+    if config.run_migrations {
+        sqlx::migrate!()
+            .run(&pool)
+            .await
+            .context("failed to run database migrations")?;
+        tracing::info!("database migrations applied");
+    } else {
+        tracing::warn!("RUN_MIGRATIONS=false: the database schema is left as it is");
+    }
 
     // The frontend calls the API from another origin; tokens travel in `Authorization`
     let cors = CorsLayer::new()
@@ -49,7 +56,14 @@ async fn main() -> anyhow::Result<()> {
         ])
         .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT]);
 
-    let app = Router::new().with_state(pool).layer(cors);
+    let app = Router::new()
+        .merge(webhooks::authentik::router(ServiceAuthState::new(
+            config.user_sync_webhook_token.clone(),
+        )))
+        .fallback(error_handlers::fallback::not_found)
+        .method_not_allowed_fallback(error_handlers::fallback::method_not_allowed)
+        .with_state(pool)
+        .layer(cors);
 
     let listener = TcpListener::bind(config.addr)
         .await
