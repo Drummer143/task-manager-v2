@@ -22,6 +22,12 @@ ENV VITE_AUTHORITY=${VITE_AUTHORITY}
 ENV VITE_CLIENT_ID=${VITE_CLIENT_ID}
 ENV VITE_API_URL=${VITE_API_URL}
 
+# They are baked into the bundle: without them the app builds fine and then cannot sign anyone in
+RUN for name in VITE_AUTHORITY VITE_CLIENT_ID VITE_API_URL; do \
+      eval "value=\$$name"; \
+      [ -n "$value" ] || { echo "$name build arg is required (CI: repository variable)"; exit 1; }; \
+    done
+
 ENV NX_DAEMON=false
 
 RUN pnpm exec nx run frontend:build
