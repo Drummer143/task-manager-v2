@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { Popover } from './Popover';
 import { Button } from '../Button';
 import { KitRoot } from '../KitRoot';
@@ -203,6 +203,28 @@ describe('Popover · closing', () => {
   });
 
   it('closes when focus leaves it — Tab from the last element goes on past the trigger', async () => {
+    // The previous test's popover has just unmounted, and Zag ignores focus
+    // leaving any layer for two frames after a layer is removed. Let those
+    // frames pass first: ours are queued after its, so they run after them.
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    // Zag moves focus in one frame after opening but starts watching it a
+    // frame later; a test running on real frames could leave in between and
+    // go unnoticed. From here frames come when the test says so.
+    const frames: FrameRequestCallback[] = [];
+    const settle = () =>
+      act(() => {
+        for (let pass = 0; frames.length > 0; pass++) {
+          if (pass === 20) throw new Error('animation frames keep coming');
+          frames.splice(0).forEach((callback) => callback(0));
+        }
+      });
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => frames.push(callback));
+    vi.stubGlobal('cancelAnimationFrame', () => undefined);
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
+
     render(
       <>
         <Share />
@@ -212,14 +234,18 @@ describe('Popover · closing', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Share' }));
     const content = await screen.findByRole('dialog');
-    // Zag starts watching focus once the popover has settled — as a user would
-    // Tab out after it is shown, not in the same millisecond.
-    await waitFor(() => expect(content.contains(document.activeElement)).toBe(true));
+    settle();
+    expect(content.contains(document.activeElement)).toBe(true);
     const after = screen.getByRole('button', { name: 'After the trigger' });
+    // jsdom has no layout; Zag counts an element without a box as not
+    // focusable and would send focus back to the trigger. On screen it has one.
+    vi.spyOn(after, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 120, 32)] as unknown as DOMRectList);
 
     act(() => after.focus());
+    settle();
 
     await waitFor(() => expect(dialog()).toBeNull());
+    settle();
     // Not pulled back to the trigger: focus stays where the user sent it.
     expect(document.activeElement).toBe(after);
   });
