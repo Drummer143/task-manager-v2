@@ -22,6 +22,7 @@
     "build_args": "APP_NAME=main_service",
     "paths": [
       "apps/main_service/**",
+      "packages/rust/**",
       "Cargo.toml",
       "Cargo.lock",
       "rust-toolchain.toml",

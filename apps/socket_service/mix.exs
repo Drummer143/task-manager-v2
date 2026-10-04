@@ -47,6 +47,9 @@ defmodule SocketService.MixProject do
       {:broadway_rabbitmq, "~> 0.8.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:ecto_sql, "~> 3.10"},
+      # The HTTP client of joken_jwks (JWKS from authentik): an optional dependency of it, so it
+      # is not pulled in by itself, and the default Tesla adapter is missing at runtime without it
+      {:hackney, "~> 4.8"},
       {:jason, "~> 1.2"},
       {:joken, "~> 2.6"},
       {:joken_jwks, "~> 1.6"},
