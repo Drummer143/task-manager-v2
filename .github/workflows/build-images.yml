@@ -140,6 +140,7 @@ jobs:
             VITE_AUTHORITY=${{ vars.VITE_AUTHORITY }}
             VITE_CLIENT_ID=${{ vars.VITE_CLIENT_ID }}
             VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_SOCKET_URL=${{ vars.VITE_SOCKET_URL }}
             ${{ matrix.image.build_args }}
           cache-from: type=gha,scope=${{ matrix.image.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
