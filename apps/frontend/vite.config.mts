@@ -23,7 +23,9 @@ export default defineConfig(() => ({
   server: {
     port: 1346,
     host: 'localhost',
-    https: devCertificates(),
+    // e2e (apps/frontend-e2e) fakes authentik, so it needs no registered URL: plain http, the same
+    // locally and in CI
+    https: process.env['E2E'] ? undefined : devCertificates(),
   },
   preview: {
     port: 2346,
@@ -49,6 +51,7 @@ export default defineConfig(() => ({
     watch: false,
     globals: true,
     environment: 'jsdom',
+    setupFiles: ['src/test-setup.ts'],
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
@@ -61,6 +64,7 @@ export default defineConfig(() => ({
         'src/**/index.ts',
         'src/**/*.d.ts',
         'src/main.tsx',
+        'src/test-setup.ts',
       ],
       reporter: ['text', 'html', 'lcov'],
       // Current level, rounded down. Raise when coverage grows; never lower silently.

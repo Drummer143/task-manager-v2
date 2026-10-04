@@ -1,4 +1,9 @@
 /*
+ * What jsdom lacks and the kit needs. Shared by every vitest setup that renders kit components:
+ * the kit's own (src/test-setup.ts) and the app's (apps/frontend/src/test-setup.ts).
+ */
+
+/*
  * jsdom has no layout, so it has no ResizeObserver either. Overlay
  * positioning (Zag → floating-ui) watches sizes with it; in tests nothing
  * resizes, so an observer that never fires is the honest stand-in.

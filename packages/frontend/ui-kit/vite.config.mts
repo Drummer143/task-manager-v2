@@ -67,6 +67,7 @@ export default defineConfig(() => ({
         'src/**/*.generated.*',
         'src/**/*.d.ts',
         'src/test-setup.ts',
+        'src/testing/**',
       ],
       reporter: ['text', 'html', 'lcov'],
       // Current level, rounded down. Raise when coverage grows; never lower silently.

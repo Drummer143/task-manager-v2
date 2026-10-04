@@ -10,6 +10,7 @@
   },
   "exclude": [
     "src/test-setup.ts",
+    "src/testing/**",
     "**/*.spec.ts",
     "**/*.test.ts",
     "**/*.spec.tsx",

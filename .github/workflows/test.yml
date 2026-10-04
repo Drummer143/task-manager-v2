@@ -6,6 +6,8 @@ name: Test
 #             OpenAPI specs the services export
 # - elixir:   socket_service (no RabbitMQ or authentik needed: config/test.exs turns them off)
 # - frontend: typecheck, lint and tests, the generated API client and the committed Wasm hasher
+# - e2e:      apps/frontend-e2e in Chromium against fakes of authentik and the services, so it
+#             needs nothing but the frontend itself
 
 # Pull requests only: opened, new commits pushed, reopened
 on:
@@ -117,10 +119,10 @@ jobs:
         run: node packages/rust/blake3_wasm/tools/build-wasm.mjs --check
 
       - name: Typecheck and test
-        run: pnpm nx run-many -t typecheck,test -p frontend,ui-kit,uploader,api
+        run: pnpm nx run-many -t typecheck,test -p frontend,frontend-e2e,ui-kit,uploader,api
 
       - name: Lint
-        run: pnpm nx run-many -t lint -p frontend,ui-kit,uploader,api
+        run: pnpm nx run-many -t lint -p frontend,frontend-e2e,ui-kit,uploader,api
 
       - name: Generated API client is up to date
         run: |
@@ -130,3 +132,35 @@ jobs:
             echo "::error::Stale generated client: run 'pnpm nx run api:generate' and commit the result"
             exit 1
           fi
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    env:
+      NX_DAEMON: "false"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.5.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The browser of the installed @playwright/test, with its system libraries
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: pnpm nx run frontend-e2e:e2e
+
+      # The HTML report with traces of the retried tests
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: dist/.playwright/apps/frontend-e2e/
+          retention-days: 7
