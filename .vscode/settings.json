@@ -2,5 +2,6 @@
     "cSpell.words": [
         "authentik",
         "utoipa"
-    ]
+    ],
+    "typescript.tsdk": "node_modules\\typescript\\lib"
 }

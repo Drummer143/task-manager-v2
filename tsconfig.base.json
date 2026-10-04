@@ -17,6 +17,7 @@
     "strict": true,
     "target": "es2022",
     "customConditions": ["@task-manager-v2/source"],
+    "plugins": [{ "name": "typescript-plugin-css-modules" }],
     "paths": {
       "@task-manager-v2/ui-kit": ["./packages/frontend/ui-kit/src/index.ts"],
       "@task-manager-v2/ui-kit/icons": ["./packages/frontend/ui-kit/src/icons/index.ts"],
