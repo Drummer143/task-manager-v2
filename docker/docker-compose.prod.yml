@@ -121,6 +121,9 @@ services:
         image: rabbitmq:management-alpine
         restart: unless-stopped
         container_name: rmq
+        # Loopback only, like postgres and redis: reachable through scripts/tunnel.ps1, not from outside
+        ports:
+            - "127.0.0.1:5672:5672"
         # A port probe, not `rabbitmq-diagnostics`: the CLI boots its own Erlang VM, which takes over
         # 10 s within the CPU limit below and so kept failing the timeout. The AMQP listener opens only
         # once the broker has finished booting, so an open port means it is ready.
