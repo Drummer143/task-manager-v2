@@ -5,7 +5,7 @@ import { useRegisterHotkey } from '../../interaction/hotkeys';
 import { Button } from '../Button';
 import { AppShell, type AppShellProps } from './AppShell';
 import { toggleSidebar, useShell } from './shellStore';
-import { useSidebar } from './SidebarContext';
+import { tooltipProps } from '../Tooltip';
 
 /*
  * Demo slots. Not part of the kit — they only fill AppShell so its geometry
@@ -16,22 +16,27 @@ const hairline = `${cssVar('border-width')} solid ${cssVar('border-hairline')}`;
 const PAGES = ['Board Q3', 'Requirements', 'Retro', 'Mobile', 'Infrastructure'];
 
 /** A sidebar item: an icon and a label; on the rail — the icon alone, the label in a tooltip. */
-const Item: React.FC<{ label: string; count?: number }> = ({ label, count }) => {
-  const { collapsed, tooltipProps } = useSidebar();
+const Item: React.FC<{ label: string; count?: number }> = ({
+  label,
+  count,
+}) => {
+  const { sidebarView, peek } = useShell();
+
+  const rail = sidebarView === 'collapsed' && !peek;
 
   return (
     <button
       type="button"
-      aria-label={collapsed ? label : undefined}
-      {...tooltipProps({ text: label })}
+      aria-label={rail ? label : undefined}
+      {...(rail ? tooltipProps({ text: label, placement: 'right' }) : null)}
       style={{
         width: '100%',
         height: cssVar('row-height'),
         display: 'flex',
         alignItems: 'center',
-        justifyContent: collapsed ? 'center' : undefined,
+        justifyContent: rail ? 'center' : undefined,
         gap: cssVar('sp-3'),
-        padding: collapsed ? 0 : `0 ${cssVar('sp-3')}`,
+        padding: rail ? 0 : `0 ${cssVar('sp-3')}`,
         border: 0,
         borderRadius: cssVar('radius-sm'),
         background: 'transparent',
@@ -57,16 +62,26 @@ const Item: React.FC<{ label: string; count?: number }> = ({ label, count }) => 
       >
         {label[0]}
       </span>
-      {!collapsed && label}
-      {!collapsed && count !== undefined && (
-        <span style={{ marginLeft: 'auto', fontSize: cssVar('type-meta'), color: cssVar('text-accent') }}>{count}</span>
+      {!rail && label}
+      {!rail && count !== undefined && (
+        <span
+          style={{
+            marginLeft: 'auto',
+            fontSize: cssVar('type-meta'),
+            color: cssVar('text-accent'),
+          }}
+        >
+          {count}
+        </span>
       )}
     </button>
   );
 };
 
 const SidebarDemo: React.FC = () => {
-  const { collapsed } = useSidebar();
+  const { sidebarView } = useShell();
+
+  const collapsed = sidebarView === 'collapsed';
 
   return (
     <>
@@ -86,7 +101,13 @@ const SidebarDemo: React.FC = () => {
       <div style={{ padding: cssVar('sp-2'), overflow: 'auto', flex: 1 }}>
         <Item label="Inbox" count={3} />
         {!collapsed && (
-          <div style={{ padding: `${cssVar('sp-3')} ${cssVar('sp-3')} ${cssVar('sp-1')}`, fontSize: cssVar('type-meta'), color: cssVar('text-muted') }}>
+          <div
+            style={{
+              padding: `${cssVar('sp-3')} ${cssVar('sp-3')} ${cssVar('sp-1')}`,
+              fontSize: cssVar('type-meta'),
+              color: cssVar('text-muted'),
+            }}
+          >
             Pages
           </div>
         )}
@@ -99,37 +120,65 @@ const SidebarDemo: React.FC = () => {
 };
 
 const StatusDemo: React.FC = () => {
-  const { collapsed, tooltipProps } = useSidebar();
+  const { sidebarView, peek } = useShell();
+
+  const rail = sidebarView === 'collapsed' && !peek;
 
   return (
     <div
-      {...tooltipProps({ text: 'Synced · 14:32' })}
+      {...(rail
+        ? tooltipProps({ text: 'Synced · 14:32', placement: 'right' })
+        : null)}
       style={{
         height: '100%',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: collapsed ? 'center' : undefined,
-        padding: collapsed ? 0 : `0 ${cssVar('sp-4')}`,
+        justifyContent: rail ? 'center' : undefined,
+        padding: rail ? 0 : `0 ${cssVar('sp-4')}`,
         fontSize: cssVar('type-meta'),
         color: cssVar('text-muted'),
         whiteSpace: 'nowrap',
       }}
     >
-      {collapsed ? '●' : 'Synced · 14:32'}
+      {rail ? '●' : 'Synced · 14:32'}
     </div>
   );
 };
 
-const HeaderDemo: React.FC<{ onTogglePanel?(): void }> = ({ onTogglePanel }) => {
+const HeaderDemo: React.FC<{ onTogglePanel?(): void }> = ({
+  onTogglePanel,
+}) => {
   const { layout, resetWidths } = useShell();
 
   return (
-    <div style={{ height: '100%', display: 'flex', alignItems: 'center', gap: cssVar('sp-3'), padding: `0 ${cssVar('sp-5')}` }}>
-      <Button size="sm" variant="ghost" onClick={toggleSidebar} tooltip="Toggle sidebar" keys="Ctrl+\">
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: cssVar('sp-3'),
+        padding: `0 ${cssVar('sp-5')}`,
+      }}
+    >
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={toggleSidebar}
+        tooltip="Toggle sidebar"
+        keys="Ctrl+\"
+      >
         Sidebar
       </Button>
-      <span style={{ fontSize: cssVar('type-meta'), color: cssVar('text-muted'), whiteSpace: 'nowrap', overflow: 'hidden' }}>
-        {layout.sidebar} · {layout.panel} · canvas {Math.round(layout.canvasPx)} px
+      <span
+        style={{
+          fontSize: cssVar('type-meta'),
+          color: cssVar('text-muted'),
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+        }}
+      >
+        {layout.sidebar} · {layout.panel} · canvas {Math.round(layout.canvasPx)}{' '}
+        px
       </span>
       <div style={{ marginLeft: 'auto', display: 'flex', gap: cssVar('sp-2') }}>
         {onTogglePanel && (
@@ -146,7 +195,14 @@ const HeaderDemo: React.FC<{ onTogglePanel?(): void }> = ({ onTogglePanel }) => 
 };
 
 const CanvasDemo: React.FC = () => (
-  <div style={{ padding: cssVar('sp-5'), display: 'flex', flexDirection: 'column', gap: cssVar('card-gap') }}>
+  <div
+    style={{
+      padding: cssVar('sp-5'),
+      display: 'flex',
+      flexDirection: 'column',
+      gap: cssVar('card-gap'),
+    }}
+  >
     {Array.from({ length: 60 }, (_, index) => (
       <div
         key={index}
@@ -158,8 +214,12 @@ const CanvasDemo: React.FC = () => (
           fontSize: cssVar('type-body'),
         }}
       >
-        <span style={{ color: cssVar('text-muted'), fontSize: cssVar('type-meta') }}>TM-{index + 1}</span> A task in
-        the one scroll area of the page
+        <span
+          style={{ color: cssVar('text-muted'), fontSize: cssVar('type-meta') }}
+        >
+          TM-{index + 1}
+        </span>{' '}
+        A task in the one scroll area of the page
       </div>
     ))}
   </div>
@@ -180,27 +240,66 @@ const PanelDemo: React.FC<{ onClose(): void }> = ({ onClose }) => (
       }}
     >
       TM-248
-      <Button size="sm" variant="ghost" style={{ marginLeft: 'auto' }} onClick={onClose} keys="Esc" tooltip="Close">
+      <Button
+        size="sm"
+        variant="ghost"
+        style={{ marginLeft: 'auto' }}
+        onClick={onClose}
+        keys="Esc"
+        tooltip="Close"
+      >
         Close
       </Button>
     </div>
-    <div style={{ padding: cssVar('sp-5'), overflow: 'auto', flex: 1, scrollbarGutter: 'stable' }}>
-      <div style={{ fontSize: cssVar('type-h1'), fontWeight: cssVar('weight-strong'), marginBottom: cssVar('sp-5') }}>
+    <div
+      style={{
+        padding: cssVar('sp-5'),
+        overflow: 'auto',
+        flex: 1,
+        scrollbarGutter: 'stable',
+      }}
+    >
+      <div
+        style={{
+          fontSize: cssVar('type-h1'),
+          fontWeight: cssVar('weight-strong'),
+          marginBottom: cssVar('sp-5'),
+        }}
+      >
         AppShell: focus regions and resize
       </div>
-      <div style={{ fontSize: cssVar('type-body'), color: cssVar('text-secondary'), lineHeight: cssVar('lh-body') }}>
-        Opening the panel leaves focus on the canvas. Closing it with focus inside brings focus back to the canvas.
+      <div
+        style={{
+          fontSize: cssVar('type-body'),
+          color: cssVar('text-secondary'),
+          lineHeight: cssVar('lh-body'),
+        }}
+      >
+        Opening the panel leaves focus on the canvas. Closing it with focus
+        inside brings focus back to the canvas.
       </div>
     </div>
   </>
 );
 
 /** The app's part: ⌘\ / Ctrl+\ and the panel's open state (in the product: ?task in the URL). */
-const Playground: React.FC<Partial<AppShellProps> & { initialPanel?: boolean }> = ({ initialPanel = false, ...args }) => {
+const Playground: React.FC<
+  Partial<AppShellProps> & { initialPanel?: boolean }
+> = ({ initialPanel = false, ...args }) => {
   const [open, setOpen] = useState(initialPanel);
 
-  useRegisterHotkey({ key: '\\', ctrl: true, callback: toggleSidebar, description: 'Toggle sidebar' });
-  useRegisterHotkey({ key: '\\', meta: true, callback: toggleSidebar, description: 'Toggle sidebar' });
+  useRegisterHotkey({
+    key: '\\',
+    ctrl: true,
+    callback: toggleSidebar,
+    description: 'Toggle sidebar',
+  });
+  useRegisterHotkey({
+    key: '\\',
+    meta: true,
+    callback: toggleSidebar,
+    description: 'Toggle sidebar',
+  });
 
   return (
     <AppShell

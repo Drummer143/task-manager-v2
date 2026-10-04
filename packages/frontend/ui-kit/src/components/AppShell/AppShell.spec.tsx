@@ -4,14 +4,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useEscapeStore } from '../../interaction/escape/store';
 import { AppShell } from './AppShell';
 import { DEFAULT_PREFS, resolveShell } from './resolveShell';
-import { STORAGE_KEY, readPrefs, toggleSidebar, useShellStore } from './shellStore';
-import { useSidebar } from './SidebarContext';
+import {
+  STORAGE_KEY,
+  readPrefs,
+  toggleSidebar,
+  useShell,
+  useShellStore,
+} from './shellStore';
+import { tooltipProps } from '../Tooltip';
 
-const setWidth = (vw: number) => act(() => useShellStore.getState().setViewport(vw));
-const pressEscape = () => act(() => void useEscapeStore.getState().handleEscape());
-const shell = () => document.querySelector<HTMLElement>('[data-sidebar]') as HTMLElement;
-const sidebarResizer = () => screen.queryByRole('separator', { name: 'Resize sidebar' });
-const panelResizer = () => screen.queryByRole('separator', { name: 'Resize panel' });
+const setWidth = (vw: number) =>
+  act(() => useShellStore.getState().setViewport(vw));
+const pressEscape = () =>
+  act(() => void useEscapeStore.getState().handleEscape());
+const shell = () =>
+  document.querySelector<HTMLElement>('[data-sidebar]') as HTMLElement;
+const sidebarResizer = () =>
+  screen.queryByRole('separator', { name: 'Resize sidebar' });
+const panelResizer = () =>
+  screen.queryByRole('separator', { name: 'Resize panel' });
 
 beforeEach(() => {
   localStorage.clear();
@@ -39,11 +50,21 @@ const moveTo = (element: HTMLElement, clientX: number) => {
 
 beforeEach(() => {
   frames = [];
-  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => frames.push(callback));
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) =>
+    frames.push(callback),
+  );
   vi.stubGlobal('cancelAnimationFrame', () => undefined);
 });
 
-const Frame = ({ panel = null, onPanelClose, scrollKey }: { panel?: ReactNode; onPanelClose?(): void; scrollKey?: string }) => (
+const Frame = ({
+  panel = null,
+  onPanelClose,
+  scrollKey,
+}: {
+  panel?: ReactNode;
+  onPanelClose?(): void;
+  scrollKey?: string;
+}) => (
   <AppShell
     sidebar={<button type="button">NAV</button>}
     status={<div>SYNC</div>}
@@ -66,7 +87,13 @@ const WithPanel = () => {
         OPEN
       </button>
       <Frame
-        panel={open ? <button type="button" onClick={() => setOpen(false)}>CLOSE</button> : null}
+        panel={
+          open ? (
+            <button type="button" onClick={() => setOpen(false)}>
+              CLOSE
+            </button>
+          ) : null
+        }
         onPanelClose={() => setOpen(false)}
       />
     </>
@@ -77,7 +104,9 @@ describe('AppShell · regions', () => {
   it('lays out the landmarks and keeps a closed panel out of the DOM', () => {
     render(<Frame />);
 
-    expect(screen.getByRole('complementary', { name: 'Sidebar' }).textContent).toBe('NAVSYNC');
+    expect(
+      screen.getByRole('complementary', { name: 'Sidebar' }).textContent,
+    ).toBe('NAVSYNC');
     expect(screen.getByRole('banner').textContent).toBe('HEAD');
     expect(screen.getByRole('main')?.getAttribute('id')).toBe('canvas');
     expect(screen.getByRole('main')?.getAttribute('tabindex')).toBe('-1');
@@ -89,7 +118,11 @@ describe('AppShell · regions', () => {
   it('opens the panel docked, with its own resizer, and writes the widths as variables', () => {
     render(<Frame panel={<div>PANEL</div>} />);
 
-    expect(screen.getByRole('complementary', { name: 'Task' })?.getAttribute('data-mode')).toBe('docked');
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Task' })
+        ?.getAttribute('data-mode'),
+    ).toBe('docked');
     expect(shell()?.getAttribute('data-panel')).toBe('docked');
     expect(panelResizer()?.getAttribute('aria-controls')).toBe('shell-panel');
     expect(shell().style.getPropertyValue('--_sidebar')).toBe('260px');
@@ -100,7 +133,11 @@ describe('AppShell · regions', () => {
     setWidth(860);
     render(<Frame panel={<div>PANEL</div>} />);
 
-    expect(screen.getByRole('complementary', { name: 'Task' })?.getAttribute('data-mode')).toBe('overlay');
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Task' })
+        ?.getAttribute('data-mode'),
+    ).toBe('overlay');
     expect(shell().style.getPropertyValue('--_panel-col')).toBe('0px');
     // The overlay has its own border to drag.
     expect(panelResizer()).not.toBeNull();
@@ -142,11 +179,19 @@ describe('AppShell · sidebar', () => {
 
     act(() => toggleSidebar());
 
-    expect(screen.getByRole('complementary', { name: 'Sidebar' })?.hasAttribute('data-peek')).toBe(true);
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Sidebar' })
+        ?.hasAttribute('data-peek'),
+    ).toBe(true);
     expect(useShellStore.getState().prefs.sidebarCollapsed).toBe(false);
 
     pressEscape();
-    expect(screen.getByRole('complementary', { name: 'Sidebar' })?.hasAttribute('data-peek')).toBe(false);
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Sidebar' })
+        ?.hasAttribute('data-peek'),
+    ).toBe(false);
   });
 
   it('peek closes on a click outside and on navigation', () => {
@@ -204,7 +249,10 @@ describe('AppShell · resizing', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
 
     fireEvent.pointerUp(resizer, { clientX: 100 });
-    expect(readPrefs()).toMatchObject({ sidebarCollapsed: true, sidebarWidth: 260 });
+    expect(readPrefs()).toMatchObject({
+      sidebarCollapsed: true,
+      sidebarWidth: 260,
+    });
   });
 
   it('dragging a collapsed sidebar wider than 140 opens it', () => {
@@ -220,7 +268,10 @@ describe('AppShell · resizing', () => {
     fireEvent.pointerUp(resizer, { clientX: 300 });
 
     expect(shell()?.getAttribute('data-sidebar')).toBe('expanded');
-    expect(readPrefs()).toMatchObject({ sidebarCollapsed: false, sidebarWidth: 300 });
+    expect(readPrefs()).toMatchObject({
+      sidebarCollapsed: false,
+      sidebarWidth: 300,
+    });
   });
 
   it('the panel cannot squeeze the canvas below its minimum', () => {
@@ -236,8 +287,21 @@ describe('AppShell · resizing', () => {
   it('takes the preferences another tab stored', () => {
     render(<Frame />);
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: 1, sidebarWidth: 320, sidebarCollapsed: false, panelWidth: 420 }));
-    act(() => void window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY })));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        v: 1,
+        sidebarWidth: 320,
+        sidebarCollapsed: false,
+        panelWidth: 420,
+      }),
+    );
+    act(
+      () =>
+        void window.dispatchEvent(
+          new StorageEvent('storage', { key: STORAGE_KEY }),
+        ),
+    );
 
     expect(shell().style.getPropertyValue('--_sidebar')).toBe('320px');
   });
@@ -310,12 +374,19 @@ describe('AppShell · canvas scroll', () => {
   });
 });
 
-describe('AppShell · useSidebar', () => {
+describe('AppShell · sidebarView', () => {
   const Probe: React.FC<{ name: string }> = ({ name }) => {
-    const { collapsed, peek, tooltipProps } = useSidebar();
+    const { sidebarView, peek } = useShell();
+
+    const collapsed = sidebarView === 'collapsed';
 
     return (
-      <button type="button" {...tooltipProps({ text: name })}>
+      <button
+        type="button"
+        {...(collapsed
+          ? tooltipProps({ text: name, placement: 'right' })
+          : null)}
+      >
         {name}:{collapsed ? 'rail' : 'full'}
         {peek ? ':peek' : ''}
       </button>
@@ -324,7 +395,11 @@ describe('AppShell · useSidebar', () => {
 
   const renderProbe = () =>
     render(
-      <AppShell sidebar={<Probe name="nav" />} status={<Probe name="status" />} header={<Probe name="header" />}>
+      <AppShell
+        sidebar={<Probe name="nav" />}
+        status={<Probe name="status" />}
+        header={<Probe name="header" />}
+      >
         x
       </AppShell>,
     );
@@ -337,12 +412,18 @@ describe('AppShell · useSidebar', () => {
     act(() => toggleSidebar());
     expect(screen.getByText('nav:rail')).not.toBeNull();
     expect(screen.getByText('status:rail')).not.toBeNull();
-    expect(screen.getByRole('complementary', { name: 'Sidebar' }).hasAttribute('data-collapsed')).toBe(true);
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Sidebar' })
+        .hasAttribute('data-collapsed'),
+    ).toBe(true);
   });
 
   it('on the rail an item gets its label as a tooltip to the right; expanded — none', () => {
     renderProbe();
-    expect(screen.getByText('nav:full').hasAttribute('data-tooltip')).toBe(false);
+    expect(screen.getByText('nav:full').hasAttribute('data-tooltip')).toBe(
+      false,
+    );
 
     act(() => toggleSidebar());
     const item = screen.getByText('nav:rail');
@@ -358,13 +439,10 @@ describe('AppShell · useSidebar', () => {
 
     act(() => toggleSidebar());
     expect(screen.getByText('nav:full:peek')).not.toBeNull();
-    expect(screen.getByRole('complementary', { name: 'Sidebar' }).hasAttribute('data-collapsed')).toBe(false);
-  });
-
-  it('outside the sidebar it reads as expanded', () => {
-    renderProbe();
-    act(() => toggleSidebar());
-
-    expect(screen.getByText('header:full')).not.toBeNull();
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Sidebar' })
+        .hasAttribute('data-collapsed'),
+    ).toBe(false);
   });
 });
