@@ -260,7 +260,7 @@ services:
             MAIN_SERVICE_HOST: 0.0.0.0
             MAIN_SERVICE_PORT: 8080
             # The frontend (https://DOMAIN) calls api.DOMAIN cross-origin
-            CORS_ORIGINS: https://${DOMAIN:?DOMAIN is required}
+            CORS_ORIGINS: https://${DOMAIN:?DOMAIN is required},https://localhost:1346
             AMQP_URL: ${AMQP_URL:?AMQP_URL is required}
             DEBUG_NOTIFICATIONS: true
         deploy:
@@ -312,7 +312,7 @@ services:
             # Links point at the public address of caddy. The frontend (https://DOMAIN) calls
             # storage cross-origin, so its origin must be allowed by CORS
             STORAGE_PUBLIC_URL: https://storage.${DOMAIN:?DOMAIN is required}
-            CORS_ORIGINS: https://${DOMAIN}
+            CORS_ORIGINS: https://${DOMAIN},https://localhost:1346
         volumes:
             - storage_data:/static
         deploy:
@@ -337,7 +337,7 @@ services:
         environment:
             SECRET_KEY_BASE: ${SECRET_KEY_BASE:?SECRET_KEY_BASE is required}
             PHX_HOST: socket.${DOMAIN}
-            PHX_CHECK_ORIGIN: https://${DOMAIN}
+            PHX_CHECK_ORIGIN: https://${DOMAIN},https://localhost:1346
             # Caddy proxies socket.{$DOMAIN} to socket-service:8079
             SOCKET_SERVICE_PORT: 8079
             AMQP_URL: ${AMQP_URL:?AMQP_URL is required}
