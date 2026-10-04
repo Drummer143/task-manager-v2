@@ -12,20 +12,20 @@ import Config
 # If you use `mix release`, you need to explicitly enable the server
 # by passing the PHX_SERVER=true when you start it:
 #
-#     PHX_SERVER=true bin/socket_server start
+#     PHX_SERVER=true bin/socket_service start
 #
 # Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
 # script that automatically sets the env var above.
 if System.get_env("PHX_SERVER") do
-  config :socket_server, SocketServerWeb.Endpoint, server: true
+  config :socket_service, SocketServiceWeb.Endpoint, server: true
 end
 
-config :socket_server, SocketServerWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("SOCKET_SERVER_PORT", "4000"))]
+config :socket_service, SocketServiceWeb.Endpoint,
+  http: [port: String.to_integer(System.get_env("socket_service_PORT", "4000"))]
 
 # Tests run without RabbitMQ and authentik (see :external_services in config/test.exs)
 if config_env() != :test do
-  config :socket_server,
+  config :socket_service,
     amqp_url: System.fetch_env!("AMQP_URL"),
     jwks_url: System.fetch_env!("AUTHENTIK_JWKS_URL"),
     issuer: System.fetch_env!("AUTHENTIK_ISSUER"),
@@ -55,9 +55,9 @@ if config_env() == :prod do
       origins -> Enum.map(origins, &String.trim/1)
     end
 
-  config :socket_server, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  config :socket_service, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
-  config :socket_server, SocketServerWeb.Endpoint,
+  config :socket_service, SocketServiceWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     check_origin: check_origin,
     http: [
@@ -74,7 +74,7 @@ if config_env() == :prod do
   # To get SSL working, you will need to add the `https` key
   # to your endpoint configuration:
   #
-  #     config :socket_server, SocketServerWeb.Endpoint,
+  #     config :socket_service, SocketServiceWeb.Endpoint,
   #       https: [
   #         ...,
   #         port: 443,
@@ -96,7 +96,7 @@ if config_env() == :prod do
   # We also recommend setting `force_ssl` in your config/prod.exs,
   # ensuring no data is ever sent via http, always redirecting to https:
   #
-  #     config :socket_server, SocketServerWeb.Endpoint,
+  #     config :socket_service, SocketServiceWeb.Endpoint,
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.

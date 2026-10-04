@@ -22,7 +22,7 @@ api.{$DOMAIN} {
 # Phoenix sockets (e.g. wss://socket.{$DOMAIN}/socket/websocket); paths are passed through as is.
 # The page's origin is checked by Phoenix (`check_origin`), not here.
 socket.{$DOMAIN} {
-    reverse_proxy socket-server:4000
+    reverse_proxy socket-service:4000
 }
 
 # Storage has its own origin, so files uploaded by users can never run in the app's origin.

@@ -4,7 +4,7 @@ name: Test
 # - rust:     main_service and sql_models, including the Postgres tests (`#[sqlx::test]`, marked
 #             #[ignore] so a plain local `cargo test` without a database still passes), and the
 #             OpenAPI specs the services export
-# - elixir:   socket_server (no RabbitMQ or authentik needed: config/test.exs turns them off)
+# - elixir:   socket_service (no RabbitMQ or authentik needed: config/test.exs turns them off)
 # - frontend: typecheck, lint and tests, the generated API client and the committed Wasm hasher
 
 # Pull requests only: opened, new commits pushed, reopened

@@ -45,12 +45,12 @@
     ]
   },
   {
-    "name": "socket-server",
+    "name": "socket-service",
     "dockerfile": "docker/Dockerfile.elixir",
-    "compose_service": "socket-server",
-    "build_args": "APP_NAME=socket_server",
+    "compose_service": "socket-service",
+    "build_args": "APP_NAME=socket_service",
     "paths": [
-      "apps/socket_server/**",
+      "apps/socket_service/**",
       "config/**",
       "mix.exs",
       "mix.lock",

@@ -11,18 +11,18 @@
 # General application configuration
 import Config
 
-config :socket_server,
+config :socket_service,
   generators: [timestamp_type: :utc_datetime]
 
 # Configure the endpoint
-config :socket_server, SocketServerWeb.Endpoint,
+config :socket_service, SocketServiceWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [json: SocketServerWeb.ErrorJSON],
+    formats: [json: SocketServiceWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: SocketServer.PubSub,
+  pubsub_server: SocketService.PubSub,
   live_view: [signing_salt: "LYz5bdF0"]
 
 # Configure Elixir's Logger

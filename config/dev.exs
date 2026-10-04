@@ -6,7 +6,7 @@ import Config
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
-config :socket_server, SocketServerWeb.Endpoint,
+config :socket_service, SocketServiceWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}],
@@ -40,7 +40,7 @@ config :socket_server, SocketServerWeb.Endpoint,
 # different ports.
 
 # Enable dev routes for dashboard and mailbox
-config :socket_server, dev_routes: true
+config :socket_service, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

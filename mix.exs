@@ -5,7 +5,7 @@ defmodule TaskManager.MixProject do
     [
       apps_path: "apps",
       # apps/ is shared with non-Elixir Nx projects, so umbrella children are listed explicitly
-      apps: [:socket_server],
+      apps: [:socket_service],
       version: "0.1.0",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -16,7 +16,7 @@ defmodule TaskManager.MixProject do
   # One release per deployable app; built by docker/Dockerfile.elixir via `mix release <name>`
   defp releases do
     [
-      socket_server: [applications: [socket_server: :permanent]]
+      socket_service: [applications: [socket_service: :permanent]]
     ]
   end
 

@@ -6,7 +6,7 @@
 # Usage:
 #   .\scripts\dev-tunnel.ps1 main        # main-service
 #   .\scripts\dev-tunnel.ps1 storage     # storage-service
-#   .\scripts\dev-tunnel.ps1 socket      # socket-server (Elixir)
+#   .\scripts\dev-tunnel.ps1 socket      # socket-service (Elixir)
 #   .\scripts\dev-tunnel.ps1 frontend    # frontend dev server
 #
 # Settings come from .env.tunnel (copy .env.tunnel.example). Variables already set in the shell
@@ -79,7 +79,7 @@ switch ($Service) {
         cargo run -p storage --bin storage
     }
     "socket" {
-        Write-Host "Starting socket-server on port $env:SOCKET_SERVER_PORT ..." -ForegroundColor Cyan
+        Write-Host "Starting socket-service on port $env:SOCKET_SERVER_PORT ..." -ForegroundColor Cyan
         mix phx.server
     }
     "frontend" {

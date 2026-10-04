@@ -49,7 +49,7 @@ services:
         depends_on:
             - task-manager
             - main-service
-            - socket-server
+            - socket-service
             - storage-service
             - authentik_server
 
@@ -320,15 +320,15 @@ services:
 
     # Served by caddy on socket.{$DOMAIN}. The frontend connects from https://DOMAIN, another
     # origin, so it is allowed explicitly through PHX_CHECK_ORIGIN
-    socket-server:
+    socket-service:
         restart: unless-stopped
-        container_name: socket-server
-        image: ghcr.io/drummer143/task-manager-v2/socket-server:${IMAGE_TAG:-latest}
+        container_name: socket-service
+        image: ghcr.io/drummer143/task-manager-v2/socket-service:${IMAGE_TAG:-latest}
         build:
             context: ..
             dockerfile: docker/Dockerfile.elixir
             args:
-                APP_NAME: socket_server
+                APP_NAME: socket_service
         environment:
             SECRET_KEY_BASE: ${SECRET_KEY_BASE:?SECRET_KEY_BASE is required}
             PHX_HOST: socket.${DOMAIN}
