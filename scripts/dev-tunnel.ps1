@@ -79,7 +79,7 @@ switch ($Service) {
         cargo run -p storage --bin storage
     }
     "socket" {
-        Write-Host "Starting socket-service on port $env:SOCKET_SERVER_PORT ..." -ForegroundColor Cyan
+        Write-Host "Starting socket-service on port $env:SOCKET_SERVICE_PORT ..." -ForegroundColor Cyan
         mix phx.server
     }
     "frontend" {

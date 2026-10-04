@@ -21,7 +21,7 @@ if System.get_env("PHX_SERVER") do
 end
 
 config :socket_service, SocketServiceWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("socket_service_PORT", "8079"))]
+  http: [port: String.to_integer(System.get_env("SOCKET_SERVICE_PORT", "8079"))]
 
 # Tests run without RabbitMQ and authentik (see :external_services in config/test.exs)
 if config_env() != :test do
