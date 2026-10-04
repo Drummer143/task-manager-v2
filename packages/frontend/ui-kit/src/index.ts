@@ -52,3 +52,6 @@ export { KitRoot, type KitRootProps } from './components/KitRoot';
 export * from './components/Tree';
 
 export * from './components/Toast';
+
+export * from './components/VirtualList';
+
