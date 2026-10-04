@@ -2,7 +2,8 @@ import type React from 'react';
 import { useRouter, type RouterAdapter } from './RouterContext';
 
 /** Anything with a scheme (`https:`, `mailto:`…) or protocol-relative leaves the app. */
-export const isExternalHref = (href: string) => /^([a-z][a-z\d+\-.]*:|\/\/)/i.test(href);
+export const isExternalHref = (href: string) =>
+  /^([a-z][a-z\d+\-.]*:|\/\/)/i.test(href);
 
 const identity = (href: string) => href;
 
@@ -16,7 +17,9 @@ export const useLinkHref = (href: string) => {
   const router = useRouter();
   const useHref = router?.useHref ?? identity;
 
-  return useHref(href);
+  const resolved = useHref(href);
+
+  return isExternalHref(href) ? href : resolved;
 };
 
 interface LinkClickOptions {
@@ -24,12 +27,14 @@ interface LinkClickOptions {
   target?: string;
   download?: boolean | string;
   onClick?: React.MouseEventHandler<HTMLAnchorElement>;
+  replace?: boolean;
+  reloadDocument?: boolean;
 }
 
 /** Whether the browser, not the app router, should handle this click. */
 const isBrowserClick = (
   event: React.MouseEvent<HTMLAnchorElement>,
-  { href, target, download }: LinkClickOptions,
+  { href, target, download, reloadDocument }: LinkClickOptions,
 ) =>
   event.defaultPrevented ||
   event.button !== 0 ||
@@ -41,7 +46,8 @@ const isBrowserClick = (
   href.startsWith('#') ||
   isExternalHref(href) ||
   (target !== undefined && target !== '_self') ||
-  (download !== undefined && download !== false);
+  (download !== undefined && download !== false) ||
+  reloadDocument;
 
 const navigateOnClick = (
   router: RouterAdapter | null,
@@ -57,7 +63,7 @@ const navigateOnClick = (
   }
 
   event.preventDefault();
-  router.navigate(options.href as string);
+  router.navigate(options.href as string, { replace: options.replace });
 };
 
 /**
@@ -69,7 +75,12 @@ const navigateOnClick = (
 export const useLinkClick = (options: LinkClickOptions) => {
   const router = useRouter();
 
-  if (import.meta.env.DEV && !router && options.href !== undefined && !warnedNoRouter) {
+  if (
+    import.meta.env.DEV &&
+    !router &&
+    options.href !== undefined &&
+    !warnedNoRouter
+  ) {
     warnedNoRouter = true;
     console.warn(
       'A kit link rendered without a router adapter: it will reload the page. ' +
@@ -77,5 +88,6 @@ export const useLinkClick = (options: LinkClickOptions) => {
     );
   }
 
-  return (event: React.MouseEvent<HTMLAnchorElement>) => navigateOnClick(router, event, options);
+  return (event: React.MouseEvent<HTMLAnchorElement>) =>
+    navigateOnClick(router, event, options);
 };
