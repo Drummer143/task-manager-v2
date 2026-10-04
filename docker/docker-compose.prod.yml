@@ -339,6 +339,7 @@ services:
             PHX_HOST: socket.${DOMAIN}
             PHX_CHECK_ORIGIN: https://${DOMAIN}
             SOCKET_SERVER_PORT: 4000
+            AMQP_URL: ${AMQP_URL:?AMQP_URL is required}
         deploy:
             resources:
                 limits:
