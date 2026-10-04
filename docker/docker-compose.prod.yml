@@ -340,6 +340,9 @@ services:
             PHX_CHECK_ORIGIN: https://${DOMAIN}
             SOCKET_SERVER_PORT: 4000
             AMQP_URL: ${AMQP_URL:?AMQP_URL is required}
+            AUTHENTIK_JWKS_URL: ${AUTHENTIK_JWKS_URL:?AUTHENTIK_JWKS_URL is required}
+            AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER:?AUTHENTIK_ISSUER is required}
+            AUTHENTIK_AUDIENCE: ${AUTHENTIK_AUDIENCE:?AUTHENTIK_AUDIENCE is required}
         deploy:
             resources:
                 limits:
