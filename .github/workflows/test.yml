@@ -116,17 +116,15 @@ jobs:
       - name: Wasm hasher is up to date
         run: node packages/rust/blake3_wasm/tools/build-wasm.mjs --check
 
-      # --skip-sync: the tsconfig project references are out of sync (nx sync:check) and are
-      # not this job's to rewrite
       - name: Typecheck and test
-        run: pnpm nx run-many -t typecheck,test -p frontend,ui-kit,uploader,api --skip-sync
+        run: pnpm nx run-many -t typecheck,test -p frontend,ui-kit,uploader,api
 
       - name: Lint
-        run: pnpm nx run-many -t lint -p frontend,ui-kit,uploader,api --skip-sync
+        run: pnpm nx run-many -t lint -p frontend,ui-kit,uploader,api
 
       - name: Generated API client is up to date
         run: |
-          pnpm nx run api:generate --skip-sync
+          pnpm nx run api:generate
           if [ -n "$(git status --porcelain -- packages/frontend/api/src/generated)" ]; then
             git status --short -- packages/frontend/api/src/generated
             echo "::error::Stale generated client: run 'pnpm nx run api:generate' and commit the result"
