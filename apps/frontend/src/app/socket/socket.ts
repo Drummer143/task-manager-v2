@@ -45,7 +45,8 @@ const init = () => {
     return;
   }
 
-  const s = new Socket(import.meta.env.VITE_SOCKET_URL, {
+  const endpoint = `${import.meta.env.VITE_SOCKET_URL.replace(/\/+$/, '')}/socket`;
+  const s = new Socket(endpoint, {
     params: () => ({ token: accessToken }),
   });
 

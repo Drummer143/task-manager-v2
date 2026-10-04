@@ -147,6 +147,7 @@ afterEach(() => {
   FakeSocket.instances = [];
   useSocketStore.setState({ status: 'disconnected' });
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe('startRealtime', () => {
@@ -157,6 +158,14 @@ describe('startRealtime', () => {
     expect(lastSocket().connect).toHaveBeenCalledTimes(1);
     expect(lastSocket().token()).toBe('stored');
     expect(status()).toBe('connecting');
+  });
+
+  it('connects to the /socket mount of the service origin (phoenix.js adds /websocket)', async () => {
+    vi.stubEnv('VITE_SOCKET_URL', 'wss://socket.example.test/');
+
+    await start(user('stored'));
+
+    expect(lastSocket().url).toBe('wss://socket.example.test/socket');
   });
 
   it('stays disconnected without a user, with an expired one, or when storage cannot be read', async () => {
