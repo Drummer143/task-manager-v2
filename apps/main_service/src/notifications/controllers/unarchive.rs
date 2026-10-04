@@ -22,7 +22,8 @@ pub struct UnarchiveNotificationRequest {
         (status = 401, description = "Unauthorized"),
         (status = 404, description = "No such notification of this user"),
         (status = 500, description = "Internal server error")
-    )
+    ),
+    tag = "Notifications"
 )]
 pub async fn unarchive_notification(
     State(pool): State<sqlx::PgPool>,

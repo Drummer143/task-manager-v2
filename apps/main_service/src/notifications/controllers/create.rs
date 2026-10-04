@@ -16,7 +16,8 @@ use crate::signals::Signals;
         (status = 401, description = "Unauthorized"),
         (status = 422, description = "No user with this userId"),
         (status = 500, description = "Internal server error")
-    )
+    ),
+    tag = "Notifications"
 )]
 pub async fn create(
     State(pool): State<sqlx::PgPool>,

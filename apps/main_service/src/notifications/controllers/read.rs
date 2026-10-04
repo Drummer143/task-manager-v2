@@ -22,7 +22,8 @@ pub struct ReadNotificationRequest {
         (status = 401, description = "Unauthorized"),
         (status = 404, description = "No such notification of this user"),
         (status = 500, description = "Internal server error")
-    )
+    ),
+    tag = "Notifications"
 )]
 pub async fn read_notification(
     State(pool): State<sqlx::PgPool>,

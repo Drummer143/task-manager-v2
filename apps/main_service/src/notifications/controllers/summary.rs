@@ -23,7 +23,8 @@ pub struct SummaryResponse {
         (status = 200, description = "Notification summary", body = SummaryResponse),
         (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal server error")
-    )
+    ),
+    tag = "Notifications"
 )]
 pub async fn get_summary(
     State(pool): State<sqlx::PgPool>,

@@ -55,7 +55,8 @@ pub struct NotificationPage {
         (status = 400, description = "Malformed query, e.g. an invalid cursor"),
         (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal server error")
-    )
+    ),
+    tag = "Notifications"
 )]
 pub async fn get_list(
     State(pool): State<sqlx::PgPool>,
