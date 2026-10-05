@@ -7,7 +7,7 @@ import { raw } from '../../tokens';
 import { CheckIcon, ChevronRightIcon } from '../../icons';
 import { useDelayedFlag } from '../../hooks';
 import { useMessages } from '../../messages';
-import { useLinkClick, useLinkHref } from '../../router';
+import { LinkBase } from '../Link';
 import { positionerStyle, usePresence } from '../../overlay';
 import { Kbd, matchKeys } from '../Kbd';
 import { Spinner } from '../Spinner';
@@ -95,8 +95,6 @@ const ActionRow: React.FC<{ item: MenuActionItem; level: MenuLevelContext; slot:
   const { busy, error } = level.asyncState(item.id);
   // The press is ignored at once; the spinner waits its delay (spec 02).
   const showSpinner = useDelayedFlag(busy);
-  const linkHref = useLinkHref(item.href ?? '');
-  const handleLinkClick = useLinkClick({ href: item.href });
   const disabled = item.disabledReason !== undefined;
 
   const props = mergeProps(
@@ -127,10 +125,10 @@ const ActionRow: React.FC<{ item: MenuActionItem; level: MenuLevelContext; slot:
 
   if (item.href !== undefined && !disabled) {
     return (
-      // Zag clicks the link on Enter; the click goes through the router adapter.
-      <a {...mergeProps(props, { onClick: handleLinkClick })} href={linkHref}>
+      // Zag clicks the link on Enter; LinkBase sends the click through the router adapter.
+      <LinkBase {...props} href={item.href}>
         {content}
-      </a>
+      </LinkBase>
     );
   }
 

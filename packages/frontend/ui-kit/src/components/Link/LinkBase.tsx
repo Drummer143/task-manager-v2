@@ -1,7 +1,6 @@
 import React from 'react';
 import { tooltipProps } from '../Tooltip';
 import { useLinkClick, useLinkHref } from '../../router';
-import { cx } from '../../utils';
 
 export interface LinkBaseProps extends Omit<
   React.AnchorHTMLAttributes<HTMLAnchorElement>,
@@ -14,6 +13,19 @@ export interface LinkBaseProps extends Omit<
   disabledReason?: string;
   reloadDocument?: boolean;
 }
+
+/** `_blank` always gets noopener noreferrer, on top of whatever rel was passed. */
+const relFor = (target: string | undefined, rel: string | undefined) => {
+  if (target !== '_blank') {
+    return rel;
+  }
+
+  const tokens = new Set(rel?.split(/\s+/).filter(Boolean));
+  tokens.add('noopener');
+  tokens.add('noreferrer');
+
+  return [...tokens].join(' ');
+};
 
 export const LinkBase: React.FC<LinkBaseProps> = ({
   rel,
@@ -52,7 +64,7 @@ export const LinkBase: React.FC<LinkBaseProps> = ({
             href,
             target,
             download,
-            rel: target === '_blank' ? cx(rel, 'noopener noreferrer') : rel,
+            rel: relFor(target, rel),
             onClick: onClickHandler,
           })}
     >

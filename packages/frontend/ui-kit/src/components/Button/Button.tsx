@@ -7,7 +7,7 @@ import { ButtonVariant, ButtonSize } from './types';
 import { BUTTON_VARIANT_TO_SPINNER_VARIANT } from './constants';
 import { useDelayedFlag } from '../../hooks';
 import { tooltipProps, type TooltipPlacement } from '../Tooltip';
-import { useLinkClick, useLinkHref } from '../../router';
+import { LinkBase, type LinkBaseProps } from '../Link';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -22,27 +22,18 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   /** Why the button is disabled; shown in a tooltip and readable from the keyboard. */
   disabledReason?: string;
 
-  /** If present, renders an <a> instead of a <button> */
+  /** If present, renders a link (LinkBase) instead of a <button>. */
   href?: string;
   target?: '_blank' | '_self';
   rel?: string;
   download?: boolean | string;
+  /** With `href`: replace the history entry instead of pushing one. */
+  replace?: boolean;
+  /** With `href`: a plain browser navigation on the same origin, past the router. */
+  reloadDocument?: boolean;
 
   ref?: React.Ref<HTMLButtonElement & HTMLAnchorElement>;
 }
-
-/** `_blank` always gets noopener noreferrer, on top of whatever rel was passed. */
-const relFor = (target: string | undefined, rel: string | undefined) => {
-  if (target !== '_blank') {
-    return rel;
-  }
-
-  const tokens = new Set(rel?.split(/\s+/).filter(Boolean));
-  tokens.add('noopener');
-  tokens.add('noreferrer');
-
-  return [...tokens].join(' ');
-};
 
 const isEmpty = (node: React.ReactNode) => node === undefined || node === null || node === false || node === '';
 
@@ -62,6 +53,8 @@ export const Button: React.FC<ButtonProps> = ({
   target,
   rel,
   download,
+  replace,
+  reloadDocument,
   type = 'button',
   onClick,
   ...props
@@ -69,14 +62,6 @@ export const Button: React.FC<ButtonProps> = ({
   // Only the picture waits: the spinner appears after its delay, while busy
   // logic (aria-busy, ignoring presses) reacts at once.
   const showSpinner = useDelayedFlag(loading);
-  // Hooks run for buttons too: the adapter is fixed, so the order never changes.
-  const linkHref = useLinkHref(href ?? '');
-  const handleLinkClick = useLinkClick({
-    href,
-    target,
-    download,
-    onClick: onClick as React.MouseEventHandler<HTMLAnchorElement> | undefined,
-  });
 
   const hasIcon = !isEmpty(icon);
   const iconOnly = hasIcon && isEmpty(children);
@@ -100,16 +85,13 @@ export const Button: React.FC<ButtonProps> = ({
     // Disabled is aria-disabled, not the native attribute: the element keeps
     // pointer events and focus (for its reason), so the press is dropped here.
     // Busy: a repeated press is ignored (spec).
+    // A link's navigation follows only if this one leaves the event alone.
     if (loading || disabled) {
       event.preventDefault();
       return;
     }
 
-    if (href !== undefined) {
-      handleLinkClick(event);
-    } else {
-      onClick?.(event);
-    }
+    onClick?.(event);
   };
 
   // The reason wins over the text in the host; both may sit on one element.
@@ -153,20 +135,19 @@ export const Button: React.FC<ButtonProps> = ({
 
   if (href !== undefined) {
     return (
-      // A link that looks like a button stays a link (spec). Disabled: no href
-      // (nothing to open), but still focusable and named a link, so the reason
-      // is reachable from the keyboard like on a button.
-      <a
-        {...(common as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
-        href={disabled ? undefined : linkHref}
-        role={disabled ? 'link' : undefined}
-        tabIndex={disabled ? 0 : props.tabIndex}
+      // A link that looks like a button stays a link (spec): LinkBase does the
+      // router, rel and disabled (no href, still focusable and named a link, so
+      // the reason is reachable from the keyboard like on a button).
+      <LinkBase
+        {...(common as Omit<LinkBaseProps, 'href'>)}
+        href={href}
+        disabled={disabled}
         target={target}
-        rel={relFor(target, rel)}
+        rel={rel}
         download={download}
-      >
-        {common.children}
-      </a>
+        replace={replace}
+        reloadDocument={reloadDocument}
+      />
     );
   }
 

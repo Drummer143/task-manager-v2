@@ -1,7 +1,7 @@
 import React, { memo, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDownIcon, ChevronRightIcon, MoreHorizontalIcon, PlusIcon } from '../../icons';
 import type { KitMessages } from '../../messages';
-import { useLinkClick, useLinkHref } from '../../router';
+import { LinkBase } from '../Link';
 import { skeletonWidth, Skeleton } from '../States';
 import { tooltipProps } from '../Tooltip';
 import { isExpandable, type TreeRow as Row } from './model';
@@ -125,16 +125,11 @@ const RenameField: React.FC<{
 };
 
 /** The text part of the row: a real link when the node has a page, so middle and mod clicks open a tab. */
-const NodeLink: React.FC<{ node: TreeNode; children: React.ReactNode }> = ({ node, children }) => {
-  const href = useLinkHref(node.href as string);
-  const onClick = useLinkClick({ href: node.href });
-
-  return (
-    <a href={href} className={styles.main} tabIndex={-1} draggable={false} onClick={onClick}>
-      {children}
-    </a>
-  );
-};
+const NodeLink: React.FC<{ node: TreeNode; children: React.ReactNode }> = ({ node, children }) => (
+  <LinkBase href={node.href as string} className={styles.main} tabIndex={-1} draggable={false}>
+    {children}
+  </LinkBase>
+);
 
 /**
  * One node (spec: Tree · 01): the chevron (an empty place of the same width
