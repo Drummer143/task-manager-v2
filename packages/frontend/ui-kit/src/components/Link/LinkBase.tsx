@@ -8,7 +8,6 @@ export interface LinkBaseProps extends Omit<
   'href'
 > {
   href: string;
-
   ref?: React.Ref<HTMLAnchorElement>;
   replace?: boolean;
   disabled?: boolean;
@@ -45,18 +44,17 @@ export const LinkBase: React.FC<LinkBaseProps> = ({
       role={disabled ? 'link' : undefined}
       aria-disabled={disabled || undefined}
       tabIndex={disabled ? 0 : undefined}
-
       {...otherProps}
-
-      rel={target === '_blank' ? cx(rel, 'noopener noreferrer') : rel}
-      href={disabled ? undefined : href}
-      target={target}
-      onClick={disabled ? undefined : onClickHandler}
-      download={download}
-
-      {...(disabledReason && disabled
-        ? tooltipProps({ reason: disabledReason })
-        : null)}
+      // Unavailable, it is no link at all: nothing to open, save or follow
+      {...(disabled
+        ? disabledReason && tooltipProps({ reason: disabledReason })
+        : {
+            href,
+            target,
+            download,
+            rel: target === '_blank' ? cx(rel, 'noopener noreferrer') : rel,
+            onClick: onClickHandler,
+          })}
     >
       {children}
     </a>

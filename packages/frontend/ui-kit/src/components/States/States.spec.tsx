@@ -182,6 +182,16 @@ describe('ErrorState', () => {
     // Only an area takes focus and Enter.
     expect(screen.getByRole('alert').hasAttribute('tabindex')).toBe(false);
   });
+
+  it.each(['area', 'block', 'row'] as const)(
+    'in %s, only the red title is a danger tone: a link in the grey description stays an accent one',
+    (scale) => {
+      render(<ErrorState scale={scale} title="Couldn’t load this board" reason="The server didn’t respond." />);
+
+      expect(screen.getByText('Couldn’t load this board').getAttribute('data-tone')).toBe('danger');
+      expect(screen.getByText('The server didn’t respond.').closest('[data-tone="danger"]')).toBeNull();
+    },
+  );
 });
 
 describe('Refetching', () => {

@@ -2,6 +2,8 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "allowJs": false,
+    "declaration": true,
+    "composite": false,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "lib": ["es2022", "dom", "dom.iterable"],

@@ -127,7 +127,7 @@ describe('Tree', () => {
       expect(navigate).not.toHaveBeenCalled();
 
       fireEvent.click(within(item('Mobile')).getByText('Mobile'));
-      expect(navigate).toHaveBeenCalledWith('/p/mobile');
+      expect(navigate).toHaveBeenCalledWith('/p/mobile', { replace: undefined });
     });
 
     it('+ adds inside, ⋯ opens the node’s menu', async () => {

@@ -63,6 +63,8 @@ export interface KitMessages {
   toastRegion: string;
   notifyMore(count: number): string;
   undoFailed(label: string): string;
+  /** What readers hear after a link that opens a new tab (its ↗ is decorative). */
+  linkOpensNewTab: string;
   /** "+N" of a tag list or an avatar stack: what readers hear. */
   more(count: number): string;
 }
@@ -76,6 +78,7 @@ export const DEFAULT_MESSAGES: KitMessages = {
   removeTag: 'Remove',
   assign: 'Assign',
   close: 'Close',
+  linkOpensNewTab: '(opens in a new tab)',
   treeEmpty: 'No pages inside',
   treeNoAccess: 'no access',
   treeLoadFailed: 'Couldn’t load',

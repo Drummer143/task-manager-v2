@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 /**
  * Which error a field shows right now (spec 04). The owner decides what is
@@ -8,7 +8,7 @@ import { useState } from 'react';
  * - an error already on screen follows its text while typing, and goes as soon as it is cleared.
  * No space is reserved under the field: the line appears on blur, not under the caret.
  */
-export const useFieldError = (error: string | undefined) => {
+export const useFieldError = (error: ReactNode) => {
   const [focused, setFocused] = useState(false);
   const [visible, setVisible] = useState(Boolean(error));
 

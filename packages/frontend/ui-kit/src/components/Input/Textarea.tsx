@@ -16,7 +16,7 @@ export interface TextareaProps extends NativeTextareaProps {
   onValueChange(value: string): void;
   /** ⌘Enter / Ctrl+Enter or blur. A plain Enter is a new line. */
   onCommit?(value: string): void;
-  error?: string;
+  error?: React.ReactNode;
   selectOnFocus?: boolean;
   disabledReason?: string;
   /** Grow with the text up to --textarea-max-rows, then scroll. Default true. */
@@ -69,7 +69,7 @@ export const Textarea: React.FC<TextareaProps> = ({
           readOnly={readOnly || disabled}
           aria-disabled={disabled || undefined}
           aria-invalid={shownError ? true : undefined}
-          aria-describedby={cx(props['aria-describedby'], shownError && errorId) || undefined}
+          aria-describedby={cx(props['aria-describedby'], shownError ? errorId : undefined) || undefined}
           onChange={(event) => {
             onChange?.(event);
 
@@ -105,7 +105,7 @@ export const Textarea: React.FC<TextareaProps> = ({
       </div>
 
       {shownError && (
-        <div id={errorId} className={styles.error}>
+        <div id={errorId} className={styles.error} data-tone="danger">
           {shownError}
         </div>
       )}

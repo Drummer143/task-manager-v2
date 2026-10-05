@@ -171,6 +171,13 @@
   --tint-fill-alpha: 1;
   --tint-text-l: 0.43;
   --tint-text-c: 0.13;
+
+  /* Link */
+  --link-fg: var(--text-accent);
+  --link-fg-hover: var(--c-accent-800);
+  --link-fg-active: var(--c-accent-900);
+  --link-underline: color-mix(in srgb, var(--c-accent-700) 45%, transparent);
+  --link-bg-pressed: var(--bg-accent-active);
 }
 
 /* DARK set. Today: inverse surfaces. Tomorrow: also the dark theme (see above). */
@@ -244,6 +251,13 @@
   --tint-fill-alpha: 0.16;
   --tint-text-l: 0.785;
   --tint-text-c: 0.08;
+
+  /* Link */
+  --link-fg: var(--text-accent);
+  --link-fg-hover: var(--c-accent-200);
+  --link-fg-active: var(--c-accent-100);
+  --link-underline: color-mix(in srgb, var(--c-accent-300) 45%, transparent);
+  --link-bg-pressed: var(--bg-accent-active);
 }
 
 /* A surface paints itself. :where() keeps specificity at zero, so a place's own
@@ -522,7 +536,6 @@
   --highlight-remote: 400ms;
   --drag-threshold: 4px;
 
-
   /* Screen states (Skeleton · Empty · Error). A skeleton appears after
      --spinner-delay, pulses once and then holds still — endless shimmer
      reads as broken. */
@@ -535,6 +548,14 @@
   --empty-measure: 380px;
   /* "Copied" on a copy button, before it reads as the action again. */
   --copied-hold: 1500ms;
+
+  /* Link */
+  --link-state: var(--dur-state) var(--ease-out);
+  --link-radius: var(--radius-xs);
+  --link-underline-offset: 2px;
+  --link-underline-width: 1px;
+  --link-ext-size: 0.85em;
+  --link-ext-margin: 2px;
 }
 
 /* ─── Density ─── */
@@ -568,7 +589,7 @@
   --card-gap: 4px;
   --cell-padding-x: 6px;
   --hit-min: 28px;
-  
+
   /* Button */
   --button-pad-x: 8px;
   --button-pad-x-sm: 4px;
