@@ -4,14 +4,41 @@
     {
       "name": "ui-kit-storybook",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["nx", "storybook", "ui-kit", "--", "--port", "6006", "--no-open"],
+      "runtimeArgs": [
+        "nx",
+        "storybook",
+        "ui-kit",
+        "--",
+        "--port",
+        "6006",
+        "--no-open"
+      ],
       "port": 6006
     },
     {
       "name": "frontend",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["nx", "run", "frontend:dev", "--skip-sync"],
+      "runtimeArgs": [
+        "nx",
+        "run",
+        "frontend:dev",
+        "--skip-sync"
+      ],
       "port": 1346
+    },
+    {
+      "name": "frontend-storybook",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "nx",
+        "storybook",
+        "frontend",
+        "--",
+        "--port",
+        "6007",
+        "--no-open"
+      ],
+      "port": 6007
     }
   ]
 }
