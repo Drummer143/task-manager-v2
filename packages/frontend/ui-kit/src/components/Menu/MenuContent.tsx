@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import * as menu from '@zag-js/menu';
 import { mergeProps, normalizeProps, useMachine, type PropTypes } from '@zag-js/react';
@@ -9,11 +9,19 @@ import { useDelayedFlag } from '../../hooks';
 import { useMessages } from '../../messages';
 import { LinkBase } from '../Link';
 import { positionerStyle, usePresence } from '../../overlay';
+import { filterByLabel } from '../CommandPalette/matchLabel';
 import { Kbd, matchKeys } from '../Kbd';
 import { Spinner } from '../Spinner';
 import { Surface } from '../Surface';
 import { tooltipProps } from '../Tooltip';
-import type { MenuActionItem, MenuCheckboxItem, MenuItem, MenuRadioGroupItem, MenuSubmenuItem } from './types';
+import type {
+  MenuActionItem,
+  MenuCheckboxItem,
+  MenuItem,
+  MenuLabelItem,
+  MenuRadioGroupItem,
+  MenuSubmenuItem,
+} from './types';
 import type { AsyncItemState } from './useAsyncItems';
 import styles from './Menu.module.scss';
 
@@ -32,7 +40,7 @@ export interface MenuLevelContext {
 
 /** A section between separators; a leading label makes it a named group. */
 interface Section {
-  label?: string;
+  label?: MenuLabelItem;
   items: MenuItem[];
 }
 
@@ -46,9 +54,9 @@ const sectionsOf = (items: MenuItem[]): Section[] => {
       sections.push({ items: [] });
     } else if (item.type === 'label') {
       if (current.items.length > 0 || current.label) {
-        sections.push({ label: item.label, items: [] });
+        sections.push({ label: item, items: [] });
       } else {
-        current.label = item.label;
+        current.label = item;
       }
     } else {
       current.items.push(item);
@@ -74,9 +82,16 @@ const needsSlot = (items: MenuItem[]) =>
 /** A radio option with a sign of its own moves the choice to a check at the right. */
 const hasOwnSigns = (group: MenuRadioGroupItem) => group.options.some((option) => option.icon !== undefined);
 
-/** Hotkeys of this level's items, while it is open (spec 09). */
+const isEditable = (target: EventTarget) =>
+  target instanceof HTMLElement && (target.isContentEditable || target.matches('input, textarea, select'));
+
+/** A key that types a character: it goes into a menu's filter field. */
+const isTyping = (event: React.KeyboardEvent) =>
+  event.key.length === 1 && event.key !== ' ' && !event.metaKey && !event.ctrlKey && !event.altKey;
+
+/** Hotkeys of this level's items, while it is open (spec 09); not while typing into a filter. */
 const itemForKeys = (items: MenuItem[], event: React.KeyboardEvent) =>
-  items.find(
+  isEditable(event.target) ? undefined : items.find(
     (item): item is MenuActionItem | MenuCheckboxItem =>
       (item.type === 'action' || item.type === 'checkbox') &&
       item.keys !== undefined &&
@@ -159,9 +174,48 @@ const CheckboxRow: React.FC<{ item: MenuCheckboxItem; level: MenuLevelContext }>
   );
 };
 
+/** The keys an input needs for itself: Zag would take them for the list (Space chooses, Home/End jump). */
+const FIELD_KEYS = new Set([' ', 'Home', 'End', 'ArrowLeft', 'ArrowRight']);
+
 const RadioGroup: React.FC<{ item: MenuRadioGroupItem; level: MenuLevelContext; slot: boolean }> = ({ item, level, slot }) => {
+  const messages = useMessages();
   const groupId = `${useId()}-group`;
   const trailing = hasOwnSigns(item);
+  const [filter, setFilter] = useState('');
+  const filtering = item.filterable === true && item.options.length > raw['menu-filter-after'];
+  const options = filtering && filter ? filterByLabel(item.options, filter) : item.options;
+  const valueOf = (value: string) => `${item.id}:${value}`;
+
+  const rows = options.map((option) => {
+    const checked = option.value === item.value;
+    const disabled = option.disabledReason !== undefined;
+
+    return (
+      <div
+        key={option.value}
+        {...level.api.getOptionItemProps({
+          type: 'radio',
+          value: valueOf(option.value),
+          checked,
+          disabled,
+          valueText: option.label,
+          // One value finishes the task (spec 09).
+          closeOnSelect: true,
+          onCheckedChange: () => item.onValueChange(option.value),
+        })}
+        aria-label={option.dot ? `${option.label}, ${option.dot}` : undefined}
+        className={styles.item}
+        {...(disabled ? tooltipProps({ reason: option.disabledReason as string }) : undefined)}
+      >
+        {slot && <Slot>{trailing ? option.icon : checked && <span className={styles.radioDot} />}</Slot>}
+        <span className={styles.text}>
+          <span className={styles.label}>{option.label}</span>
+        </span>
+        {option.dot && <span className={cx(styles.trailing, styles.dot)} {...tooltipProps({ text: option.dot })} />}
+        {trailing && checked && <CheckIcon className={cx(styles.trailing, styles.check)} aria-hidden="true" />}
+      </div>
+    );
+  });
 
   return (
     <div {...level.api.getItemGroupProps({ id: groupId })} className={styles.group}>
@@ -170,34 +224,42 @@ const RadioGroup: React.FC<{ item: MenuRadioGroupItem; level: MenuLevelContext; 
           {item.label}
         </div>
       )}
-      {item.options.map((option) => {
-        const checked = option.value === item.value;
-        const disabled = option.disabledReason !== undefined;
+      {filtering ? (
+        <>
+          <input
+            className={styles.filter}
+            data-menu-filter=""
+            type="text"
+            value={filter}
+            placeholder={messages.menuFilter}
+            aria-label={messages.menuFilter}
+            autoComplete="off"
+            spellCheck={false}
+            onChange={(event) => {
+              const next = event.target.value;
+              const first = (next ? filterByLabel(item.options, next) : item.options).find(
+                (option) => option.disabledReason === undefined,
+              );
 
-        return (
-          <div
-            key={option.value}
-            {...level.api.getOptionItemProps({
-              type: 'radio',
-              value: `${item.id}:${option.value}`,
-              checked,
-              disabled,
-              valueText: option.label,
-              // One value finishes the task (spec 09).
-              closeOnSelect: true,
-              onCheckedChange: () => item.onValueChange(option.value),
-            })}
-            className={styles.item}
-            {...(disabled ? tooltipProps({ reason: option.disabledReason as string }) : undefined)}
-          >
-            {slot && <Slot>{trailing ? option.icon : checked && <span className={styles.radioDot} />}</Slot>}
-            <span className={styles.text}>
-              <span className={styles.label}>{option.label}</span>
-            </span>
-            {trailing && checked && <CheckIcon className={cx(styles.trailing, styles.check)} aria-hidden="true" />}
+              setFilter(next);
+              // The cursor stays on what is left: Enter takes the best match.
+              if (first) {
+                level.api.setHighlightedValue(valueOf(first.value));
+              }
+            }}
+            onKeyDown={(event) => {
+              if (FIELD_KEYS.has(event.key)) {
+                event.stopPropagation();
+              }
+            }}
+          />
+          <div className={styles.scroll}>
+            {rows.length > 0 ? rows : <div className={styles.empty}>{messages.menuFilterEmpty}</div>}
           </div>
-        );
-      })}
+        </>
+      ) : (
+        rows
+      )}
     </div>
   );
 };
@@ -288,8 +350,11 @@ const Group: React.FC<{ section: Section; level: MenuLevelContext; slot: boolean
 
   return (
     <div {...level.api.getItemGroupProps({ id: groupId })} className={styles.group}>
-      <div {...level.api.getItemGroupLabelProps({ htmlFor: groupId })} className={styles.groupLabel}>
-        {section.label}
+      <div
+        {...level.api.getItemGroupLabelProps({ htmlFor: groupId })}
+        className={cx(styles.groupLabel, section.label.content !== undefined && styles.groupLabelContent)}
+      >
+        {section.label.content ?? section.label.label}
       </div>
       <Rows items={section.items} level={level} slot={slot} />
     </div>
@@ -319,6 +384,15 @@ export const MenuPanel: React.FC<{ level: MenuLevelContext; items: MenuItem[]; c
       const item = itemForKeys(items, event);
 
       if (!item) {
+        // Typing in a menu with a filter goes into the field. Focus moves before the
+        // character lands, so the browser puts it there; Zag's typeahead never sees it.
+        const field = contentRef.current?.querySelector<HTMLInputElement>('[data-menu-filter]');
+
+        if (field && isTyping(event) && !isEditable(event.target)) {
+          field.focus();
+          event.stopPropagation();
+        }
+
         return;
       }
 

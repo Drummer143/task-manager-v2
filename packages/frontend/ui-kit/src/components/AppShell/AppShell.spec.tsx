@@ -7,6 +7,7 @@ import { DEFAULT_PREFS, resolveShell } from './resolveShell';
 import {
   STORAGE_KEY,
   readPrefs,
+  openPeek,
   toggleSidebar,
   useShell,
   useShellStore,
@@ -31,6 +32,7 @@ beforeEach(() => {
     vw: 1280,
     panelOpen: false,
     peek: false,
+    peekTarget: null,
     layout: resolveShell(1280, DEFAULT_PREFS, false),
   });
 });
@@ -208,6 +210,53 @@ describe('AppShell · sidebar', () => {
     act(() => toggleSidebar());
     rerender(<Frame scrollKey="/b" />);
     expect(useShellStore.getState().peek).toBe(false);
+  });
+
+  it('a rail button opens a peek in a wide frame too, without touching the choice', () => {
+    render(<Frame />);
+    act(() => toggleSidebar());
+
+    act(() => openPeek());
+
+    const aside = screen.getByRole('complementary', { name: 'Sidebar' });
+    expect(aside.hasAttribute('data-peek')).toBe(true);
+    expect(aside.hasAttribute('data-collapsed')).toBe(false);
+    expect(useShellStore.getState().prefs.sidebarCollapsed).toBe(true);
+    // The border under a peek is not draggable: the sidebar's column is the rail's.
+    expect(sidebarResizer()).toBeNull();
+
+    pressEscape();
+    expect(aside.hasAttribute('data-peek')).toBe(false);
+    expect(sidebarResizer()).not.toBeNull();
+  });
+
+  it('an expanded sidebar has nothing to peek; expanding ends a peek', () => {
+    render(<Frame />);
+
+    act(() => openPeek());
+    expect(useShellStore.getState().peek).toBe(false);
+
+    act(() => toggleSidebar());
+    act(() => openPeek('pages'));
+    act(() => toggleSidebar());
+
+    expect(useShellStore.getState()).toMatchObject({ peek: false, peekTarget: null });
+    expect(shell().getAttribute('data-sidebar')).toBe('expanded');
+  });
+
+  it('a peek opened for a section scrolls it into view', () => {
+    const scrollIntoView = vi.fn();
+    render(
+      <AppShell sidebar={<section id="pages">PAGES</section>} header={null}>
+        x
+      </AppShell>,
+    );
+    screen.getByText('PAGES').scrollIntoView = scrollIntoView;
+    act(() => toggleSidebar());
+
+    act(() => openPeek('pages'));
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
   });
 
   it('peek gives focus back where it was', () => {

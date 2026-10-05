@@ -33,6 +33,54 @@
   line-height: var(--lh-meta);
 }
 
+/* A rich group label (who is signed in): body-sized, the content's own colours. */
+.groupLabelContent {
+  padding-block: var(--sp-2);
+  color: var(--text-primary);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+}
+
+/* The filter of a long choice: looks like the palette's field, compact. */
+.filter {
+  min-height: var(--control-height);
+  margin-bottom: var(--sp-2);
+  padding-inline: var(--sp-3);
+  border: var(--border-width) solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-raised);
+  color: var(--text-primary);
+  font: inherit;
+
+  &::placeholder {
+    color: var(--text-placeholder);
+  }
+}
+
+/* The options under a filter scroll on their own; the field stays. */
+.scroll {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(var(--menu-filter-after) * var(--control-height));
+  overflow-y: auto;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding-inline: var(--sp-3);
+  color: var(--text-muted);
+}
+
+/* "Something new here" on an option; its count is in the tooltip. */
+.dot {
+  width: var(--tag-dot);
+  height: var(--tag-dot);
+  border-radius: var(--radius-full);
+  background-color: var(--border-accent);
+}
+
 .separator {
   height: var(--border-width);
   margin-block: var(--sp-2);

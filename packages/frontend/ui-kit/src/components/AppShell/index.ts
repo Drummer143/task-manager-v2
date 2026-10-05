@@ -1,6 +1,6 @@
 export { AppShell, default } from './AppShell';
 export type { AppShellProps } from './AppShell';
-export { useShell, toggleSidebar } from './shellStore';
+export { useShell, toggleSidebar, openPeek } from './shellStore';
 export {
   BP_PANEL,
   BP_SIDEBAR,

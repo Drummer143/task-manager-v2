@@ -468,6 +468,8 @@
   --menu-min-width: 200px;
   --menu-max-width: 320px;
   --menu-max-items: 10;
+  /* A long radio choice (workspaces) gets a filter past this many options; they then scroll. */
+  --menu-filter-after: 8;
   --menu-radio-dot: 6px;
   --menu-enter: var(--dur-layer) var(--ease-out);
   --menu-exit: var(--dur-exit) var(--ease-in);

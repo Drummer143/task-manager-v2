@@ -344,6 +344,21 @@ export const Tree: React.FC<TreeProps> = ({
       setRenamingId(id);
     },
     focus: () => containerRef.current?.focus(),
+    reveal: (id = activeId) => {
+      if (id === undefined || !index.has(id)) {
+        return;
+      }
+
+      const closed = ancestorsOf(index, id).filter((ancestor) => !expanded.has(ancestor));
+
+      if (closed.length > 0) {
+        setOpen(closed, true);
+      }
+
+      setCursorId(id);
+      revealCursor.current = true;
+      containerRef.current?.focus({ preventScroll: true });
+    },
   }));
 
   // ── Keyboard (spec: Tree · 03) ───────────────────────────────────

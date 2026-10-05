@@ -34,8 +34,14 @@ interface ShellState {
   /** The frame's own width — what the thresholds compare against (a ResizeObserver on .shell). */
   vw: number;
   panelOpen: boolean;
-  /** The auto-collapsed sidebar opened over the canvas with ⌘\. Fleeting: not stored. */
+  /**
+   * The collapsed sidebar opened over the canvas: ⌘\ in a narrow frame, or a
+   * rail button (Favorites, Pages) at any width. Fleeting: not stored, and the
+   * user's choice (collapsed) stays as it was.
+   */
   peek: boolean;
+  /** The id of what the peek opened for (a section): the frame scrolls it into view. */
+  peekTarget: string | null;
   layout: ShellLayout;
 
   setViewport(vw: number): void;
@@ -45,7 +51,13 @@ interface ShellState {
   /** Another tab changed the preferences: take them, do not write them back. */
   syncPrefs(prefs: ShellPrefs): void;
   setPeek(peek: boolean): void;
+  /** Opens a collapsed sidebar over the canvas, scrolled to `target` (an element id inside it). */
+  openPeek(target?: string): void;
 }
+
+/** A peek lives only over a collapsed sidebar; a layout that expands it ends the peek. */
+const peekFor = (layout: ShellLayout, state: Pick<ShellState, 'peek' | 'peekTarget'>) =>
+  layout.sidebar === 'expanded' ? { peek: false, peekTarget: null } : { peek: state.peek, peekTarget: state.peekTarget };
 
 const relayout = (state: Pick<ShellState, 'vw' | 'prefs' | 'panelOpen' | 'layout'>) =>
   resolveShell(state.vw, state.prefs, state.panelOpen, state.layout);
@@ -63,6 +75,7 @@ export const useShellStore = create<ShellState>((set, get) => {
     vw,
     panelOpen: false,
     peek: false,
+    peekTarget: null,
     layout: resolveShell(vw, prefs, false),
 
     setViewport: (next) => {
@@ -74,7 +87,7 @@ export const useShellStore = create<ShellState>((set, get) => {
         const layout = relayout({ ...state, vw: next });
 
         // A window that widens past the threshold ends a peek: the sidebar is in its column again.
-        return { vw: next, layout, peek: layout.sidebar === 'auto-collapsed' && state.peek };
+        return { vw: next, layout, ...peekFor(layout, state) };
       });
     },
     setPanelOpen: (open) => {
@@ -87,11 +100,27 @@ export const useShellStore = create<ShellState>((set, get) => {
     commitPrefs: (patch) => {
       const next = clampPrefs({ ...get().prefs, ...patch });
 
-      set((state) => ({ prefs: next, layout: relayout({ ...state, prefs: next }) }));
+      set((state) => {
+        const layout = relayout({ ...state, prefs: next });
+
+        // Expanded by the user: the peek has nothing left to show.
+        return { prefs: next, layout, ...peekFor(layout, state) };
+      });
       writePrefs(next);
     },
-    syncPrefs: (next) => set((state) => ({ prefs: next, layout: relayout({ ...state, prefs: next }) })),
-    setPeek: (peek) => set({ peek }),
+    syncPrefs: (next) =>
+      set((state) => {
+        const layout = relayout({ ...state, prefs: next });
+
+        return { prefs: next, layout, ...peekFor(layout, state) };
+      }),
+    setPeek: (peek) => set(peek ? { peek: get().layout.sidebar !== 'expanded' } : { peek: false, peekTarget: null }),
+    openPeek: (target) => {
+      // An expanded sidebar is already on screen: nothing to open over the canvas.
+      if (get().layout.sidebar !== 'expanded') {
+        set({ peek: true, peekTarget: target ?? null });
+      }
+    },
   };
 });
 
@@ -112,6 +141,8 @@ export const useShell = () => {
     sidebarView: layout.sidebar === 'expanded' || peek ? ('expanded' as const) : ('collapsed' as const),
     toggleSidebar,
     closePeek: () => useShellStore.getState().setPeek(false),
+    /** A rail button: open the sidebar over the canvas at a section (its element id), at any width. */
+    openPeek: (target?: string) => useShellStore.getState().openPeek(target),
     setSidebarWidth: (px: number) => useShellStore.getState().commitPrefs({ sidebarWidth: px }),
     setPanelWidth: (px: number) => useShellStore.getState().commitPrefs({ panelWidth: px }),
     resetWidths: () =>
@@ -122,7 +153,8 @@ export const useShell = () => {
 /**
  * ⌘\ (the app binds it through its hotkeys): collapse / expand the sidebar;
  * in a narrow window, where it is collapsed by itself, open it over the canvas
- * (peek) — without touching the user's choice (spec 02, E).
+ * (peek) — without touching the user's choice (spec 02, E). A peek opened from
+ * the rail in a wide window ends by expanding: the user asked for the sidebar.
  */
 export const toggleSidebar = () => {
   const { layout, peek, prefs, setPeek, commitPrefs } = useShellStore.getState();
@@ -133,3 +165,6 @@ export const toggleSidebar = () => {
     commitPrefs({ sidebarCollapsed: !prefs.sidebarCollapsed });
   }
 };
+
+/** A rail button (Favorites, Pages): the sidebar over the canvas at that section (spec: Sidebar · 05). */
+export const openPeek = (target?: string) => useShellStore.getState().openPeek(target);

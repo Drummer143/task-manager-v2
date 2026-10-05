@@ -102,6 +102,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const vw = useShellStore((state) => state.vw);
   const prefs = useShellStore((state) => state.prefs);
   const peek = useShellStore((state) => state.peek);
+  const peekTarget = useShellStore((state) => state.peekTarget);
   const storeLayout = useShellStore((state) => state.layout);
   const storePanelOpen = useShellStore((state) => state.panelOpen);
 
@@ -224,6 +225,17 @@ export const AppShell: React.FC<AppShellProps> = ({
     () => useShellStore.getState().setPeek(false),
     [],
   );
+  // A peek opened for a section (a rail button) starts scrolled to it.
+  useLayoutEffect(() => {
+    if (peek && peekTarget) {
+      const target = document.getElementById(peekTarget);
+
+      if (target && sidebarRef.current?.contains(target)) {
+        target.scrollIntoView?.({ block: 'start' });
+      }
+    }
+  }, [peek, peekTarget]);
+
   /** Where focus was before the peek opened: it goes back there on close. */
   const beforePeek = useRef<HTMLElement | null>(null);
 
@@ -367,7 +379,8 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   const autoCollapsed = layout.sidebar === 'auto-collapsed';
   const sidebarCollapsed = layout.sidebar !== 'expanded';
-  const peeking = peek && autoCollapsed;
+  // Over any collapsed sidebar: by the window, or by the user with a rail button (spec: Sidebar · 05).
+  const peeking = peek && sidebarCollapsed;
   // What the sidebar's content draws: the rail, or full (expanded, or a peek over the canvas).
   // The same rule as `useShell().sidebarView`.
   const rail = sidebarCollapsed && !peeking;
@@ -393,7 +406,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         {status != null && <div className={styles.status}>{status}</div>}
       </aside>
 
-      {!autoCollapsed && (
+      {!autoCollapsed && !peeking && (
         <Resizer
           side="sidebar"
           className={styles.sidebarResizer}

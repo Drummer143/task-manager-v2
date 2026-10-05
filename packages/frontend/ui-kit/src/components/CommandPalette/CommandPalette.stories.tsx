@@ -161,7 +161,7 @@ const LiveDemo: React.FC = () => {
     <div style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start' }}>
       <Screen log={setLast} selected={selected} />
       <div style={{ display: 'flex', gap: cssVar('sp-5'), alignItems: 'center' }}>
-        <Button keys="mod+k" onClick={palette.open}>
+        <Button keys="mod+k" onClick={() => palette.open()}>
           Open palette
         </Button>
         <Checkbox label="2 tasks selected on the board" checked={selected} onCheckedChange={setSelected} />

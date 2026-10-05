@@ -39,7 +39,16 @@ const Highlighted: React.FC<{ label: string; query: string }> = ({ label, query 
  * confirmation — inside the palette, never a dialog. It lives in the app's
  * single layer: opened with ⌘K, Esc steps back, focus returns where it was.
  */
-export const CommandPalette: React.FC = () => {
+export interface CommandPaletteProps {
+  /**
+   * What the field starts with: a key typed on something that only looks like
+   * a field (the sidebar's Search) is not lost (spec: Sidebar · 02). A source
+   * prefix in it narrows at once, as if typed.
+   */
+  initialQuery?: string;
+}
+
+export const CommandPalette: React.FC<CommandPaletteProps> = ({ initialQuery }) => {
   const messages = useMessages();
   const router = useRouter();
   const registered = usePaletteStore((state) => state.sources);
@@ -84,6 +93,12 @@ export const CommandPalette: React.FC = () => {
   useLayoutEffect(() => {
     // The field is focused in the first frame: typing never waits (spec 06).
     inputRef.current?.focus({ preventScroll: true });
+
+    if (initialQuery) {
+      changeQuery(initialQuery);
+    }
+    // Once, on open: the first keystroke, not a controlled value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useLayoutEffect(() => {

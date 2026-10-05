@@ -20,6 +20,9 @@ export interface KitMessages {
   assign: string;
   /** After a failed async menu item: how to try again. */
   menuRetryHint: string;
+  /** A long choice's filter field (workspaces), and what it says when nothing matches. */
+  menuFilter: string;
+  menuFilterEmpty: string;
   /** Command palette: its name, the field, the empty result, the footer hints. */
   palette: string;
   paletteInput: string;
@@ -115,6 +118,8 @@ export const DEFAULT_MESSAGES: KitMessages = {
   paletteEscClear: 'clear',
   paletteEscBack: 'back',
   menuRetryHint: 'Enter to retry',
+  menuFilter: 'Filter',
+  menuFilterEmpty: 'Nothing found',
   more: (count) => `${count} more`,
 };
 

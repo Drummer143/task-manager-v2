@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { createRef, useState } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Tree } from './Tree';
-import type { TreeMoveTarget, TreeNode, TreeProps } from './types';
+import type { TreeHandle, TreeMoveTarget, TreeNode, TreeProps } from './types';
 import { RouterContext, type RouterAdapter } from '../../router';
 import { useHotkeysStore } from '../../interaction/hotkeys';
 import type { MenuItem } from '../Menu';
@@ -65,6 +65,42 @@ afterEach(() => {
 });
 
 describe('Tree', () => {
+  describe('reveal (G S)', () => {
+    it('expands the path to a node, puts the cursor on it and focuses the tree', () => {
+      const ref = createRef<TreeHandle>();
+      render(<Owned ref={ref} initialExpanded={[]} />);
+      expect(screen.queryByRole('treeitem', { name: 'API contracts' })).toBeNull();
+
+      act(() => ref.current?.reveal('api'));
+
+      expect(item('Web').getAttribute('aria-expanded')).toBe('true');
+      expect(item('Requirements').getAttribute('aria-expanded')).toBe('true');
+      expect(cursorLabel()).toBe('API contracts');
+      expect(document.activeElement).toBe(tree());
+    });
+
+    it('reveals the open page by default, even in a branch the user closed', () => {
+      const ref = createRef<TreeHandle>();
+      render(<Owned ref={ref} activeId="q3" />);
+      fireEvent.click(within(item('Web')).getAllByRole('button', { hidden: true })[0]);
+      expect(screen.queryByRole('treeitem', { name: 'Q3 board' })).toBeNull();
+
+      act(() => ref.current?.reveal());
+
+      expect(cursorLabel()).toBe('Q3 board');
+    });
+
+    it('ignores a node that is not loaded', () => {
+      const ref = createRef<TreeHandle>();
+      const onExpandedChange = vi.fn();
+      render(<Owned ref={ref} onExpandedChange={onExpandedChange} />);
+
+      act(() => ref.current?.reveal('nowhere'));
+
+      expect(onExpandedChange).not.toHaveBeenCalled();
+    });
+  });
+
   describe('rows', () => {
     it('is a tree of levels, with the open page marked and the rest described', () => {
       render(<Owned activeId="q3" />);
