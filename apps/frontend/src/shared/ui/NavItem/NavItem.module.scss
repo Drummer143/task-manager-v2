@@ -1,0 +1,177 @@
+/* NavItem (spec: Sidebar · 03). One row look with the tree's rows: the same tokens and states. */
+
+.row {
+  position: relative;
+  // In a grid or flex column, a long name must not widen the row past the sidebar
+  min-width: 0;
+  margin-inline: var(--sp-2);
+}
+
+/* The whole row is the link: a click anywhere but on the ⋯ opens the page. */
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: var(--tree-row);
+  padding-inline: var(--sp-3);
+
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--type-body);
+  text-decoration: none;
+  transition:
+    background-color var(--dur-state) var(--ease-out),
+    color var(--dur-state) var(--ease-out);
+
+  // Inward: the rows sit edge to edge (focus tokens)
+  &:focus-visible {
+    outline-offset: calc(var(--border-width-strong) * -1);
+  }
+
+  .row:hover & {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  // Pressed, and the current page: no accent — in the sidebar accent is only focus and the drop line
+  &:active,
+  .row[data-current] & {
+    background-color: var(--bg-active);
+    color: var(--text-primary);
+  }
+
+  // The ⋯ takes the right end on hover: the label stops short of it
+  .row[data-menu]:is(:hover, :focus-within) & {
+    padding-inline-end: calc(var(--sp-3) + var(--tree-chevron));
+  }
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  color: var(--text-muted);
+
+  .row[data-current] &,
+  .railButton[data-current] & {
+    color: var(--text-secondary);
+  }
+
+  & > svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The counter and the dot take one place at the right; on hover they give it to the ⋯. */
+.count {
+  flex: none;
+  color: var(--text-accent);
+  font-size: var(--type-meta);
+  font-weight: var(--weight-strong);
+  font-variant-numeric: var(--num-tabular);
+}
+
+.dot {
+  flex: none;
+  width: var(--tag-dot);
+  height: var(--tag-dot);
+  border-radius: var(--radius-full);
+  background-color: var(--border-accent);
+}
+
+.row[data-menu]:is(:hover, :focus-within) :is(.count, .dot) {
+  visibility: hidden;
+}
+
+/* Over the link's right end. Hidden by visibility, not opacity: an invisible button would still take the click. */
+.more {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: var(--sp-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tree-chevron);
+  height: var(--tree-chevron);
+  margin: auto 0;
+  padding: 0;
+
+  border: 0;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  visibility: hidden;
+
+  .row:is(:hover, :focus-within) & {
+    visibility: visible;
+  }
+
+  &:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  & > svg {
+    width: var(--icon-size);
+    height: var(--icon-size);
+  }
+}
+
+/* The rail (Sidebar · 05): only the icon, a square centred in the column. */
+.railButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rail-button);
+  height: var(--rail-button);
+  margin-inline: auto;
+
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  transition: background-color var(--dur-state) var(--ease-out);
+
+  &:hover {
+    background-color: var(--bg-hover);
+  }
+
+  &:active,
+  &[data-current] {
+    background-color: var(--bg-active);
+  }
+
+  &:focus-visible {
+    outline-offset: calc(var(--border-width-strong) * -1);
+  }
+}
+
+/* No room for a number: unread is a dot on the icon's corner, ringed in the sidebar's colour. */
+.railDot {
+  position: absolute;
+  top: calc((var(--rail-button) - var(--icon-size)) / 2 - var(--border-width-strong));
+  right: calc((var(--rail-button) - var(--icon-size)) / 2 - var(--border-width-strong));
+  width: var(--tag-dot);
+  height: var(--tag-dot);
+  box-sizing: content-box;
+  border: var(--border-width-strong) solid var(--bg-sunken);
+  border-radius: var(--radius-full);
+  background-color: var(--border-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link,
+  .railButton {
+    transition: none;
+  }
+}
