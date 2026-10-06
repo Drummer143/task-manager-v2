@@ -14,13 +14,13 @@ import { AuthErrorView } from './AuthErrorView';
 import { AuthFrame, AuthStatus, AuthText, Wordmark } from './AuthScreen';
 import { fetchMe } from './me';
 import {
-  CALLBACK_PATH,
   pendingReturnTo,
   returnPathOf,
   startSignIn,
   switchAccount,
   userManager,
 } from './user-manager';
+import { ROUTES } from '../../shared/constants/routes';
 
 /** Timeline of the wait (design: Callback §01). The spinner appears after --spinner-delay. */
 export const HINT_AFTER_MS = 1_000;
@@ -221,7 +221,7 @@ export const CallbackScreen: React.FC<CallbackScreenProps> = ({ deps: overrides 
     started.current = true;
     const url = window.location.href;
     // Out of the address bar before anything else: not in history, logs or copied links
-    window.history.replaceState(null, '', CALLBACK_PATH);
+    window.history.replaceState(null, '', ROUTES.CALLBACK);
     void complete(url);
   }, [complete]);
 

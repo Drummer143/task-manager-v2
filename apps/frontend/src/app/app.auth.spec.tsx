@@ -24,11 +24,11 @@ describe('App', () => {
     expect(provider.props?.skipSigninCallback).toBe(true);
   });
 
-  it('starts at the demo board', async () => {
+  it('starts at the inbox', async () => {
     render(<App />);
 
     await act(() => router.navigate('/'));
 
-    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/w/product/p/board-q3'));
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inbox'));
   });
 });

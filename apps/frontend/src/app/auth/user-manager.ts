@@ -1,15 +1,11 @@
 import { UserManager, WebStorageStateStore, type UserManagerSettings } from 'oidc-client-ts';
-
-/** Where authentik sends the browser back after sign-in; registered in the authentik blueprint. */
-export const CALLBACK_PATH = '/auth/callback';
-/** Starts a sign-in; also where authentik returns after sign-out (also registered). */
-export const LOGIN_PATH = '/login';
+import { ROUTES } from '../../shared/constants/routes';
 
 export const oidcSettings = (origin = window.location.origin): UserManagerSettings => ({
   authority: import.meta.env.VITE_AUTHORITY,
   client_id: import.meta.env.VITE_CLIENT_ID,
-  redirect_uri: `${origin}${CALLBACK_PATH}`,
-  post_logout_redirect_uri: `${origin}${LOGIN_PATH}`,
+  redirect_uri: `${origin}${ROUTES.CALLBACK}`,
+  post_logout_redirect_uri: `${origin}${ROUTES.LOGIN}`,
   // Authorization code with PKCE, the flow for a public client
   response_type: 'code',
   // offline_access brings a refresh token: the access token is renewed with it in the
@@ -53,7 +49,7 @@ export function returnPathOf(state: unknown): string {
 }
 
 /** `/login?return_to=…` for `path`. */
-export const loginPath = (path: string) => `${LOGIN_PATH}?return_to=${encodeURIComponent(path)}`;
+export const loginPath = (path: string) => `${ROUTES.LOGIN}?return_to=${encodeURIComponent(path)}`;
 
 const RETURN_TO_KEY = 'verso.auth.returnTo';
 const SELECT_ACCOUNT_KEY = 'verso.auth.selectAccount';

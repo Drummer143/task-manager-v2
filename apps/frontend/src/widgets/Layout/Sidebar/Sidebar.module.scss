@@ -1,0 +1,40 @@
+.sidebar {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  height: var(--canvas-header-height);
+  padding-inline: var(--sp-3);
+  border-bottom: var(--border-width) solid var(--border-hairline);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding-block: var(--sp-3);
+  overflow-y: auto;
+
+  .sidebar[data-rail] & {
+    gap: var(--sp-2);
+  }
+}
+
+.toggle {
+  flex: none;
+}
+
+.expand {
+  flex: none;
+  width: var(--rail-button);
+  height: var(--rail-button);
+  margin: auto auto 0;
+}
