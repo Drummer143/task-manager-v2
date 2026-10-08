@@ -1,0 +1,210 @@
+/* NotificationRow (spec: Inbox · 02, 11). No cards: rows on the canvas, a subtle line between them. */
+
+.row {
+  position: relative;
+  min-width: 0;
+  border-bottom: var(--border-width) solid var(--inbox-divider);
+
+  // A change on its way that takes a while (spec 02)
+  &[data-pending] {
+    opacity: var(--disabled-opacity);
+  }
+}
+
+.cell {
+  position: relative;
+}
+
+/* The whole row is the link: a click anywhere but on a button opens it. */
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: var(--inbox-row);
+  padding-block: var(--inbox-pad-y);
+  padding-inline: var(--sp-3) var(--sp-5);
+
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--dur-state) var(--ease-out);
+
+  // The list draws the focus ring around itself; the row is shown by the cursor
+  &:focus-visible {
+    outline: none;
+  }
+
+  .row:hover & {
+    background-color: var(--bg-hover);
+  }
+
+  // The cursor: the hover background and a 2 px bar on the left, as in the table
+  .row[data-cursor] & {
+    background-color: var(--bg-hover);
+    box-shadow: inset var(--border-width-strong) 0 0 var(--border-accent);
+  }
+
+  // Its object is in the panel
+  .row[data-opened] & {
+    background-color: var(--bg-selected);
+  }
+}
+
+/* The dot's own column, the dot centred in it and on the first line, a gap before the avatar (the spec's mock). */
+.dot {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-self: flex-start;
+  width: var(--inbox-dot-col);
+  height: calc(var(--lh-body) * var(--type-body));
+  align-items: center;
+  margin-inline-end: calc(var(--inbox-dot-gap) - var(--sp-4));
+
+  // The column stays when read: rows do not shift as they are read
+  .row[data-unread] &::before {
+    content: '';
+    display: block;
+    width: var(--tag-dot);
+    height: var(--tag-dot);
+    border-radius: var(--radius-full);
+    background-color: var(--inbox-unread);
+  }
+}
+
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-self: flex-start;
+  // The avatar sits on the first line
+  margin-block-start: calc((var(--lh-body) * var(--type-body) - var(--avatar-sm)) / 2);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.title,
+.context {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// One line each, whatever is inside: a monospace key in a meta line would otherwise grow it by a pixel
+.title {
+  height: calc(var(--lh-body) * var(--type-body));
+}
+
+.context {
+  height: calc(var(--lh-meta) * var(--type-meta));
+}
+
+.title {
+  color: var(--text-secondary);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+  font-weight: var(--weight-medium);
+
+  .row[data-unread] & {
+    color: var(--text-primary);
+    font-weight: var(--weight-strong);
+  }
+
+  // A deleted object (spec 02); a deleted actor does not make a row gone
+  .row[data-gone] & {
+    color: var(--text-placeholder);
+  }
+}
+
+.context {
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+
+  .row[data-gone] & {
+    text-decoration-line: line-through;
+  }
+}
+
+/* The right edge: the folded count and the time; on hover and on the cursor the time gives its place to the actions. */
+.meta {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--sp-3);
+  justify-content: flex-end;
+  align-self: flex-start;
+  min-height: calc(var(--lh-body) * var(--type-body));
+  // At least as wide as the actions that take its place: the text never runs under them
+  min-width: calc(var(--_actions, 0) * var(--control-height-sm) + max(var(--_actions, 0) - 1, 0) * var(--sp-1));
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  height: var(--inbox-count-height);
+  padding-inline: var(--sp-2);
+  border: var(--border-width) solid var(--border-hairline);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  font-variant-numeric: var(--num-tabular);
+}
+
+.time {
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  font-variant-numeric: var(--num-tabular);
+  white-space: nowrap;
+}
+
+/* The actions take the whole right edge: the count and the time make way, keeping their width. */
+.row:is(:hover, [data-cursor]) .meta {
+  visibility: hidden;
+}
+
+/* Over the link's right end, where the time was. Hidden by visibility, not opacity: a hidden button must not take the click. */
+.actions {
+  position: absolute;
+  top: var(--inbox-pad-y);
+  inset-inline-end: var(--sp-5);
+  display: inline-flex;
+  gap: var(--sp-1);
+  visibility: hidden;
+
+  .row:is(:hover, [data-cursor]) & {
+    visibility: visible;
+  }
+}
+
+/* The spec's own action look: quieter than a ghost button, and its hover must show on a hovered row,
+   whose background is already --bg-hover. Selectors outweigh Button's ghost rules. */
+.row .actions .action {
+  color: var(--text-secondary);
+
+  &:not([aria-disabled='true']):hover {
+    background-color: var(--bg-active);
+    color: var(--text-primary);
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: var(--visually-hidden-size);
+  height: var(--visually-hidden-size);
+  margin: calc(var(--visually-hidden-size) * -1);
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link {
+    transition: none;
+  }
+}

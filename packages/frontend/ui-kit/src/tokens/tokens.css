@@ -102,6 +102,7 @@
   --text-danger: var(--c-danger-700);
 
   --border-hairline: color-mix(in srgb, var(--c-n-1000) 14%, transparent);
+  --border-subtle: color-mix(in srgb, var(--c-n-1000) 8%, transparent);
   --border-strong: color-mix(in srgb, var(--c-n-1000) 30%, transparent);
   --border-accent: var(--c-accent);
   --border-danger: var(--c-danger-500);
@@ -178,6 +179,10 @@
   --link-fg-active: var(--c-accent-900);
   --link-underline: color-mix(in srgb, var(--c-accent-700) 45%, transparent);
   --link-bg-pressed: var(--bg-accent-active);
+
+  /* Inbox (spec: Inbox · 11) */
+  --inbox-divider: var(--border-subtle);
+  --inbox-unread: var(--border-accent);
 }
 
 /* DARK set. Today: inverse surfaces. Tomorrow: also the dark theme (see above). */
@@ -202,6 +207,7 @@
   --text-danger: var(--c-danger-300);
 
   --border-hairline: color-mix(in srgb, var(--c-n-50) 20%, transparent);
+  --border-subtle: color-mix(in srgb, var(--c-n-50) 8%, transparent);
   --border-strong: color-mix(in srgb, var(--c-n-50) 40%, transparent);
   --border-accent: var(--c-accent-400);
   --border-danger: var(--c-danger-300);
@@ -258,6 +264,10 @@
   --link-fg-active: var(--c-accent-100);
   --link-underline: color-mix(in srgb, var(--c-accent-300) 45%, transparent);
   --link-bg-pressed: var(--bg-accent-active);
+
+  /* Inbox (spec: Inbox · 11) */
+  --inbox-divider: var(--border-subtle);
+  --inbox-unread: var(--border-accent);
 }
 
 /* A surface paints itself. :where() keeps specificity at zero, so a place's own
@@ -288,6 +298,8 @@
 
   --weight-normal: 400;
   --weight-strong: 600;
+  /* A read notification's line: between body and strong (spec: Inbox · 02). */
+  --weight-medium: 500;
   --line-clamp-title: 2;
 }
 
@@ -560,6 +572,15 @@
   --link-underline-width: 1px;
   --link-ext-size: 0.85em;
   --link-ext-margin: 2px;
+
+  /* Inbox · NotificationRow (spec: Inbox · 02, 11). The dot is centred in its column with a gap before the avatar,
+     as in the spec's mock (its text says "no gap" and 48 px — asked of the designer). */
+  --inbox-dot-col: 8px;
+  --inbox-dot-gap: var(--sp-3);
+  --inbox-text-start: calc(var(--sp-3) + var(--inbox-dot-col) + var(--inbox-dot-gap) + var(--avatar-sm) + var(--sp-4));
+  --inbox-count-height: 18px;
+  /* A row whose change is still on its way dims only after this: a quick answer shows nothing. */
+  --inbox-pending-delay: 1000ms;
 }
 
 /* ─── Density ─── */
@@ -584,6 +605,9 @@
   --segmented-height: 28px;
 
   --tree-row: 28px;
+
+  --inbox-row: 56px;
+  --inbox-pad-y: 9px;
 }
 [data-density='compact'] {
   --row-height: 28px;
@@ -605,6 +629,9 @@
   --segmented-height: 24px;
 
   --tree-row: 24px;
+
+  --inbox-row: 48px;
+  --inbox-pad-y: 5px;
 }
 [data-density='comfortable'] {
   --row-height: 44px;
@@ -626,6 +653,9 @@
   --segmented-height: 32px;
 
   --tree-row: 32px;
+
+  --inbox-row: 64px;
+  --inbox-pad-y: 13px;
 }
 
 /* ─── Reduced motion ─── */
