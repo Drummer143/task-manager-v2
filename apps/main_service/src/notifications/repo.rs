@@ -25,8 +25,8 @@ pub enum InboxView {
     Unread,
     /// Everything not done, read or not.
     All,
-    /// Done (archived), newest done first.
-    Done,
+    /// Archived, newest done first.
+    Archived,
 }
 
 impl InboxView {
@@ -34,7 +34,7 @@ impl InboxView {
         match self {
             Self::Unread => "read_at IS NULL AND archived_at IS NULL",
             Self::All => "archived_at IS NULL",
-            Self::Done => "archived_at IS NOT NULL",
+            Self::Archived => "archived_at IS NOT NULL",
         }
     }
 
@@ -42,7 +42,7 @@ impl InboxView {
     fn sort_column(self) -> &'static str {
         match self {
             Self::Unread | Self::All => "updated_at",
-            Self::Done => "archived_at",
+            Self::Archived => "archived_at",
         }
     }
 
@@ -50,8 +50,7 @@ impl InboxView {
     pub fn cursor_after(self, notification: &Notification) -> Cursor {
         let at = match self {
             Self::Unread | Self::All => notification.updated_at,
-            // The Done tab only lists archived rows
-            Self::Done => notification.archived_at.unwrap_or(notification.updated_at),
+            Self::Archived => notification.archived_at.unwrap_or(notification.updated_at),
         };
         Cursor {
             at,
@@ -305,7 +304,7 @@ mod tests {
             messages(&pool, me, InboxView::All).await,
             ["unread", "read"]
         );
-        assert_eq!(messages(&pool, me, InboxView::Done).await, ["done"]);
+        assert_eq!(messages(&pool, me, InboxView::Archived).await, ["archived"]);
     }
 
     #[sqlx::test(migrations = "./migrations")]
@@ -329,7 +328,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            messages(&pool, me, InboxView::Done).await,
+            messages(&pool, me, InboxView::Archived).await,
             ["done second", "done first"]
         );
     }
@@ -410,11 +409,11 @@ mod tests {
             .await
             .unwrap();
 
-        let first = NotificationsRepository::list(&pool, me, InboxView::Done, 1, None)
+        let first = NotificationsRepository::list(&pool, me, InboxView::Archived, 1, None)
             .await
             .unwrap();
-        let after = InboxView::Done.cursor_after(&first[0]);
-        let second = NotificationsRepository::list(&pool, me, InboxView::Done, 1, Some(after))
+        let after = InboxView::Archived.cursor_after(&first[0]);
+        let second = NotificationsRepository::list(&pool, me, InboxView::Archived, 1, Some(after))
             .await
             .unwrap();
 

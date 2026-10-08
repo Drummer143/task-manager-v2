@@ -41,7 +41,7 @@
     "/notifications": {
       "get": {
         "tags": [
-          "controllers::get_list"
+          "Notifications"
         ],
         "operationId": "listNotifications",
         "parameters": [
@@ -56,7 +56,7 @@
               "enum": [
                 "unread",
                 "all",
-                "done"
+                "archived"
               ]
             }
           },
@@ -104,7 +104,7 @@
       },
       "post": {
         "tags": [
-          "controllers::create"
+          "Notifications"
         ],
         "operationId": "createNotification",
         "requestBody": {
@@ -146,7 +146,7 @@
     "/notifications/archive": {
       "post": {
         "tags": [
-          "controllers::archive"
+          "Notifications"
         ],
         "operationId": "archiveNotification",
         "requestBody": {
@@ -181,7 +181,7 @@
     "/notifications/read": {
       "post": {
         "tags": [
-          "controllers::read"
+          "Notifications"
         ],
         "operationId": "readNotification",
         "requestBody": {
@@ -216,7 +216,7 @@
     "/notifications/summary": {
       "get": {
         "tags": [
-          "controllers::summary"
+          "Notifications"
         ],
         "operationId": "getNotificationSummary",
         "responses": {
@@ -242,7 +242,7 @@
     "/notifications/unarchive": {
       "post": {
         "tags": [
-          "controllers::unarchive"
+          "Notifications"
         ],
         "operationId": "unarchiveNotification",
         "requestBody": {
@@ -277,7 +277,7 @@
     "/notifications/unread": {
       "post": {
         "tags": [
-          "controllers::unread"
+          "Notifications"
         ],
         "operationId": "unreadNotification",
         "requestBody": {

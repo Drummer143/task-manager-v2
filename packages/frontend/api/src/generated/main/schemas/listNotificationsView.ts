@@ -11,5 +11,5 @@ export type ListNotificationsView = typeof ListNotificationsView[keyof typeof Li
 export const ListNotificationsView = {
   unread: 'unread',
   all: 'all',
-  done: 'done',
+  archived: 'archived',
 } as const;

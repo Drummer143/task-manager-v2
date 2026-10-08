@@ -119,9 +119,9 @@ mod tests {
             id: Uuid::nil(),
         };
 
-        let query = parse(&format!("view=done&cursor={cursor}")).unwrap();
+        let query = parse(&format!("view=archived&cursor={cursor}")).unwrap();
 
-        assert_eq!(query.view, InboxView::Done);
+        assert_eq!(query.view, InboxView::Archived);
         assert_eq!(query.cursor, Some(cursor));
     }
 
