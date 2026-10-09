@@ -2,7 +2,7 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { CallbackScreen, LoginScreen, RequireAuth } from './auth';
 import { Layout } from '../widgets/Layout';
 import { lazySuspense } from '../shared/utils/lazySuspense';
-import { Root } from '../widgets/Root';
+import { Root } from './Root';
 import { ROUTES } from '../shared/constants/routes';
 
 const Inbox = lazySuspense(() =>

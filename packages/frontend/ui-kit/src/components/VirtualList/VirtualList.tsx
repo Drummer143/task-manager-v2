@@ -20,6 +20,8 @@ export interface VirtualListRange {
   endIndex: number;
 }
 
+export type VirtualListSemantics = 'list' | 'rows';
+
 export interface VirtualListProps<Item> {
   /**
    * The rows. With `count`, a row whose page has not arrived is a hole (or `undefined`) at its
@@ -43,6 +45,8 @@ export interface VirtualListProps<Item> {
   footer?: React.ReactNode;
   /** Default: 2 */
   overscan?: number;
+  /** Default: 'list' */
+  semantics?: VirtualListSemantics;
   /** Wrapper className. Applies before classNames.wrapper */
   className?: string;
   /**
@@ -59,7 +63,8 @@ export interface VirtualListProps<Item> {
   scrollMargin?: number;
   endThreshold?: number;
 
-  renderItem: (item: Item) => React.ReactNode;
+  /** `index` is the row's place in `data` (0-based): a grid's aria-rowindex, a list's own numbering. */
+  renderItem: (item: Item, index: number) => React.ReactNode;
 
   getKey?: (item: Item) => React.Key;
   /** The last loaded row came within `endThreshold` rows of the view: once per `data.length`. */
@@ -79,6 +84,7 @@ export const VirtualList = <Item,>({
   getKey,
   cursorKey,
   overscan = 2,
+  semantics = 'list',
   className,
   classNames,
   renderItem,
@@ -179,10 +185,14 @@ export const VirtualList = <Item,>({
     classNames?.listItemWrapper,
   );
 
+  const asList = semantics === 'list';
+  const ListTag = asList ? 'ul' : 'div';
+  const ItemTag = asList ? 'li' : 'div';
+
   const list = (
-    // eslint-disable-next-line jsx-a11y/no-redundant-roles
-    <ul
-      role="list"
+    <ListTag
+      // role="list" survives `list-style: none` in Safari / VoiceOver
+      role={asList ? 'list' : 'rowgroup'}
       ref={virtualizer.containerRef}
       className={cx(styles.listContainer, classNames?.listContainer)}
     >
@@ -191,22 +201,23 @@ export const VirtualList = <Item,>({
         const isPlaceholder = item === undefined;
 
         return (
-          <li
+          <ItemTag
             key={virtualItem.key}
             ref={virtualizer.measureElement}
             className={listItemClassName}
             data-index={virtualItem.index}
-            aria-setsize={count}
-            aria-posinset={virtualItem.index + 1}
+            role={asList ? undefined : 'none'}
+            aria-setsize={asList ? count : undefined}
+            aria-posinset={asList ? virtualItem.index + 1 : undefined}
             aria-busy={isPlaceholder || undefined}
           >
             {isPlaceholder
               ? renderPlaceholder?.(virtualItem.index)
-              : renderItem(item)}
-          </li>
+              : renderItem(item, virtualItem.index)}
+          </ItemTag>
         );
       })}
-    </ul>
+    </ListTag>
   );
 
   if (getScrollElement) {

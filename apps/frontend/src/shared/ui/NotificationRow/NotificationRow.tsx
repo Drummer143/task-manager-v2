@@ -39,6 +39,11 @@ export interface NotificationRowProps {
   gone?: boolean;
   /** Events folded into it; a pill when > 1. */
   count?: number;
+  /**
+   * The row's place in the whole list (1-based): only some rows are in the DOM, so a reader
+   * learns "row 37" from this, not from counting.
+   */
+  rowIndex?: number;
   /** The list's cursor is here (spec 02): a bar on the left. Not DOM focus. */
   cursor?: boolean;
   /** Its object is in the panel now. */
@@ -65,6 +70,7 @@ export const NotificationRow: React.FC<NotificationRowProps> = ({
   context,
   time,
   count = 1,
+  rowIndex,
   cursor,
   opened,
   pending = false,
@@ -84,6 +90,7 @@ export const NotificationRow: React.FC<NotificationRowProps> = ({
     <div
       id={id}
       role="row"
+      aria-rowindex={rowIndex}
       className={styles.row}
       // How many actions stand at the right: the time's column keeps room for them
       style={{ '--_actions': actions.length } as React.CSSProperties}
@@ -103,7 +110,7 @@ export const NotificationRow: React.FC<NotificationRowProps> = ({
           <span className={styles.dot} aria-hidden="true" />
           <span className={styles.avatar}>{avatar}</span>
           <span className={styles.text}>
-            {/* Read as one phrase (spec 03): "Unread. Mira Sato mentioned you in TM-248: … 2 minutes ago" */}
+
             {unread && <span className={styles.srOnly}>Unread. </span>}
 
             <span className={styles.title}>{title}</span>
@@ -137,7 +144,6 @@ export const NotificationRow: React.FC<NotificationRowProps> = ({
                 icon={action.icon}
                 label={action.label}
                 keys={action.keys}
-                // Not Tab stops: from the keyboard these are U and E on the list (spec 08)
                 tabIndex={-1}
                 onClick={action.onClick}
               />

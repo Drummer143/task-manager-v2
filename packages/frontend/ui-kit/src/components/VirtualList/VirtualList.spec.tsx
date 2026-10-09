@@ -273,6 +273,38 @@ describe('VirtualList', () => {
     });
   });
 
+  describe('as the rows of a grid', () => {
+    it('is a rowgroup of presentational wrappers: the rows inside belong to the grid', async () => {
+      await renderList({
+        overscan: 0,
+        semantics: 'rows',
+        renderItem: (id, index) => (
+          <div role="row" data-id={id} aria-rowindex={index + 1}>
+            {id}
+          </div>
+        ),
+      });
+
+      expect(document.querySelector('ul, li')).toBeNull();
+      // renderItem gets the row's place in the whole list, for its aria-rowindex
+      expect(document.querySelector('[data-id="r3"]')?.getAttribute('aria-rowindex')).toBe('4');
+      expect(document.querySelector('[role="rowgroup"]')).not.toBeNull();
+
+      const wrappers = [...document.querySelectorAll('[data-index]')];
+      expect(wrappers.length).toBeGreaterThan(0);
+      // A wrapper is no element of its own, and has no list place to tell: the grid does that
+      wrappers.forEach((wrapper) => {
+        expect(wrapper.getAttribute('role')).toBe('none');
+        expect(wrapper.hasAttribute('aria-posinset')).toBe(false);
+        expect(wrapper.hasAttribute('aria-setsize')).toBe(false);
+      });
+      // Through the presentational wrappers, every row is owned by the rowgroup
+      expect(document.querySelectorAll('[role="rowgroup"] > [role="none"] > [role="row"]')).toHaveLength(
+        wrappers.length,
+      );
+    });
+  });
+
   describe('an outer scroll element (the AppShell canvas)', () => {
     const MARGIN = 40;
 

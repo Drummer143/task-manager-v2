@@ -28,7 +28,7 @@ const resetChord = () => {
 };
 
 const handleKeydown = (event: KeyboardEvent) => {
-  if (isTypingTarget(event.target)) {
+  if (isTypingTarget(event.target) || event.defaultPrevented) {
     return;
   }
 
