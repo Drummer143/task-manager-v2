@@ -18,6 +18,8 @@ export * from './meResponseWorkspacesItem';
 export * from './notification';
 export * from './notificationKind';
 export * from './notificationPage';
+export * from './readAllNotificationsRequest';
+export * from './readAllNotificationsResponse';
 export * from './readNotificationRequest';
 export * from './summaryResponse';
 export * from './unarchiveNotificationRequest';

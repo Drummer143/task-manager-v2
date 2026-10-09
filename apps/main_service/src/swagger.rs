@@ -12,6 +12,7 @@ use crate::notifications::controllers;
         controllers::summary::get_summary,
         controllers::create::create,
         controllers::read::read_notification,
+        controllers::read_all::read_all_notifications,
         controllers::unread::unread_notification,
         controllers::archive::archive_notification,
         controllers::unarchive::unarchive_notification,

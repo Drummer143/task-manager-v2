@@ -11,6 +11,8 @@ import type {
   MeResponse,
   Notification,
   NotificationPage,
+  ReadAllNotificationsRequest,
+  ReadAllNotificationsResponse,
   ReadNotificationRequest,
   SummaryResponse,
   UnarchiveNotificationRequest,
@@ -75,6 +77,17 @@ export const readNotification = (
       options);
     }
 
+export const readAllNotifications = (
+    readAllNotificationsRequest: ReadAllNotificationsRequest,
+ options?: SecondParameter<typeof mainFetcher<ReadAllNotificationsResponse>>,) => {
+      return mainFetcher<ReadAllNotificationsResponse>(
+      {url: `/notifications/read_all`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: readAllNotificationsRequest
+    },
+      options);
+    }
+
 export const getNotificationSummary = (
 
  options?: SecondParameter<typeof mainFetcher<SummaryResponse>>,) => {
@@ -111,6 +124,7 @@ export type ListNotificationsResult = NonNullable<Awaited<ReturnType<typeof list
 export type CreateNotificationResult = NonNullable<Awaited<ReturnType<typeof createNotification>>>
 export type ArchiveNotificationResult = NonNullable<Awaited<ReturnType<typeof archiveNotification>>>
 export type ReadNotificationResult = NonNullable<Awaited<ReturnType<typeof readNotification>>>
+export type ReadAllNotificationsResult = NonNullable<Awaited<ReturnType<typeof readAllNotifications>>>
 export type GetNotificationSummaryResult = NonNullable<Awaited<ReturnType<typeof getNotificationSummary>>>
 export type UnarchiveNotificationResult = NonNullable<Awaited<ReturnType<typeof unarchiveNotification>>>
 export type UnreadNotificationResult = NonNullable<Awaited<ReturnType<typeof unreadNotification>>>

@@ -4,6 +4,7 @@ use axum::routing::{get, post};
 use utils::auth_middleware::{InternalAuthState, auth_guard};
 
 use crate::app_state::AppState;
+use crate::notifications::controllers::read_all::read_all_notifications;
 use crate::notifications::controllers::{
     archive::archive_notification, create::create, get_list::get_list, read::read_notification,
     summary::get_summary, unarchive::unarchive_notification, unread::unread_notification,
@@ -22,6 +23,7 @@ pub fn router(auth: InternalAuthState, debug_create: bool) -> Router<AppState> {
         .route("/notifications", list)
         .route("/notifications/summary", get(get_summary))
         .route("/notifications/read", post(read_notification))
+        .route("/notifications/read_all", post(read_all_notifications))
         .route("/notifications/unread", post(unread_notification))
         .route("/notifications/archive", post(archive_notification))
         .route("/notifications/unarchive", post(unarchive_notification))

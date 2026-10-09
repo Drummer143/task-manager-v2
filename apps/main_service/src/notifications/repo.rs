@@ -1,10 +1,11 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sql_models::notification::model::{Notification, NotificationKind};
 use sqlx::AssertSqlSafe;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::notifications::cursor::Cursor;
+use crate::{notifications::cursor::Cursor, webhooks::authentik::user_sync};
 
 pub struct NotificationsRepository;
 
@@ -75,7 +76,7 @@ impl NotificationsRepository {
         // Keyset pagination: rows strictly after the cursor in the tab's order. The row
         // comparison walks the (user_id, updated_at DESC, id DESC) index
         let sql = format!(
-            "SELECT {COLUMNS} FROM notifications              WHERE user_id = $1 AND {filter}                AND ($3::timestamptz IS NULL OR ({sort}, id) < ($3, $4))              ORDER BY {sort} DESC, id DESC              LIMIT $2",
+            "SELECT {COLUMNS} FROM notifications WHERE user_id = $1 AND {filter} AND ($3::timestamptz IS NULL OR ({sort}, id) < ($3, $4)) ORDER BY {sort} DESC, id DESC LIMIT $2",
             filter = view.filter(),
             sort = view.sort_column(),
         );
@@ -93,17 +94,46 @@ impl NotificationsRepository {
     pub async fn mark_as_read(
         pool: &sqlx::PgPool,
         user_id: Uuid,
-        id: Uuid,
+        ids: Vec<Uuid>,
     ) -> Result<(), sqlx::Error> {
-        Self::update(pool, user_id, id, "read_at = COALESCE(read_at, NOW())").await
+        sqlx::query("UPDATE notifications SET read_at = COALESCE(read_at, NOW()) WHERE user_id = $1 AND id = ANY($2)")
+            .bind(user_id)
+            .bind(ids)
+            .execute(pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn mark_as_read_all(
+        pool: &sqlx::PgPool,
+        user_id: Uuid,
+        before: DateTime<Utc>,
+    ) -> Result<Vec<Uuid>, sqlx::Error> {
+        sqlx::query_scalar::<_, Uuid>(
+            "UPDATE notifications
+         SET read_at = NOW()
+         WHERE user_id = $1 AND read_at IS NULL AND archived_at IS NULL AND updated_at <= $2
+         RETURNING id",
+        )
+        .bind(user_id)
+        .bind(before)
+        .fetch_all(pool)
+        .await
     }
 
     pub async fn mark_as_unread(
         pool: &sqlx::PgPool,
         user_id: Uuid,
-        id: Uuid,
+        ids: Vec<Uuid>,
     ) -> Result<(), sqlx::Error> {
-        Self::update(pool, user_id, id, "read_at = NULL").await
+        sqlx::query("UPDATE notifications SET read_at = NULL WHERE user_id = $1 AND id = ANY($2)")
+            .bind(user_id)
+            .bind(ids)
+            .execute(pool)
+            .await?;
+
+        Ok(())
     }
 
     /// Done implies read.
@@ -211,6 +241,23 @@ mod tests {
         .unwrap();
     }
 
+    /// Moves both the arrival and the event time: a notification with a single event.
+    async fn arrived_minutes_ago(pool: &PgPool, id: Uuid, minutes: i32) {
+        sqlx::query(
+            "UPDATE notifications SET created_at = NOW() - make_interval(mins => $2), \
+             updated_at = NOW() - make_interval(mins => $2) WHERE id = $1",
+        )
+        .bind(id)
+        .bind(minutes)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    fn minutes_ago(minutes: i64) -> DateTime<Utc> {
+        Utc::now() - chrono::Duration::minutes(minutes)
+    }
+
     async fn messages(pool: &PgPool, user_id: Uuid, view: InboxView) -> Vec<String> {
         NotificationsRepository::list(pool, user_id, view, 50, None)
             .await
@@ -292,7 +339,7 @@ mod tests {
         happened_minutes_ago(&pool, unread.id, 1).await;
         happened_minutes_ago(&pool, read.id, 2).await;
         happened_minutes_ago(&pool, done.id, 3).await;
-        NotificationsRepository::mark_as_read(&pool, me, read.id)
+        NotificationsRepository::mark_as_read(&pool, me, vec![read.id])
             .await
             .unwrap();
         NotificationsRepository::archive(&pool, me, done.id)
@@ -427,19 +474,124 @@ mod tests {
         let me = user(&pool).await;
         let n = notify(&pool, me, "hello").await;
 
-        NotificationsRepository::mark_as_read(&pool, me, n.id)
+        NotificationsRepository::mark_as_read(&pool, me, vec![n.id])
             .await
             .unwrap();
         let first = get(&pool, n.id).await.read_at.expect("read");
-        NotificationsRepository::mark_as_read(&pool, me, n.id)
+        NotificationsRepository::mark_as_read(&pool, me, vec![n.id])
             .await
             .unwrap();
         assert_eq!(get(&pool, n.id).await.read_at, Some(first));
 
-        NotificationsRepository::mark_as_unread(&pool, me, n.id)
+        NotificationsRepository::mark_as_unread(&pool, me, vec![n.id])
             .await
             .unwrap();
         assert_eq!(get(&pool, n.id).await.read_at, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn read_all_reads_the_unread_before_the_moment_and_returns_exactly_them(pool: PgPool) {
+        let me = user(&pool).await;
+        let first = notify(&pool, me, "first").await;
+        let second = notify(&pool, me, "second").await;
+        let already_read = notify(&pool, me, "already read").await;
+        for n in [&first, &second, &already_read] {
+            arrived_minutes_ago(&pool, n.id, 30).await;
+        }
+        NotificationsRepository::mark_as_read(&pool, me, vec![already_read.id])
+            .await
+            .unwrap();
+        let first_read = get(&pool, already_read.id).await.read_at;
+
+        let mut ids = NotificationsRepository::mark_as_read_all(&pool, me, minutes_ago(10))
+            .await
+            .unwrap();
+
+        ids.sort();
+        let mut expected = vec![first.id, second.id];
+        expected.sort();
+        assert_eq!(ids, expected);
+        assert!(messages(&pool, me, InboxView::Unread).await.is_empty());
+        // Not in the result, so an undo of this read-all will not unread it
+        assert_eq!(get(&pool, already_read.id).await.read_at, first_read);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn read_all_leaves_what_arrived_after_the_moment_unread(pool: PgPool) {
+        let me = user(&pool).await;
+        let seen = notify(&pool, me, "seen").await;
+        arrived_minutes_ago(&pool, seen.id, 30).await;
+        notify(&pool, me, "arrived later").await;
+
+        let ids = NotificationsRepository::mark_as_read_all(&pool, me, minutes_ago(10))
+            .await
+            .unwrap();
+
+        assert_eq!(ids, [seen.id]);
+        assert_eq!(
+            messages(&pool, me, InboxView::Unread).await,
+            ["arrived later"]
+        );
+    }
+
+    /// Spec (Inbox · read all): only what is seen at the moment. A notification merged with a
+    /// new event after it was seen is new again, and the list sorts it by that event.
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn read_all_leaves_a_notification_with_a_newer_event_unread(pool: PgPool) {
+        let me = user(&pool).await;
+        let n = notify(&pool, me, "merged").await;
+        arrived_minutes_ago(&pool, n.id, 30).await;
+        happened_minutes_ago(&pool, n.id, 5).await;
+
+        let ids = NotificationsRepository::mark_as_read_all(&pool, me, minutes_ago(10))
+            .await
+            .unwrap();
+
+        assert!(ids.is_empty());
+        assert_eq!(get(&pool, n.id).await.read_at, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn read_all_does_not_touch_someone_elses(pool: PgPool) {
+        let me = user(&pool).await;
+        let someone = user(&pool).await;
+        let theirs = notify(&pool, someone, "theirs").await;
+        arrived_minutes_ago(&pool, theirs.id, 30).await;
+
+        let ids = NotificationsRepository::mark_as_read_all(&pool, me, minutes_ago(10))
+            .await
+            .unwrap();
+
+        assert!(ids.is_empty());
+        assert_eq!(get(&pool, theirs.id).await.read_at, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn undoing_read_all_unreads_only_what_it_read(pool: PgPool) {
+        let me = user(&pool).await;
+        let unread = notify(&pool, me, "unread").await;
+        let already_read = notify(&pool, me, "already read").await;
+        for n in [&unread, &already_read] {
+            arrived_minutes_ago(&pool, n.id, 30).await;
+        }
+        NotificationsRepository::mark_as_read(&pool, me, vec![already_read.id])
+            .await
+            .unwrap();
+
+        let ids = NotificationsRepository::mark_as_read_all(&pool, me, minutes_ago(10))
+            .await
+            .unwrap();
+        NotificationsRepository::mark_as_unread(&pool, me, ids)
+            .await
+            .unwrap();
+
+        assert_eq!(get(&pool, unread.id).await.read_at, None);
+        assert!(get(&pool, already_read.id).await.read_at.is_some());
     }
 
     #[sqlx::test(migrations = "./migrations")]
@@ -471,7 +623,7 @@ mod tests {
         happened_minutes_ago(&pool, n.id, 30).await;
         let before = get(&pool, n.id).await.updated_at;
 
-        NotificationsRepository::mark_as_read(&pool, me, n.id)
+        NotificationsRepository::mark_as_read(&pool, me, vec![n.id])
             .await
             .unwrap();
         NotificationsRepository::archive(&pool, me, n.id)
@@ -491,11 +643,9 @@ mod tests {
         let theirs = notify(&pool, someone, "theirs").await;
 
         for result in [
-            NotificationsRepository::mark_as_read(&pool, me, theirs.id).await,
-            NotificationsRepository::mark_as_unread(&pool, me, theirs.id).await,
             NotificationsRepository::archive(&pool, me, theirs.id).await,
             NotificationsRepository::unarchive(&pool, me, theirs.id).await,
-            NotificationsRepository::mark_as_read(&pool, me, Uuid::new_v4()).await,
+            NotificationsRepository::archive(&pool, me, Uuid::new_v4()).await,
         ] {
             assert!(matches!(result, Err(sqlx::Error::RowNotFound)));
         }
@@ -503,6 +653,33 @@ mod tests {
         let untouched = get(&pool, theirs.id).await;
         assert_eq!(untouched.read_at, None);
         assert_eq!(untouched.archived_at, None);
+    }
+
+    /// A batch (read-all, its undo and redo) skips ids that are not the user's instead of failing
+    /// whole.
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn read_and_unread_skip_someone_elses_and_missing_ids_and_leave_them_untouched(
+        pool: PgPool,
+    ) {
+        let me = user(&pool).await;
+        let someone = user(&pool).await;
+        let theirs = notify(&pool, someone, "theirs").await;
+
+        NotificationsRepository::mark_as_read(&pool, me, vec![theirs.id, Uuid::new_v4()])
+            .await
+            .unwrap();
+        assert_eq!(get(&pool, theirs.id).await.read_at, None);
+
+        NotificationsRepository::mark_as_read(&pool, someone, vec![theirs.id])
+            .await
+            .unwrap();
+        let read_at = get(&pool, theirs.id).await.read_at;
+
+        NotificationsRepository::mark_as_unread(&pool, me, vec![theirs.id, Uuid::new_v4()])
+            .await
+            .unwrap();
+        assert_eq!(get(&pool, theirs.id).await.read_at, read_at);
     }
 
     #[sqlx::test(migrations = "./migrations")]
@@ -514,7 +691,7 @@ mod tests {
         let read = notify(&pool, me, "read").await;
         let done = notify(&pool, me, "done").await;
         notify(&pool, someone, "not mine").await;
-        NotificationsRepository::mark_as_read(&pool, me, read.id)
+        NotificationsRepository::mark_as_read(&pool, me, vec![read.id])
             .await
             .unwrap();
         NotificationsRepository::archive(&pool, me, done.id)

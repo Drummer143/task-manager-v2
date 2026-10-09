@@ -6,5 +6,5 @@
  */
 
 export interface ReadNotificationRequest {
-  id: string;
+  ids: string[];
 }

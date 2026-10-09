@@ -5,6 +5,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface UnreadNotificationRequest {
-  ids: string[];
+export interface ReadAllNotificationsResponse {
+  affected: string[];
 }

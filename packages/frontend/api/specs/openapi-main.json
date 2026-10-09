@@ -213,6 +213,48 @@
         }
       }
     },
+    "/notifications/read_all": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "readAllNotifications",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadAllNotificationsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "All notifications marked as read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadAllNotificationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "No such notification of this user"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/notifications/summary": {
       "get": {
         "tags": [
@@ -1201,15 +1243,45 @@
           }
         }
       },
+      "ReadAllNotificationsRequest": {
+        "type": "object",
+        "required": [
+          "before"
+        ],
+        "properties": {
+          "before": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ReadAllNotificationsResponse": {
+        "type": "object",
+        "required": [
+          "affected"
+        ],
+        "properties": {
+          "affected": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "ReadNotificationRequest": {
         "type": "object",
         "required": [
-          "id"
+          "ids"
         ],
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -1242,12 +1314,15 @@
       "UnreadNotificationRequest": {
         "type": "object",
         "required": [
-          "id"
+          "ids"
         ],
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },

@@ -8,7 +8,7 @@ use crate::notifications::repo::NotificationsRepository;
 
 #[derive(Deserialize, ToSchema)]
 pub struct UnreadNotificationRequest {
-    id: Uuid,
+    ids: Vec<Uuid>,
 }
 
 #[utoipa::path(
@@ -30,6 +30,6 @@ pub async fn unread_notification(
     Extension(user_id): Extension<Uuid>,
     Json(body): Json<UnreadNotificationRequest>,
 ) -> Result<(), ApiError> {
-    NotificationsRepository::mark_as_unread(&pool, user_id, body.id).await?;
+    NotificationsRepository::mark_as_unread(&pool, user_id, body.ids).await?;
     Ok(())
 }
