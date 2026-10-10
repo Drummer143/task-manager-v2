@@ -1,6 +1,14 @@
 import { Notification } from '@task-manager-v2/api/main/schemas';
 import { useCursorStore, useRegisterHotkey } from '@task-manager-v2/ui-kit';
-import { useLayoutEffect, useMemo, useRef } from 'react';
+
+interface Props {
+  notifications: Notification[];
+  onReadAll: () => void;
+  onMarkAsRead: (params: { ids: string[] }) => void;
+  onMarkAsUnread: (params: { ids: string[] }) => void;
+  onArchive: (notification: Notification) => void;
+  onUnarchive: (notification: Notification) => void;
+}
 
 export const useRegisterKeyboardHandlers = ({
   notifications,
@@ -9,79 +17,37 @@ export const useRegisterKeyboardHandlers = ({
   onMarkAsUnread,
   onArchive,
   onUnarchive,
-}: {
-  notifications: Notification[];
-  onReadAll: () => void;
-  onMarkAsRead: (params: { ids: string[] }) => void;
-  onMarkAsUnread: (params: { ids: string[] }) => void;
-  onArchive: (notification: Notification) => void;
-  onUnarchive: (notification: Notification) => void;
-}) => {
-  const notificationsRef = useRef<Notification[]>(notifications);
+}: Props) => {
+  const highlighted = () => {
+    const cursor = useCursorStore.getState().cursor;
 
-  useLayoutEffect(() => {
-    notificationsRef.current = notifications;
-  }, [notifications]);
+    return notifications.find((n) => n.id === cursor);
+  };
 
-  const readAllConfig = useMemo(
-    () => ({
-      callback: () => onReadAll(),
-      description: 'Mark all notifications as read',
-      key: 'u',
-      shift: true,
-    }),
-    [onReadAll],
-  );
+  useRegisterHotkey({
+    key: 'u',
+    shift: true,
+    description: 'Mark all notifications as read',
+    callback: () => onReadAll(),
+  });
 
-  const markAsReadConfig = useMemo(
-    () => ({
-      callback: () => {
-        const cursor = useCursorStore.getState().cursor;
+  useRegisterHotkey({
+    key: 'u',
+    description: 'Mark highlighted notification as read/unread',
+    callback: () => {
+      const n = highlighted();
+      if (!n) return;
+      (n.readAt ? onMarkAsUnread : onMarkAsRead)({ ids: [n.id] });
+    },
+  });
 
-        if (!cursor) return;
-
-        const notification = notificationsRef.current.find(
-          (n) => n.id === cursor,
-        );
-        if (!notification) return;
-
-        if (notification.readAt) {
-          onMarkAsUnread({ ids: [cursor] });
-        } else {
-          onMarkAsRead({ ids: [cursor] });
-        }
-      },
-      description: 'Mark highlighted notification as read/unread',
-      key: 'u',
-    }),
-    [onMarkAsRead, onMarkAsUnread],
-  );
-
-  const archiveConfig = useMemo(
-    () => ({
-      callback: () => {
-        const cursor = useCursorStore.getState().cursor;
-
-        if (!cursor) return;
-
-        const notification = notificationsRef.current.find(
-          (n) => n.id === cursor,
-        );
-        if (!notification) return;
-
-        if (notification.archivedAt) {
-          onUnarchive(notification);
-        } else {
-          onArchive(notification);
-        }
-      },
-      description: 'Archive/Unarchive highlighted notification',
-      key: 'e',
-    }),
-    [onArchive, onUnarchive],
-  );
-
-  useRegisterHotkey(readAllConfig);
-  useRegisterHotkey(markAsReadConfig);
-  useRegisterHotkey(archiveConfig);
+  useRegisterHotkey({
+    key: 'e',
+    description: 'Archive/Unarchive highlighted notification',
+    callback: () => {
+      const n = highlighted();
+      if (!n) return;
+      (n.archivedAt ? onUnarchive : onArchive)(n);
+    },
+  });
 };
