@@ -34,12 +34,11 @@ The most common way to break the 16 ms budget in this codebase.
   (surface tone, theme, density).
 - **Unstable context values.** `value={{ a, b }}` created inline re-renders all consumers on
   every parent render. Memoize, or split contexts.
-- **Unstable props into memoized or effect-dependent code.** Inline objects/callbacks passed to
-  a `memo` component, or into a hook that lists them as effect deps (`useRegisterHotkey(config)`,
-  `useEscapeStack(handler)` — both document "memoize or it re-registers every render"), cause
-  re-registration churn. Check the call sites, not just the hook.
-- **Do not demand blanket `useMemo` / `useCallback`.** Only where identity matters (deps,
-  `memo` children, context values) or the computation is measurably heavy.
+- **Memoization is the compiler's job** (see `react-compiler.md`). Do not ask for `useMemo` /
+  `useCallback` / `memo`; ask why a component is not compiled. `useRegisterHotkey` and
+  `useEscapeStack` register once and call the latest callback — inline configs are fine there.
+- **Identity that matters for correctness** (an effect that must not re-run, a registration)
+  is not left to memoization: state, `useEffectEvent`, or a ref written in an effect.
 
 ## Work per frame and per event
 
@@ -57,8 +56,8 @@ The most common way to break the 16 ms budget in this codebase.
 
 ## Lists
 
-- **Virtualize from the first row past ~50 nodes** (Philosophy 03 rule 4). `react-virtuoso` is
-  the chosen library. A `.map` over an unbounded server list without virtualization is a
+- **Virtualize from the first row past ~50 nodes** (Philosophy 03 rule 4) with the kit's
+  `VirtualList` (TanStack Virtual inside). Its scroller needs a bounded height. A `.map` over an unbounded server list without virtualization is a
   blocker on board columns, tables and the page tree.
 - **Row height is known before data** (rule 5): fixed or estimated heights from tokens
   (`--row-height`, card layout), so the list does not jump when data arrives.

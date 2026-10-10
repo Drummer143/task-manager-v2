@@ -1,6 +1,6 @@
 ---
 name: review
-description: Review frontend code in task-manager-v2 (apps/frontend, packages/frontend/ui-kit) against the project's UI canon — the UI philosophy, the primitives spec and repo conventions — with the heaviest weight on responsiveness and runtime performance. Use when asked to review a diff, branch, PR, component, hook, story or CSS in the frontend, to check a component "against the docs/design", or before calling a UI change done.
+description: Review frontend code in task-manager-v2 (apps/frontend, packages/frontend/ui-kit) against the project's UI canon — the UI philosophy, the primitives spec and repo conventions — with the heaviest weight on responsiveness and runtime performance, plus React Compiler compatibility and accessibility. Use when asked to review a diff, branch, PR, component, hook, story or CSS in the frontend, to check a component "against the docs/design", to check accessibility or why a component is not compiled, or before calling a UI change done.
 ---
 
 # Frontend review against the UI canon
@@ -23,6 +23,8 @@ Details live in the reference files; load the one you need, not all of them:
 | File | Load when |
 |---|---|
 | `references/performance.md` | Always. This is the primary lens of every review |
+| `references/react-compiler.md` | Always when components or hooks changed — what makes the compiler skip them |
+| `references/accessibility.md` | Any markup, interactive element, focus, ARIA, composite widget or announcement |
 | `references/philosophy.md` | Screens, interaction, keyboard, states, motion, a11y, text |
 | `references/repo-conventions.md` | Always — tokens, surfaces, file layout, tests, stories |
 
@@ -60,15 +62,20 @@ Severity labels:
 2. **Automated guards.** Run and report failures as findings; do not re-derive what they
    already check:
    - `pnpm run check:ds` — token sync and the literal guard.
-   - `pnpm nx run-many -t typecheck test -p <affected projects>` when code changed.
+   - `pnpm nx run-many -t lint typecheck test -p <affected projects>` when code changed.
      Coverage thresholds live in each `vite.config.mts`; a drop below them fails `test --coverage`.
-3. **Performance pass** using `references/performance.md`. Trace every state change the diff
-   introduces: who subscribes, what re-renders, what runs per frame, what never gets cleaned up.
-4. **Canon pass** using the other references, only for the areas the diff touches.
-5. **Verify before reporting.** For each finding, confirm the failure path in the code: name
+     A `react-hooks/*` lint error means the React Compiler skips that function: report it as a
+     performance finding, not as style.
+3. **Performance pass** using `references/performance.md` and `references/react-compiler.md`.
+   Trace every state change the diff introduces: who subscribes, what re-renders, what runs per
+   frame, what never gets cleaned up — and whether each changed component and hook is compiled.
+4. **Accessibility pass** using `references/accessibility.md` for every changed piece of markup:
+   name, role, keyboard path, focus on every exit path, state attributes, announcements.
+5. **Canon pass** using the other references, only for the areas the diff touches.
+6. **Verify before reporting.** For each finding, confirm the failure path in the code: name
    the input or interaction that produces it. Drop anything you cannot confirm, or mark it
    explicitly as a question. Fewer, correct findings beat a long list.
-6. **Visual check, when a Storybook story or screen changed and a preview is available.** Look
+7. **Visual check, when a Storybook story or screen changed and a preview is available.** Look
    at the story (both surfaces, if the component has an inverse stand). Rendering claims —
    "the arc doubles at `lg`", "the gap is too wide" — should be seen, not assumed.
 
@@ -95,6 +102,9 @@ rule, that is a decision to record in the docs, not an exception to make silentl
 - `Spinner` has no `delay` / `minVisible` props: timing lives in `useDelayedFlag`, called by the
   owner of `busy`. The spec's `SpinnerProps` still lists them; the code is right.
 - Hotkey registration uses `useRegisterHotkey(config)` rather than the spec's
-  `useHotkey(keys, handler)`; the notation for display is `Kbd`'s `keys` string.
+  `useHotkey(keys, handler)`; the notation for display is `Kbd`'s `keys` string. It registers
+  once per key combination and calls the latest callback: no memoization needed at call sites.
+- React Compiler is on in the app and the kit. Accepted uncompiled places are listed in
+  `references/react-compiler.md`.
 - The kit's interaction engines live in `src/interaction/` (hotkeys, escape, layers, cursor).
 - The repo is English-only: code, comments, identifiers, docs. UI copy is a product concern.
