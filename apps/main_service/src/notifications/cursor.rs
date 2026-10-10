@@ -43,7 +43,7 @@ mod tests {
             at: DateTime::parse_from_rfc3339("2026-10-03T10:00:00.123456Z")
                 .unwrap()
                 .to_utc(),
-            id: Uuid::new_v4(),
+            id: Uuid::now_v7(),
         };
 
         assert_eq!(Cursor::parse(&cursor.to_string()), Some(cursor));

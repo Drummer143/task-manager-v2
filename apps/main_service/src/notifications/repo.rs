@@ -283,7 +283,7 @@ mod tests {
     const WS: Uuid = Uuid::from_u128(0x0a);
 
     async fn user(pool: &PgPool) -> Uuid {
-        let id = Uuid::new_v4();
+        let id = Uuid::now_v7();
         sqlx::query("INSERT INTO users (id, username) VALUES ($1, 'test')")
             .bind(id)
             .execute(pool)
@@ -404,7 +404,7 @@ mod tests {
     #[ignore = "needs DATABASE_URL to a disposable Postgres"]
     async fn refuses_a_notification_for_a_user_that_does_not_exist(pool: PgPool) {
         let dto = CreateNotificationDto {
-            user_id: Uuid::new_v4(),
+            user_id: Uuid::now_v7(),
             workspace_id: None,
             data: NotificationKind::Assigned {},
         };
@@ -781,7 +781,7 @@ mod tests {
         for result in [
             NotificationsRepository::archive(&pool, me, theirs.id).await,
             NotificationsRepository::unarchive(&pool, me, theirs.id).await,
-            NotificationsRepository::archive(&pool, me, Uuid::new_v4()).await,
+            NotificationsRepository::archive(&pool, me, Uuid::now_v7()).await,
         ] {
             assert!(matches!(result, Err(sqlx::Error::RowNotFound)));
         }
@@ -802,7 +802,7 @@ mod tests {
         let someone = user(&pool).await;
         let theirs = notify(&pool, someone, "theirs").await;
 
-        NotificationsRepository::mark_as_read(&pool, me, vec![theirs.id, Uuid::new_v4()])
+        NotificationsRepository::mark_as_read(&pool, me, vec![theirs.id, Uuid::now_v7()])
             .await
             .unwrap();
         assert_eq!(get(&pool, theirs.id).await.read_at, None);
@@ -812,7 +812,7 @@ mod tests {
             .unwrap();
         let read_at = get(&pool, theirs.id).await.read_at;
 
-        NotificationsRepository::mark_as_unread(&pool, me, vec![theirs.id, Uuid::new_v4()])
+        NotificationsRepository::mark_as_unread(&pool, me, vec![theirs.id, Uuid::now_v7()])
             .await
             .unwrap();
         assert_eq!(get(&pool, theirs.id).await.read_at, read_at);

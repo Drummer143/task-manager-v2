@@ -90,8 +90,8 @@ pub async fn spawn_mock(assets: Vec<AssetAccess>, fail: bool) -> MockMain {
 
 pub fn asset(visibility: AssetVisibility) -> AssetAccess {
     AssetAccess {
-        id: Uuid::new_v4(),
-        blob_id: Uuid::new_v4(),
+        id: Uuid::now_v7(),
+        blob_id: Uuid::now_v7(),
         name: "cat.png".into(),
         visibility,
     }

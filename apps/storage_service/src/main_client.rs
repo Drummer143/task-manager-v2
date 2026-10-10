@@ -132,7 +132,7 @@ mod tests {
         let mock = spawn_mock(vec![private.clone()], false).await;
 
         let found = client_for(&mock)
-            .readable_assets(Some(Uuid::new_v4()), &[private.id, Uuid::new_v4()])
+            .readable_assets(Some(Uuid::now_v7()), &[private.id, Uuid::now_v7()])
             .await
             .unwrap();
 
@@ -146,7 +146,7 @@ mod tests {
         let client = MainServiceClient::new(&mock.url, ServiceAuthState::new("another-token"));
 
         let error = client
-            .readable_assets(None, &[Uuid::new_v4()])
+            .readable_assets(None, &[Uuid::now_v7()])
             .await
             .unwrap_err();
 
@@ -165,7 +165,7 @@ mod tests {
             public.id
         );
         assert!(client.public_asset(private.id).await.unwrap().is_none());
-        assert!(client.public_asset(Uuid::new_v4()).await.unwrap().is_none());
+        assert!(client.public_asset(Uuid::now_v7()).await.unwrap().is_none());
     }
 
     #[tokio::test]
@@ -173,7 +173,7 @@ mod tests {
         let public = asset(AssetVisibility::Public);
         let mock = spawn_mock(vec![public.clone()], false).await;
         let client = client_for(&mock);
-        let unknown = Uuid::new_v4();
+        let unknown = Uuid::now_v7();
 
         for _ in 0..3 {
             client.public_asset(public.id).await.unwrap();
@@ -187,7 +187,7 @@ mod tests {
     async fn failures_are_not_cached() {
         let mock = spawn_mock(vec![], true).await;
         let client = client_for(&mock);
-        let id = Uuid::new_v4();
+        let id = Uuid::now_v7();
 
         for _ in 0..2 {
             let error = client.public_asset(id).await.unwrap_err();

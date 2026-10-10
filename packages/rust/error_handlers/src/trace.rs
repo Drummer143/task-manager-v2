@@ -53,7 +53,7 @@ pub async fn request_id(mut req: Request, next: Next) -> Response {
         .and_then(|value| value.to_str().ok())
         .filter(|id| is_acceptable(id))
         .map(str::to_owned)
-        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+        .unwrap_or_else(|| uuid::Uuid::now_v7().to_string());
 
     // Only ever built from validated or generated ids, so this cannot fail.
     let header_value = HeaderValue::from_str(&id).expect("request id is a valid header value");

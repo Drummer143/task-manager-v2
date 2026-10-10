@@ -170,8 +170,8 @@ mod tests {
 
     fn asset(visibility: AssetVisibility) -> AssetAccess {
         AssetAccess {
-            id: Uuid::new_v4(),
-            blob_id: Uuid::new_v4(),
+            id: Uuid::now_v7(),
+            blob_id: Uuid::now_v7(),
             name: "report.pdf".into(),
             visibility,
         }
@@ -224,7 +224,7 @@ mod tests {
     #[test]
     fn assets_missing_from_the_answer_are_unavailable() {
         let readable = asset(AssetVisibility::Private);
-        let hidden = Uuid::new_v4();
+        let hidden = Uuid::now_v7();
         let requested = [readable.id, hidden];
 
         let response = build_links(&config(), &requested, vec![readable.clone()], 0).unwrap();
@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn requested_ids_are_deduplicated_keeping_order() {
-        let (a, b) = (Uuid::new_v4(), Uuid::new_v4());
+        let (a, b) = (Uuid::now_v7(), Uuid::now_v7());
         let request = FileLinksRequest {
             asset_ids: vec![a, b, a, b, a],
         };
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn too_many_ids_are_rejected_before_any_lookup() {
         let request = FileLinksRequest {
-            asset_ids: (0..=MAX_LINKS_PER_REQUEST).map(|_| Uuid::new_v4()).collect(),
+            asset_ids: (0..=MAX_LINKS_PER_REQUEST).map(|_| Uuid::now_v7()).collect(),
         };
 
         let error = requested_ids(&request).unwrap_err();
@@ -289,7 +289,7 @@ mod tests {
     #[test]
     fn exactly_the_limit_is_fine() {
         let request = FileLinksRequest {
-            asset_ids: (0..MAX_LINKS_PER_REQUEST).map(|_| Uuid::new_v4()).collect(),
+            asset_ids: (0..MAX_LINKS_PER_REQUEST).map(|_| Uuid::now_v7()).collect(),
         };
 
         assert_eq!(requested_ids(&request).unwrap().len(), MAX_LINKS_PER_REQUEST);
