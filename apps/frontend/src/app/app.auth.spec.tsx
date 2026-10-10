@@ -4,6 +4,7 @@ import type { AuthProviderProps } from 'react-oidc-context';
 import { App } from './app';
 import { userManager } from './auth';
 import { router } from './router';
+import { NIL_WORKSPACE_ID } from '../shared/constants/routes';
 
 const provider = vi.hoisted(() => ({ props: undefined as AuthProviderProps | undefined }));
 
@@ -24,11 +25,19 @@ describe('App', () => {
     expect(provider.props?.skipSigninCallback).toBe(true);
   });
 
-  it('starts at the inbox', async () => {
+  it("starts at the default space's inbox", async () => {
     render(<App />);
 
     await act(() => router.navigate('/'));
 
-    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inbox'));
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe(`/${NIL_WORKSPACE_ID}/inbox`));
+  });
+
+  it("sends an unknown path inside a space to that space's inbox", async () => {
+    render(<App />);
+
+    await act(() => router.navigate('/ws-1/nowhere'));
+
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/ws-1/inbox'));
   });
 });

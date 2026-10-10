@@ -6,27 +6,30 @@ import {
   VirtualList,
 } from '@task-manager-v2/ui-kit';
 import type { Notification } from '@task-manager-v2/api/main/schemas';
+import { GROUP_LABELS, type InboxEntry } from '../grouping';
 import styles from '../Inbox.module.scss';
 
 export const inboxRowId = (id: string) => `inbox-row-${id}`;
 
 const ROW_ID_PREFIX = inboxRowId('');
 
-const getKey = (item: Notification) => item.id;
+const getKey = (entry: InboxEntry) => entry.key;
 
 export interface InboxListProps {
-  items: readonly Notification[];
+  /** The rows with their group headers (`groupEntries`). The cursor walks the rows only. */
+  entries: readonly InboxEntry[];
 
   footer?: React.ReactNode;
   /** More pages to come: the row count is not known yet (aria-rowcount -1). */
   hasMore?: boolean;
 
+  /** A notification's row; `index` is its place among the entries, headers counted (aria-rowindex). */
   renderItem: (item: Notification, index: number) => React.ReactNode;
   onEndReached: () => void;
 }
 
 export const InboxList: React.FC<InboxListProps> = ({
-  items,
+  entries,
   footer,
   hasMore = false,
   renderItem,
@@ -37,6 +40,9 @@ export const InboxList: React.FC<InboxListProps> = ({
   const cursor = useCursorStore((state) => state.cursor);
 
   const getScrollElement = useCallback(() => listRef.current, []);
+
+  // What the cursor walks: J / K, the arrows, Home / End never land on a header
+  const items = entries.flatMap((entry) => (entry.kind === 'row' ? [entry.item] : []));
 
   useLayoutEffect(() => {
     const { cursor: current, setCursor } = useCursorStore.getState();
@@ -107,7 +113,7 @@ export const InboxList: React.FC<InboxListProps> = ({
       ref={listRef}
       role="grid"
       aria-label="Notifications"
-      aria-rowcount={hasMore ? -1 : items.length}
+      aria-rowcount={hasMore ? -1 : entries.length}
       tabIndex={0}
       aria-activedescendant={cursor ? inboxRowId(cursor) : undefined}
       className={styles.grid}
@@ -128,12 +134,19 @@ export const InboxList: React.FC<InboxListProps> = ({
     >
       <VirtualList
         semantics="rows"
-        data={items}
+        data={entries}
         getKey={getKey}
+        // A row's key is its notification's id: the cursor names the row directly
         cursorKey={cursor ?? undefined}
         getScrollElement={getScrollElement}
-        renderItem={renderItem}
-        estimateSize={raw['inbox-row']}
+        renderItem={(entry, index) =>
+          entry.kind === 'group' ? (
+            <InboxGroupHeader label={GROUP_LABELS[entry.group]} rowIndex={index + 1} />
+          ) : (
+            renderItem(entry.item, index)
+          )
+        }
+        estimateSize={(index) => (entries[index]?.kind === 'group' ? raw['inbox-group-height'] : raw['inbox-row'])}
         onEndReached={onEndReached}
         footer={footer}
         endThreshold={10}
@@ -141,3 +154,15 @@ export const InboxList: React.FC<InboxListProps> = ({
     </div>
   );
 };
+
+/**
+ * A time group's header (spec 04): a row of the grid with its name, so a screen reader walking
+ * the grid hears "Today". Not clickable, never the cursor.
+ */
+const InboxGroupHeader: React.FC<{ label: string; rowIndex: number }> = ({ label, rowIndex }) => (
+  <div role="row" aria-rowindex={rowIndex} className={styles.group}>
+    <div role="rowheader" className={styles.groupLabel}>
+      {label}
+    </div>
+  </div>
+);

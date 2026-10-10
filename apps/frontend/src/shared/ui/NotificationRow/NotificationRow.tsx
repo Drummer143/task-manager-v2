@@ -21,7 +21,7 @@ export interface NotificationAction {
 export interface NotificationRowProps {
   /** For the list's aria-activedescendant: the row under the cursor is named by its id. */
   id: string;
-  /** Opens it in the panel: /inbox?view=unread&task=TM-248. Always replace — history does not pile up. */
+  /** Opens it in the panel: /{ws}/inbox?view=unread&task=TM-248. Always replace — history does not pile up. */
   href: string;
   /** updated_at: the last event in the notification. */
   time: Date;

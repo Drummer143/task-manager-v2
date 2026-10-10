@@ -573,12 +573,14 @@
   --link-ext-size: 0.85em;
   --link-ext-margin: 2px;
 
-  /* Inbox · NotificationRow (spec: Inbox · 02, 11). The dot is centred in its column with a gap before the avatar,
-     as in the spec's mock (its text says "no gap" and 48 px — asked of the designer). */
+  /* Inbox · NotificationRow (spec: Inbox · 02, 11). The dot is centred in its column with a gap before the avatar:
+     the text starts at 56 px = 8 + 8 + 8 + 20 + 12 (without the gap the dot reads as part of the avatar). */
   --inbox-dot-col: 8px;
   --inbox-dot-gap: var(--sp-3);
   --inbox-text-start: calc(var(--sp-3) + var(--inbox-dot-col) + var(--inbox-dot-gap) + var(--avatar-sm) + var(--sp-4));
   --inbox-count-height: 18px;
+  /* A time group's header (spec: Inbox · 04): not sticky, not in the cursor; its text at --inbox-text-start. */
+  --inbox-group-height: 32px;
   /* A row whose change is still on its way dims only after this: a quick answer shows nothing. */
   --inbox-pending-delay: 1000ms;
 }

@@ -4,6 +4,7 @@ import React, {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from 'react';
 import { useSearchParam } from '../../shared/hooks/useSearchParam';
 import {
@@ -26,6 +27,7 @@ import { useNotificationQueries } from './useNotificationQueries';
 import { segmentedOptions, viewValidation } from './utils';
 import { useRegisterKeyboardHandlers } from './useRegisterKeyboardHandlers';
 import { stepCursorOff } from './cursor';
+import { firstDayOfWeek, groupEntries } from './grouping';
 import { NotificationRowSkeleton } from '../../shared/ui/NotificationRow/NotificationRowSkeleton';
 
 export const Inbox: React.FC = () => {
@@ -45,8 +47,8 @@ export const Inbox: React.FC = () => {
     hasMoreNotifications,
     refetchNotifications,
     loadNextNotifications,
-    isLoadingNextNotifications,
     isNextNotificationsError,
+    isLoadingNextNotifications,
     isFirstLoadingNotifications,
   } = useNotificationQueries(view);
 
@@ -56,8 +58,6 @@ export const Inbox: React.FC = () => {
     notificationsRef.current = notifications;
   }, [notifications]);
 
-  // Archive and Unarchive take the row out of the current tab: the highlight steps to its
-  // neighbour first, from the keyboard (E) and from the row's button alike
   const archive = useCallback(
     (item: Notification) => {
       stepCursorOff(notificationsRef.current, item.id);
@@ -105,6 +105,11 @@ export const Inbox: React.FC = () => {
   );
 
   useEffect(() => () => useCursorStore.getState().clearCursor(), [view]);
+
+  // Read once per visit: past midnight the groups keep their names until the page opens again
+  const [now] = useState(() => new Date());
+  const [weekStart] = useState(() => firstDayOfWeek());
+  const entries = groupEntries(notifications, currentView, now, weekStart);
 
   let content;
 
@@ -161,7 +166,7 @@ export const Inbox: React.FC = () => {
   } else {
     content = (
       <InboxList
-        items={notifications}
+        entries={entries}
         renderItem={renderItem}
         hasMore={hasMoreNotifications}
         onEndReached={loadNextNotifications}
@@ -169,7 +174,7 @@ export const Inbox: React.FC = () => {
           <InboxListFooter
             loading={isLoadingNextNotifications}
             failed={isNextNotificationsError}
-            rowIndex={notifications.length + 1}
+            rowIndex={entries.length + 1}
             onRetry={() => void loadNextNotifications()}
           />
         }

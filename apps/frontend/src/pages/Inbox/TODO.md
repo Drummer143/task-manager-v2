@@ -19,7 +19,9 @@ move an item to "Deferred" with a reason rather than deleting it.
 - [x] E / U on the highlighted row (`useRegisterKeyboardHandlers`); E is Unarchive in the Archived tab
 - [x] Archive / Unarchive moves the cursor to the next row (the previous one at the end) *before*
       the row leaves, from E and from the row's button (`cursor.ts`, wrapped in the page)
-- [ ] Enter / O — open in the panel: real `href`s (`?task=` / `?invite=`, replace) instead of `#`
+- [ ] Enter / O — open in the panel: real `href`s (`?task=` / `?invite=`, replace) instead of `#`.
+      Spec 11: the API gives only `subject { type, id, key, pageId }`; the front builds
+      `inboxHref(n, view)` and `objectHref(subject)` in one place, beside `parseSidePanel` / `writeSidePanel`
 - [ ] ⌘Enter — a new tab; G O — the object's own page (`objectHref`)
 - [ ] J / K with the panel open — the panel follows the cursor (navigate with replace)
 - [x] G U / G A / G E — the tabs
@@ -29,7 +31,10 @@ move an item to "Deferred" with a reason rather than deleting it.
 - [x] Next pages: `onEndReached` with `endThreshold` 10; the footer (`InboxListFooter`) is a
       `row` + `gridcell` inside the grid, only while the next page loads or failed, with Retry.
       A failed next page or background refetch keeps the list; the error state is for an empty one
-- [ ] Groups: Today / Yesterday / This week / Earlier (`--inbox-group-height`, text at `--inbox-text-start`)
+- [x] Groups: Today / Yesterday / This week / Earlier (`grouping.ts`): a flat list of header and
+      row entries for `VirtualList`, headers are grid rows (`rowheader`) the cursor steps over,
+      32 px, text at `--inbox-text-start`; by `sortDateOf` (the sort's own date), local calendar
+      days, the locale's first weekday. `now` is read once per visit
 - [x] States: skeleton after 200 ms (`NotificationRowSkeleton`), empty per tab, load error with Retry
 - [x] No `?view=` is the All tab (`currentView`), also for the empty state
 - [ ] `keepReadIds`: a row read in the Unread tab stays until the tab changes, also across refetches
@@ -59,6 +64,9 @@ move an item to "Deferred" with a reason rather than deleting it.
 
 ## Loose ends
 
+- [x] The route is `/{ws}/inbox` (`ROUTES.INBOX`, `inboxPath`); `/` and unknown paths go to the
+      default space's inbox — for now the nil uuid (`defaultWorkspaceId`)
+- [ ] `defaultWorkspaceId`: the active space from localStorage, else the first from `/me`
 - [ ] `Inbox.module.scss` header: `48px`, `12px`, `16px` fail the literal check —
       `--canvas-header-height`, `--sp-4`, `--sp-5`
 - [ ] `src/app/app.spec.tsx` imports the deleted `WorkspacePage`: the frontend tests fail
@@ -66,9 +74,11 @@ move an item to "Deferred" with a reason rather than deleting it.
 
 ## For the designer
 
-- Text start 48 px (spec text: no gap after the dot) or 56 px (spec mock: a gap)? Built as 56.
 - Line heights 14/20 and 12/18 in the spec, the kit's `--lh-body` / `--lh-meta` give 21 / 16.8.
 - Row action icons on the inverse surface: the mock has `--text-muted`, built as `--text-secondary`.
+
+Closed 2026-10-10: the text starts at 56 px (8 + 8 + `--inbox-dot-gap` 8 + 20 + 12; without the gap
+the dot reads as part of the avatar), and the address is `/{ws}/inbox`.
 
 ## Backend
 

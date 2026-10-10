@@ -45,3 +45,18 @@
   color: var(--text-muted);
   font-size: var(--type-meta);
 }
+
+// A time group's header (spec 04): its text in the rows' text column
+.group {
+  display: flex;
+  align-items: center;
+  height: var(--inbox-group-height);
+}
+
+.groupLabel {
+  padding-inline-start: var(--inbox-text-start);
+
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}

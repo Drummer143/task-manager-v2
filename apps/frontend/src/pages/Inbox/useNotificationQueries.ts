@@ -11,6 +11,7 @@ import {
   UnreadNotificationRequest,
 } from '@task-manager-v2/api/main/schemas';
 import { QUERY_KEYS } from '../../shared/constants/queryKeys';
+import { sortDateOf } from './grouping';
 import {
   archiveNotification,
   listNotifications,
@@ -72,10 +73,8 @@ const comesBefore = (
   a: Notification,
   b: Notification,
 ) => {
-  const at = (n: Notification) =>
-    Date.parse(
-      view === 'archived' ? (n.archivedAt ?? n.updatedAt) : n.updatedAt,
-    );
+  // The same date the groups use (grouping.ts)
+  const at = (n: Notification) => sortDateOf(view, n).getTime();
 
   return at(a) !== at(b) ? at(a) > at(b) : a.id > b.id;
 };
