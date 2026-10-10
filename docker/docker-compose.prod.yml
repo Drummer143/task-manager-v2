@@ -54,7 +54,7 @@ services:
             - authentik_server
 
     postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         restart: unless-stopped
         container_name: postgres
         healthcheck:
@@ -74,7 +74,9 @@ services:
         ports:
             - "127.0.0.1:5432:5432"
         volumes:
-            - pgdata:/var/lib/postgresql/data
+            # Postgres 18 keeps its data in /var/lib/postgresql/18/docker and refuses a volume
+            # mounted at the old /var/lib/postgresql/data; a 16 volume cannot be reused anyway
+            - pgdata:/var/lib/postgresql
         networks:
             - net
 
@@ -82,7 +84,7 @@ services:
     # Values come from the environment ($$ = resolved inside the container), so the
     # password never ends up in the container command line.
     postgres-init:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         container_name: postgres-init
         restart: "no"
         depends_on:

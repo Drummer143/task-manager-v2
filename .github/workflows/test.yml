@@ -30,7 +30,7 @@ jobs:
       # this job at a shared server
       postgres:
         # The same major version as docker/docker-compose.prod.yml
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test

@@ -385,6 +385,8 @@ mod tests {
         let created = notify(&pool, user_id, "hello").await;
 
         assert_eq!(created.user_id, user_id);
+        // uuidv7() as the column default (PostgreSQL 18)
+        assert_eq!(created.id.get_version_num(), 7);
         assert_eq!(created.workspace_id, Some(WS));
         assert_eq!(created.read_at, None);
         assert_eq!(created.archived_at, None);
@@ -450,7 +452,7 @@ mod tests {
             messages(&pool, me, InboxView::All).await,
             ["unread", "read"]
         );
-        assert_eq!(messages(&pool, me, InboxView::Archived).await, ["archived"]);
+        assert_eq!(messages(&pool, me, InboxView::Archived).await, ["done"]);
     }
 
     #[sqlx::test(migrations = "./migrations")]

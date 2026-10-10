@@ -1,12 +1,22 @@
-CREATE TABLE IF NOT EXISTS notifications (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+CREATE TABLE users (
+  id            UUID PRIMARY KEY,
+  authentik_id  INTEGER UNIQUE,
+  username      TEXT NOT NULL,
+  email         TEXT,
+  picture       TEXT,
+  is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX users_email_idx ON users (email);
+
+CREATE TABLE notifications (
+  id            UUID PRIMARY KEY DEFAULT uuidv7(),
   user_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-  -- NULL until workspaces exist; then NOT NULL REFERENCES workspaces
   workspace_id  UUID NULL,
 
-  -- NotificationKind as serde writes it: {"kind": ..., "facts": {...}}
   data          JSONB NOT NULL,
-  -- Derived from data, so the two never disagree; for filters and indexes only
   kind          TEXT NOT NULL GENERATED ALWAYS AS (data->>'kind') STORED,
 
   -- TODO: DISABLED BECAUSE ENTITIES ARE NOT YET IMPLEMENTED
@@ -26,9 +36,11 @@ CREATE TABLE IF NOT EXISTS notifications (
   archived_at   TIMESTAMPTZ NULL
 );
 
--- The list: a user's notifications, newest event first
-CREATE INDEX notifications_user_updated_idx ON notifications (user_id, updated_at DESC, id DESC);
+-- The list of one workspace's (or the account-level) notifications, newest event first.
+-- A btree keeps the NULLs too, so the account list walks it as well
+CREATE INDEX notifications_user_workspace_updated_idx
+  ON notifications (user_id, workspace_id, updated_at DESC, id DESC);
 
--- The unread counter: only the rows it counts
-CREATE INDEX notifications_unread_idx ON notifications (user_id)
+-- The unread counts, grouped by workspace: only the rows they count
+CREATE INDEX notifications_unread_idx ON notifications (user_id, workspace_id)
   WHERE read_at IS NULL AND archived_at IS NULL;
