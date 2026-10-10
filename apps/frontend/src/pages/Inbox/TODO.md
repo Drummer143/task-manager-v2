@@ -88,6 +88,7 @@ the dot reads as part of the avatar), and the address is `/{ws}/inbox`.
       workspace only, the summary is `{ byWorkspace, accountUnread }`. `workspace_id NULL` is an
       account-level notification. Membership is a stub (`main_service/src/workspaces.rs`,
       `TODO(workspaces)`): every workspace is allowed
-- [x] The repository's DB tests pass on a disposable Postgres 16 (44, 2026-10-10)
+- [x] All Rust tests, the DB ones included, pass on a disposable Postgres 18.6 with the squashed
+      `init` migration and UUIDv7 ids (161, 2026-10-10)
 - Invites: `decline` / `undecline` with a 60 s window, `409 invite.decline_final` after it
 - The `inbox.updated` signal with `patch { unread }` and the list tag
