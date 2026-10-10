@@ -105,6 +105,7 @@ export const Inbox: React.FC = () => {
           keys="shift+U"
           onClick={() => onReadAll()}
           loading={isReadingAll}
+          disabled={view === 'archived'}
         >
           Mark all read
         </Button>
