@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { useSearchParam } from '../../shared/hooks/useSearchParam';
 import { Button, Segmented, useCursorStore } from '@task-manager-v2/ui-kit';
 import {
@@ -58,6 +64,7 @@ export const Inbox: React.FC = () => {
     onMarkAsUnread,
     onArchive: archive,
     onUnarchive: unarchive,
+    setView,
   });
 
   const handlers = useMemo<InboxRowHandlers>(

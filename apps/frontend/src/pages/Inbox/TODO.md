@@ -22,7 +22,7 @@ move an item to "Deferred" with a reason rather than deleting it.
 - [ ] Enter / O — open in the panel: real `href`s (`?task=` / `?invite=`, replace) instead of `#`
 - [ ] ⌘Enter — a new tab; G O — the object's own page (`objectHref`)
 - [ ] J / K with the panel open — the panel follows the cursor (navigate with replace)
-- [ ] G U / G A / G E — the tabs
+- [x] G U / G A / G E — the tabs
 
 ## List (§04, §06)
 

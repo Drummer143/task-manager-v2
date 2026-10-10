@@ -1,4 +1,7 @@
-import { Notification } from '@task-manager-v2/api/main/schemas';
+import {
+  ListNotificationsView,
+  Notification,
+} from '@task-manager-v2/api/main/schemas';
 import { useCursorStore, useRegisterHotkey } from '@task-manager-v2/ui-kit';
 
 interface Props {
@@ -8,6 +11,7 @@ interface Props {
   onMarkAsUnread: (params: { ids: string[] }) => void;
   onArchive: (notification: Notification) => void;
   onUnarchive: (notification: Notification) => void;
+  setView: (view: ListNotificationsView) => void;
 }
 
 export const useRegisterKeyboardHandlers = ({
@@ -17,6 +21,7 @@ export const useRegisterKeyboardHandlers = ({
   onMarkAsUnread,
   onArchive,
   onUnarchive,
+  setView,
 }: Props) => {
   const highlighted = () => {
     const cursor = useCursorStore.getState().cursor;
@@ -49,5 +54,32 @@ export const useRegisterKeyboardHandlers = ({
       if (!n) return;
       (n.archivedAt ? onUnarchive : onArchive)(n);
     },
+  });
+
+  useRegisterHotkey({
+    key: 'a',
+    chord: {
+      key: 'g',
+    },
+    description: 'Show all notifications',
+    callback: () => setView('all'),
+  });
+
+  useRegisterHotkey({
+    key: 'u',
+    chord: {
+      key: 'g',
+    },
+    description: 'Show unread notifications',
+    callback: () => setView('unread'),
+  });
+
+  useRegisterHotkey({
+    key: 'e',
+    chord: {
+      key: 'g',
+    },
+    description: 'Show archived notifications',
+    callback: () => setView('archived'),
   });
 };
