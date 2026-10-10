@@ -42,7 +42,9 @@ move an item to "Deferred" with a reason rather than deleting it.
 ## Counters and realtime (§09, §10)
 
 - [ ] The Unread tab's count — needs a count in the kit's Segmented
-- [ ] The sidebar Inbox count from the summary (`by_workspace[current] + account_unread`)
+- [x] The sidebar Inbox count from the summary: `byWorkspace[current]` only. Decided 2026-10-10,
+      against spec 09 / Sidebar 03 (`+ account_unread`): the row counts the workspace you are in.
+      Optimistic on every change; refetched after one the cache cannot count (read-all, its undo)
 - [ ] `inbox.updated`: patch the summary, refetch the list; highlight new rows (`--highlight-remote`);
       the cursor and the scroll do not move
 
@@ -73,6 +75,10 @@ move an item to "Deferred" with a reason rather than deleting it.
 - [x] ⇧U is registered with an object made in render: it re-registers every render (`useMemo` it)
 
 ## For the designer
+
+- The sidebar Inbox count is `byWorkspace[current]` without `account_unread` (our decision,
+  2026-10-10): spec 09 and Sidebar 03 still add it. Unread invites in the Account group are then
+  not in the number.
 
 - Line heights 14/20 and 12/18 in the spec, the kit's `--lh-body` / `--lh-meta` give 21 / 16.8.
 - Row action icons on the inverse surface: the mock has `--text-muted`, built as `--text-secondary`.

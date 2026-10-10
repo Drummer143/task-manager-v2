@@ -8,10 +8,11 @@ import {
   Notification,
   NotificationPage,
   ReadNotificationRequest,
+  SummaryResponse,
   UnreadNotificationRequest,
 } from '@task-manager-v2/api/main/schemas';
-import { QUERY_KEYS } from '../../shared/constants/queryKeys';
-import { sortDateOf } from './grouping';
+import { QUERY_KEYS, inboxListOf } from '../../../shared/constants/queryKeys';
+import { sortDateOf } from '../grouping';
 import {
   archiveNotification,
   listNotifications,
@@ -20,22 +21,91 @@ import {
   unarchiveNotification,
   unreadNotification,
 } from '@task-manager-v2/api/main';
-import { queryClient } from '../../app/queryClient';
+import { queryClient } from '../../../app/queryClient';
 import { toast } from '@task-manager-v2/ui-kit';
 import { useCallback } from 'react';
 
 type InboxData = InfiniteData<NotificationPage, string | undefined>;
+
+/** What the summary counts (`count_unread`): neither read nor archived. */
+const isUnread = (n: Notification) => !n.readAt && !n.archivedAt;
+
+/** A notification as the cached lists have it, the first copy found. */
+const cachedNotification = (id: string) =>
+  queryClient
+    .getQueriesData<InboxData>({ queryKey: QUERY_KEYS.inboxLists })
+    .flatMap(([, data]) => data?.pages.flatMap((page) => page.data) ?? [])
+    .find((n) => n.id === id);
+
+/**
+ * Moves the unread counts by what a change did to each notification: -1 where an unread one
+ * stops being unread, +1 the other way. Returns a rollback.
+ */
+const patchSummary = (
+  changes: { before: Notification; after: Notification }[],
+) => {
+  const previous = queryClient.getQueryData<SummaryResponse>(
+    QUERY_KEYS.inboxSummary,
+  );
+
+  if (!previous) return () => undefined;
+
+  let next = previous;
+
+  for (const { before, after } of changes) {
+    const delta = Number(isUnread(after)) - Number(isUnread(before));
+
+    if (delta === 0) continue;
+
+    const workspace = after.workspaceId;
+    next = workspace
+      ? {
+          ...next,
+          byWorkspace: {
+            ...next.byWorkspace,
+            [workspace]: Math.max(
+              0,
+              (next.byWorkspace[workspace] ?? 0) + delta,
+            ),
+          },
+        }
+      : { ...next, accountUnread: Math.max(0, next.accountUnread + delta) };
+  }
+
+  if (next === previous) return () => undefined;
+
+  // A summary on its way would answer for the state before this change
+  void queryClient.cancelQueries({ queryKey: QUERY_KEYS.inboxSummary });
+  queryClient.setQueryData(QUERY_KEYS.inboxSummary, next);
+
+  return () => queryClient.setQueryData(QUERY_KEYS.inboxSummary, previous);
+};
+
+/**
+ * The summary from the server: after a change the cache could not count, because some of its
+ * notifications are not loaded (read-all, its undo).
+ */
+const refreshSummary = () =>
+  queryClient.invalidateQueries({ queryKey: QUERY_KEYS.inboxSummary });
 
 const patchReadNotification = (
   ids: string[],
   patch: Partial<Pick<Notification, 'readAt'>>,
 ) => {
   const snapshot = queryClient.getQueriesData<InboxData>({
-    queryKey: QUERY_KEYS.inbox,
+    queryKey: QUERY_KEYS.inboxLists,
   });
 
+  const rollbackSummary = patchSummary(
+    ids.flatMap((id) => {
+      const before = cachedNotification(id);
+
+      return before ? [{ before, after: { ...before, ...patch } }] : [];
+    }),
+  );
+
   queryClient.setQueriesData<InboxData>(
-    { queryKey: QUERY_KEYS.inbox },
+    { queryKey: QUERY_KEYS.inboxLists },
     (data) =>
       data && {
         ...data,
@@ -48,8 +118,41 @@ const patchReadNotification = (
       },
   );
 
-  return () =>
+  return () => {
     snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    rollbackSummary();
+  };
+};
+
+/**
+ * What the server's read-all reads (`mark_as_read_all`): the workspace's unread, not archived
+ * notifications whose last event is not after `before`. Marks them read in every cached tab of
+ * that workspace; returns their ids and a rollback.
+ */
+const patchReadAll = (workspace: string, before: string, readAt: string) => {
+  const limit = Date.parse(before);
+  const ids = new Set<string>();
+
+  const isRead = (n: Notification) =>
+    n.workspaceId === workspace &&
+    n.readAt === null &&
+    n.archivedAt === null &&
+    Date.parse(n.updatedAt) <= limit;
+
+  queryClient
+    .getQueriesData<InboxData>({ queryKey: QUERY_KEYS.inboxLists })
+    .forEach(([key, data]) => {
+      if (inboxListOf(key).workspace !== workspace) return;
+
+      data?.pages.forEach((page) =>
+        page.data.forEach((n) => isRead(n) && ids.add(n.id)),
+      );
+    });
+
+  return {
+    ids: [...ids],
+    rollback: patchReadNotification([...ids], { readAt }),
+  };
 };
 
 const VIEWS: readonly ListNotificationsView[] = ['all', 'unread', 'archived'];
@@ -114,13 +217,10 @@ const patchArchiveNotification = (
   archivedAt: string | null,
 ) => {
   const snapshot = queryClient.getQueriesData<InboxData>({
-    queryKey: QUERY_KEYS.inbox,
+    queryKey: QUERY_KEYS.inboxLists,
   });
 
-  const current =
-    snapshot
-      .flatMap(([, data]) => data?.pages.flatMap((page) => page.data) ?? [])
-      .find((n) => n.id === notification.id) ?? notification;
+  const current = cachedNotification(notification.id) ?? notification;
 
   const next: Notification = {
     ...current,
@@ -128,17 +228,21 @@ const patchArchiveNotification = (
     readAt: archivedAt ? (current.readAt ?? archivedAt) : current.readAt,
   };
 
+  const rollbackSummary = patchSummary([{ before: current, after: next }]);
+
   snapshot.forEach(([key, data]) => {
-    // ['inbox', workspace, view] (QUERY_KEYS.inboxWithView): only its own workspace's tabs
-    const [, workspace, view] = key;
+    // Only its own workspace's tabs
+    const { workspace, view } = inboxListOf(key);
 
     if (data && workspace === next.workspaceId && isView(view)) {
       queryClient.setQueryData<InboxData>(key, place(view, data, next));
     }
   });
 
-  return () =>
+  return () => {
     snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    rollbackSummary();
+  };
 };
 
 export const useNotificationQueries = (
@@ -172,13 +276,18 @@ export const useNotificationQueries = (
     select: (data) => data.pages.flatMap((page) => page.data),
   });
 
-  const { mutateAsync: markAsRead } = useMutation({
+  // Every mutation here is `mutate`, not `mutateAsync`: nobody awaits them, and a failure is
+  // handled in onError (rollback, toast), not rejected into an unhandled promise
+  const { mutate: markAsRead } = useMutation({
     mutationFn: (data: ReadNotificationRequest) => readNotification(data),
     onMutate: ({ ids }) => ({
+      uncounted: !ids.every(cachedNotification),
       rollback: patchReadNotification(ids, {
         readAt: new Date().toISOString(),
       }),
     }),
+    onSettled: (data, error, variables, context) =>
+      context?.uncounted && refreshSummary(),
     onError: (error, data, context) => {
       context?.rollback();
 
@@ -189,11 +298,20 @@ export const useNotificationQueries = (
     },
   });
 
-  const { mutateAsync: readAll, isPending: isReadingAll } = useMutation({
-    mutationFn: () =>
-      // This workspace's Inbox only: the others keep their unread
-      readAllNotifications({ workspace, before: new Date().toISOString() }),
-    onSuccess: (data) => {
+  // `before` is a variable, not read inside: the optimistic patch and the server must agree on it
+  const { mutate: readAllBefore, isPending: isReadingAll } = useMutation({
+    mutationFn: ({ before }: { before: string }) =>
+      readAllNotifications({ workspace, before }),
+    onMutate: ({ before }) =>
+      patchReadAll(workspace, before, new Date().toISOString()),
+    onSuccess: (data, variables, context) => {
+      // What the cache read but the server did not (an event that came in the meantime) is
+      // unread again; what the server read beyond the loaded pages is not in the cache anyway
+      const affected = new Set(data.affected);
+      const notRead = context.ids.filter((id) => !affected.has(id));
+
+      if (notRead.length > 0) patchReadNotification(notRead, { readAt: null });
+
       if (data.affected.length === 0) return;
 
       toast.undo({
@@ -201,18 +319,29 @@ export const useNotificationQueries = (
         undo: () => markAsUnread({ ids: data.affected }),
       });
     },
-    onError: () => {
+    // The server read beyond the loaded pages too
+    onSettled: () => refreshSummary(),
+    onError: (error, variables, context) => {
+      context?.rollback();
+
       toast.error({
         message: 'Couldn’t mark all read. Changes were undone.',
+        retry: () => readAllBefore(variables),
       });
     },
   });
 
-  const { mutateAsync: markAsUnread } = useMutation({
+  const readAll = () => readAllBefore({ before: new Date().toISOString() });
+
+  const { mutate: markAsUnread } = useMutation({
     mutationFn: (data: UnreadNotificationRequest) => unreadNotification(data),
     onMutate: ({ ids }) => ({
+      uncounted: !ids.every(cachedNotification),
       rollback: patchReadNotification(ids, { readAt: null }),
     }),
+    // Undo of read-all: most of its ids are past the loaded pages
+    onSettled: (data, error, variables, context) =>
+      context?.uncounted && refreshSummary(),
     onError: (error, data, context) => {
       context?.rollback();
 
@@ -223,7 +352,7 @@ export const useNotificationQueries = (
     },
   });
 
-  const { mutateAsync: archive } = useMutation({
+  const { mutate: archive } = useMutation({
     mutationFn: ({ id }: Notification) => archiveNotification({ id }),
     onMutate: (notification) => ({
       rollback: patchArchiveNotification(
@@ -241,7 +370,7 @@ export const useNotificationQueries = (
     },
   });
 
-  const { mutateAsync: unarchive } = useMutation({
+  const { mutate: unarchive } = useMutation({
     mutationFn: ({ id }: Notification) => unarchiveNotification({ id }),
     onMutate: (notification) => ({
       rollback: patchArchiveNotification(notification, null),

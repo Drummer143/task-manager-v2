@@ -1,8 +1,15 @@
 import { AppShell } from '@task-manager-v2/ui-kit';
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Outlet, useMatch, useNavigate, useParams } from 'react-router-dom';
-import { ROUTES, defaultWorkspaceId, inboxPath } from '../../shared/constants/routes';
+import {
+  ROUTES,
+  defaultWorkspaceId,
+  inboxPath,
+} from '../../shared/constants/routes';
 import { Sidebar, useSidebarHotkeys } from './Sidebar';
+import { useQuery } from '@tanstack/react-query';
+import { QUERY_KEYS } from '../../shared/constants/queryKeys';
+import { getNotificationSummary } from '@task-manager-v2/api/main';
 
 export const Layout: React.FC = () => {
   const navigate = useNavigate();
@@ -11,11 +18,25 @@ export const Layout: React.FC = () => {
   const inbox = inboxPath(workspace);
   const onInbox = useMatch(ROUTES.INBOX) !== null;
 
-  useSidebarHotkeys(useCallback(() => navigate(inbox), [navigate, inbox]));
+  const { data: summary } = useQuery({
+    queryKey: QUERY_KEYS.inboxSummary,
+    queryFn: () => getNotificationSummary(),
+  });
+
+  useSidebarHotkeys(() => navigate(inbox));
 
   return (
     <AppShell
-      sidebar={<Sidebar inbox={{ href: inbox, current: onInbox }} />}
+      sidebar={
+        <Sidebar
+          inbox={{
+            href: inbox,
+            current: onInbox,
+            // This workspace's own unread (decided 2026-10-10: not + accountUnread)
+            unread: summary?.byWorkspace[workspace],
+          }}
+        />
+      }
       header={<div>header</div>}
     >
       <Outlet />
