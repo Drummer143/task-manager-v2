@@ -6,8 +6,13 @@ use utils::auth_middleware::{InternalAuthState, auth_guard};
 use crate::app_state::AppState;
 use crate::notifications::controllers::read_all::read_all_notifications;
 use crate::notifications::controllers::{
-    archive::archive_notification, create::create, get_list::get_list, read::read_notification,
-    summary::get_summary, unarchive::unarchive_notification, unread::unread_notification,
+    archive::archive_notification,
+    create::create,
+    get_list::{get_account_list, get_list},
+    read::read_notification,
+    summary::get_summary,
+    unarchive::unarchive_notification,
+    unread::unread_notification,
 };
 
 /// `debug_create` mounts `POST /notifications` (config `DEBUG_NOTIFICATIONS`): it lets any
@@ -21,6 +26,7 @@ pub fn router(auth: InternalAuthState, debug_create: bool) -> Router<AppState> {
 
     Router::new()
         .route("/notifications", list)
+        .route("/notifications/account", get(get_account_list))
         .route("/notifications/summary", get(get_summary))
         .route("/notifications/read", post(read_notification))
         .route("/notifications/read_all", post(read_all_notifications))

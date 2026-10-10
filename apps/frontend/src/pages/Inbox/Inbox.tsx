@@ -6,7 +6,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useParams } from 'react-router-dom';
 import { useSearchParam } from '../../shared/hooks/useSearchParam';
+import { defaultWorkspaceId } from '../../shared/constants/routes';
 import {
   Button,
   EmptyState,
@@ -34,6 +36,8 @@ export const Inbox: React.FC = () => {
   const [view, setView] = useSearchParam('view', viewValidation);
   // No `?view=` (the sidebar's link) is the All tab
   const currentView = view ?? 'all';
+  // The route is `/:workspace/inbox`; the default only stands in outside it (a story, a test)
+  const { workspace = defaultWorkspaceId() } = useParams();
 
   const {
     onReadAll,
@@ -50,7 +54,7 @@ export const Inbox: React.FC = () => {
     isNextNotificationsError,
     isLoadingNextNotifications,
     isFirstLoadingNotifications,
-  } = useNotificationQueries(view);
+  } = useNotificationQueries(workspace, view);
 
   const notificationsRef = useRef(notifications);
 

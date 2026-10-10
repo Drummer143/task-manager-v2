@@ -13,8 +13,43 @@ pub struct NotificationsRepository;
 #[serde(rename_all = "camelCase")]
 pub struct CreateNotificationDto {
     pub user_id: Uuid,
+    /// The workspace it belongs to; none for an account-level one (an invite, a new sign-in).
+    #[serde(default)]
+    pub workspace_id: Option<Uuid>,
     #[serde(flatten)]
     pub data: NotificationKind,
+}
+
+/// Whose notifications a list shows: a workspace's Inbox, or the account-level ones that every
+/// workspace's Inbox shows apart, as the Account group above Today (spec: Inbox · 01).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InboxScope {
+    Workspace(Uuid),
+    Account,
+}
+
+impl InboxScope {
+    /// `$n` is bound only for a workspace (see `list`).
+    fn filter(self, n: usize) -> String {
+        match self {
+            Self::Workspace(_) => format!("workspace_id = ${n}"),
+            Self::Account => "workspace_id IS NULL".into(),
+        }
+    }
+
+    fn workspace_id(self) -> Option<Uuid> {
+        match self {
+            Self::Workspace(id) => Some(id),
+            Self::Account => None,
+        }
+    }
+}
+
+/// Unread counts for the sidebar and the workspace menu.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct UnreadCounts {
+    pub by_workspace: Vec<(Uuid, i64)>,
+    pub account: i64,
 }
 
 /// The Inbox tabs.
@@ -69,25 +104,32 @@ impl NotificationsRepository {
     pub async fn list(
         pool: &sqlx::PgPool,
         user_id: Uuid,
+        scope: InboxScope,
         view: InboxView,
         limit: i64,
         after: Option<Cursor>,
     ) -> Result<Vec<Notification>, sqlx::Error> {
         // Keyset pagination: rows strictly after the cursor in the tab's order. The row
-        // comparison walks the (user_id, updated_at DESC, id DESC) index
+        // comparison walks the (user_id, workspace_id, updated_at DESC, id DESC) index
         let sql = format!(
-            "SELECT {COLUMNS} FROM notifications WHERE user_id = $1 AND {filter} AND ($3::timestamptz IS NULL OR ({sort}, id) < ($3, $4)) ORDER BY {sort} DESC, id DESC LIMIT $2",
+            "SELECT {COLUMNS} FROM notifications WHERE user_id = $1 AND {scope} AND {filter} AND ($3::timestamptz IS NULL OR ({sort}, id) < ($3, $4)) ORDER BY {sort} DESC, id DESC LIMIT $2",
+            scope = scope.filter(5),
             filter = view.filter(),
             sort = view.sort_column(),
         );
 
-        sqlx::query_as::<_, Notification>(AssertSqlSafe(sql))
+        let query = sqlx::query_as::<_, Notification>(AssertSqlSafe(sql))
             .bind(user_id)
             .bind(limit)
             .bind(after.map(|c| c.at))
-            .bind(after.map(|c| c.id))
-            .fetch_all(pool)
-            .await
+            .bind(after.map(|c| c.id));
+
+        match scope.workspace_id() {
+            Some(workspace_id) => query.bind(workspace_id),
+            None => query,
+        }
+        .fetch_all(pool)
+        .await
     }
 
     /// Keeps the first read time when it is read again.
@@ -105,19 +147,23 @@ impl NotificationsRepository {
         Ok(())
     }
 
+    /// Reads one workspace's Inbox up to `before`: the other workspaces and the account-level
+    /// notifications keep their unread.
     pub async fn mark_as_read_all(
         pool: &sqlx::PgPool,
         user_id: Uuid,
+        workspace_id: Uuid,
         before: DateTime<Utc>,
     ) -> Result<Vec<Uuid>, sqlx::Error> {
         sqlx::query_scalar::<_, Uuid>(
             "UPDATE notifications
          SET read_at = NOW()
-         WHERE user_id = $1 AND read_at IS NULL AND archived_at IS NULL AND updated_at <= $2
+         WHERE user_id = $1 AND workspace_id = $3 AND read_at IS NULL AND archived_at IS NULL AND updated_at <= $2
          RETURNING id",
         )
         .bind(user_id)
         .bind(before)
+        .bind(workspace_id)
         .fetch_all(pool)
         .await
     }
@@ -175,14 +221,36 @@ impl NotificationsRepository {
         Ok(())
     }
 
-    /// What the Unread tab shows.
-    pub async fn count_unread(pool: &sqlx::PgPool, user_id: Uuid) -> Result<i64, sqlx::Error> {
-        sqlx::query_scalar(
-            "SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND read_at IS NULL AND archived_at IS NULL",
+    /// What the Unread tabs show, per workspace and for the account. `members` limits the
+    /// workspaces to those the user is in now; `None` counts every workspace.
+    pub async fn count_unread(
+        pool: &sqlx::PgPool,
+        user_id: Uuid,
+        members: Option<&[Uuid]>,
+    ) -> Result<UnreadCounts, sqlx::Error> {
+        let rows: Vec<(Option<Uuid>, i64)> = sqlx::query_as(
+            "SELECT workspace_id, COUNT(*) FROM notifications
+             WHERE user_id = $1 AND read_at IS NULL AND archived_at IS NULL
+               AND (workspace_id IS NULL OR $2::uuid[] IS NULL OR workspace_id = ANY($2))
+             GROUP BY workspace_id",
         )
         .bind(user_id)
-        .fetch_one(pool)
-        .await
+        .bind(members)
+        .fetch_all(pool)
+        .await?;
+
+        let mut counts = UnreadCounts::default();
+
+        for (workspace_id, count) in rows {
+            match workspace_id {
+                Some(id) => counts.by_workspace.push((id, count)),
+                None => counts.account = count,
+            }
+        }
+
+        counts.by_workspace.sort();
+
+        Ok(counts)
     }
 
     pub async fn create(
@@ -190,11 +258,12 @@ impl NotificationsRepository {
         dto: CreateNotificationDto,
     ) -> Result<Notification, sqlx::Error> {
         let sql = format!(
-            "INSERT INTO notifications (user_id, data) VALUES ($1, $2) RETURNING {COLUMNS}"
+            "INSERT INTO notifications (user_id, workspace_id, data) VALUES ($1, $2, $3) RETURNING {COLUMNS}"
         );
 
         sqlx::query_as::<_, Notification>(AssertSqlSafe(sql))
             .bind(dto.user_id)
+            .bind(dto.workspace_id)
             .bind(sqlx::types::Json(dto.data))
             .fetch_one(pool)
             .await
@@ -210,6 +279,9 @@ mod tests {
 
     use super::*;
 
+    /// The workspace the tests' notifications are in, unless a test says otherwise.
+    const WS: Uuid = Uuid::from_u128(0x0a);
+
     async fn user(pool: &PgPool) -> Uuid {
         let id = Uuid::new_v4();
         sqlx::query("INSERT INTO users (id, username) VALUES ($1, 'test')")
@@ -221,12 +293,29 @@ mod tests {
     }
 
     async fn notify(pool: &PgPool, user_id: Uuid, message: &str) -> Notification {
+        notify_in(pool, user_id, Some(WS), message).await
+    }
+
+    /// In `workspace_id`, or account-level for `None`.
+    async fn notify_in(
+        pool: &PgPool,
+        user_id: Uuid,
+        workspace_id: Option<Uuid>,
+        message: &str,
+    ) -> Notification {
         let data = NotificationKind::Debug {
             message: message.into(),
         };
-        NotificationsRepository::create(pool, CreateNotificationDto { user_id, data })
-            .await
-            .unwrap()
+        NotificationsRepository::create(
+            pool,
+            CreateNotificationDto {
+                user_id,
+                workspace_id,
+                data,
+            },
+        )
+        .await
+        .unwrap()
     }
 
     /// Moves the event time, which lists sort by.
@@ -259,7 +348,16 @@ mod tests {
     }
 
     async fn messages(pool: &PgPool, user_id: Uuid, view: InboxView) -> Vec<String> {
-        NotificationsRepository::list(pool, user_id, view, 50, None)
+        messages_in(pool, user_id, InboxScope::Workspace(WS), view).await
+    }
+
+    async fn messages_in(
+        pool: &PgPool,
+        user_id: Uuid,
+        scope: InboxScope,
+        view: InboxView,
+    ) -> Vec<String> {
+        NotificationsRepository::list(pool, user_id, scope, view, 50, None)
             .await
             .unwrap()
             .into_iter()
@@ -287,7 +385,7 @@ mod tests {
         let created = notify(&pool, user_id, "hello").await;
 
         assert_eq!(created.user_id, user_id);
-        assert_eq!(created.workspace_id, None);
+        assert_eq!(created.workspace_id, Some(WS));
         assert_eq!(created.read_at, None);
         assert_eq!(created.archived_at, None);
         assert!(matches!(&created.data, NotificationKind::Debug { message } if message == "hello"));
@@ -305,6 +403,7 @@ mod tests {
     async fn refuses_a_notification_for_a_user_that_does_not_exist(pool: PgPool) {
         let dto = CreateNotificationDto {
             user_id: Uuid::new_v4(),
+            workspace_id: None,
             data: NotificationKind::Assigned {},
         };
 
@@ -389,15 +488,29 @@ mod tests {
             happened_minutes_ago(&pool, n.id, minutes).await;
         }
 
-        let first = NotificationsRepository::list(&pool, me, InboxView::All, 2, None)
-            .await
-            .unwrap();
+        let first = NotificationsRepository::list(
+            &pool,
+            me,
+            InboxScope::Workspace(WS),
+            InboxView::All,
+            2,
+            None,
+        )
+        .await
+        .unwrap();
         // Something new arrives at the top between the pages
         notify(&pool, me, "newest").await;
         let after = InboxView::All.cursor_after(first.last().unwrap());
-        let second = NotificationsRepository::list(&pool, me, InboxView::All, 2, Some(after))
-            .await
-            .unwrap();
+        let second = NotificationsRepository::list(
+            &pool,
+            me,
+            InboxScope::Workspace(WS),
+            InboxView::All,
+            2,
+            Some(after),
+        )
+        .await
+        .unwrap();
 
         let ids = |page: &[Notification]| page.iter().map(|n| n.id).collect::<Vec<_>>();
         assert_eq!(first.len(), 2);
@@ -421,9 +534,16 @@ mod tests {
         let mut seen = Vec::new();
         let mut after = None;
         loop {
-            let page = NotificationsRepository::list(&pool, me, InboxView::All, 2, after)
-                .await
-                .unwrap();
+            let page = NotificationsRepository::list(
+                &pool,
+                me,
+                InboxScope::Workspace(WS),
+                InboxView::All,
+                2,
+                after,
+            )
+            .await
+            .unwrap();
             let Some(last) = page.last() else { break };
             after = Some(InboxView::All.cursor_after(last));
             seen.extend(page.iter().map(|n| n.id));
@@ -456,13 +576,27 @@ mod tests {
             .await
             .unwrap();
 
-        let first = NotificationsRepository::list(&pool, me, InboxView::Archived, 1, None)
-            .await
-            .unwrap();
+        let first = NotificationsRepository::list(
+            &pool,
+            me,
+            InboxScope::Workspace(WS),
+            InboxView::Archived,
+            1,
+            None,
+        )
+        .await
+        .unwrap();
         let after = InboxView::Archived.cursor_after(&first[0]);
-        let second = NotificationsRepository::list(&pool, me, InboxView::Archived, 1, Some(after))
-            .await
-            .unwrap();
+        let second = NotificationsRepository::list(
+            &pool,
+            me,
+            InboxScope::Workspace(WS),
+            InboxView::Archived,
+            1,
+            Some(after),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(first[0].id, b.id);
         assert_eq!(second[0].id, a.id);
@@ -504,7 +638,7 @@ mod tests {
             .unwrap();
         let first_read = get(&pool, already_read.id).await.read_at;
 
-        let mut ids = NotificationsRepository::mark_as_read_all(&pool, me, minutes_ago(10))
+        let mut ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
             .await
             .unwrap();
 
@@ -525,7 +659,7 @@ mod tests {
         arrived_minutes_ago(&pool, seen.id, 30).await;
         notify(&pool, me, "arrived later").await;
 
-        let ids = NotificationsRepository::mark_as_read_all(&pool, me, minutes_ago(10))
+        let ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
             .await
             .unwrap();
 
@@ -546,7 +680,7 @@ mod tests {
         arrived_minutes_ago(&pool, n.id, 30).await;
         happened_minutes_ago(&pool, n.id, 5).await;
 
-        let ids = NotificationsRepository::mark_as_read_all(&pool, me, minutes_ago(10))
+        let ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
             .await
             .unwrap();
 
@@ -562,7 +696,7 @@ mod tests {
         let theirs = notify(&pool, someone, "theirs").await;
         arrived_minutes_ago(&pool, theirs.id, 30).await;
 
-        let ids = NotificationsRepository::mark_as_read_all(&pool, me, minutes_ago(10))
+        let ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
             .await
             .unwrap();
 
@@ -583,7 +717,7 @@ mod tests {
             .await
             .unwrap();
 
-        let ids = NotificationsRepository::mark_as_read_all(&pool, me, minutes_ago(10))
+        let ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
             .await
             .unwrap();
         NotificationsRepository::mark_as_unread(&pool, me, ids)
@@ -698,15 +832,80 @@ mod tests {
             .await
             .unwrap();
 
-        let count = NotificationsRepository::count_unread(&pool, me)
+        let counts = NotificationsRepository::count_unread(&pool, me, None)
             .await
             .unwrap();
 
-        assert_eq!(count, 1);
-        assert_eq!(
-            count as usize,
-            messages(&pool, me, InboxView::Unread).await.len()
-        );
+        assert_eq!(counts.by_workspace, [(WS, 1)]);
+        assert_eq!(counts.account, 0);
+        assert_eq!(1, messages(&pool, me, InboxView::Unread).await.len());
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_workspace_lists_only_its_own_and_the_account_list_only_the_account_level(
+        pool: PgPool,
+    ) {
+        let me = user(&pool).await;
+        let other = Uuid::from_u128(0x0b);
+        notify(&pool, me, "here").await;
+        notify_in(&pool, me, Some(other), "elsewhere").await;
+        notify_in(&pool, me, None, "invite").await;
+
+        let list = |scope| messages_in(&pool, me, scope, InboxView::All);
+
+        assert_eq!(list(InboxScope::Workspace(WS)).await, ["here"]);
+        assert_eq!(list(InboxScope::Workspace(other)).await, ["elsewhere"]);
+        assert_eq!(list(InboxScope::Account).await, ["invite"]);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn read_all_reads_one_workspace_and_leaves_the_others_and_the_account_unread(
+        pool: PgPool,
+    ) {
+        let me = user(&pool).await;
+        let other = Uuid::from_u128(0x0b);
+        let here = notify(&pool, me, "here").await;
+        let elsewhere = notify_in(&pool, me, Some(other), "elsewhere").await;
+        let invite = notify_in(&pool, me, None, "invite").await;
+        for n in [&here, &elsewhere, &invite] {
+            arrived_minutes_ago(&pool, n.id, 20).await;
+        }
+
+        let ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
+            .await
+            .unwrap();
+
+        assert_eq!(ids, [here.id]);
+        assert_eq!(get(&pool, elsewhere.id).await.read_at, None);
+        assert_eq!(get(&pool, invite.id).await.read_at, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn counts_unread_per_workspace_and_for_the_account_within_the_members_workspaces(
+        pool: PgPool,
+    ) {
+        let me = user(&pool).await;
+        let other = Uuid::from_u128(0x0b);
+        notify(&pool, me, "a").await;
+        notify(&pool, me, "b").await;
+        notify_in(&pool, me, Some(other), "c").await;
+        notify_in(&pool, me, None, "invite").await;
+
+        let all = NotificationsRepository::count_unread(&pool, me, None)
+            .await
+            .unwrap();
+        assert_eq!(all.by_workspace, [(WS, 2), (other, 1)]);
+        assert_eq!(all.account, 1);
+
+        // A workspace the user left is not counted; the account-level ones always are
+        let members = NotificationsRepository::count_unread(&pool, me, Some(&[WS]))
+            .await
+            .unwrap();
+        assert_eq!(members.by_workspace, [(WS, 2)]);
+        assert_eq!(members.account, 1);
     }
 
     #[sqlx::test(migrations = "./migrations")]

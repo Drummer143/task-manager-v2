@@ -50,7 +50,7 @@ move an item to "Deferred" with a reason rather than deleting it.
 
 - [ ] Texts per kind (`inbox.messages.ts`); only `debug` exists so far
 - [ ] System avatars (due soon, overdue) and `--state-warning` with its palette steps
-- [ ] The Account group and invites: Join / Decline in the row, ⇧Enter / ⇧⌫, the palette, `?invite=` in the panel
+- [ ] The Account group (`listAccountNotifications`, one page, above Today) and invites: Join / Decline in the row, ⇧Enter / ⇧⌫, the palette, `?invite=` in the panel
 - [ ] Auto-read after `--inbox-auto-read` (1 s) of showing in the panel
 
 ## Deferred
@@ -83,6 +83,12 @@ the dot reads as part of the avatar), and the address is `/{ws}/inbox`.
 ## Backend
 
 - Folding notifications (count, last actor, moves up on a new event; safe under concurrent inserts)
-- `account_unread` in the summary
+- [x] Per workspace (2026-10-10): `GET /notifications?workspace=` (required), the account-level
+      ones apart at `GET /notifications/account`, `read_all { workspace, before }` reads one
+      workspace only, the summary is `{ byWorkspace, accountUnread }`. `workspace_id NULL` is an
+      account-level notification. Membership is a stub (`main_service/src/workspaces.rs`,
+      `TODO(workspaces)`): every workspace is allowed
+- [ ] Run the repository's DB tests (`#[ignore]`d) on a disposable Postgres: not run since the
+      per-workspace change (no Docker at the time)
 - Invites: `decline` / `undecline` with a 60 s window, `409 invite.decline_final` after it
 - The `inbox.updated` signal with `patch { unread }` and the list tag

@@ -46,6 +46,125 @@
         "operationId": "listNotifications",
         "parameters": [
           {
+            "name": "workspace",
+            "in": "query",
+            "description": "The workspace whose Inbox it is.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "description": "Inbox tab; `unread` by default.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "The Inbox tabs.",
+              "enum": [
+                "unread",
+                "all",
+                "archived"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size, 1 to 100; 50 by default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "`nextCursor` of the previous page; none for the first page.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the tab, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query: no workspace, an invalid cursor"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "No such workspace for this user"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "createNotification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNotificationDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Notification created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "422": {
+            "description": "No user with this userId"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/notifications/account": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "The account-level notifications (an invite, a new sign-in): every workspace's Inbox shows them\napart, as the Account group above Today (spec: Inbox · 01).",
+        "operationId": "listAccountNotifications",
+        "parameters": [
+          {
             "name": "view",
             "in": "query",
             "description": "Inbox tab; `unread` by default.",
@@ -96,46 +215,6 @@
           },
           "401": {
             "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Notifications"
-        ],
-        "operationId": "createNotification",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateNotificationDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Notification created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Notification"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "422": {
-            "description": "No user with this userId"
           },
           "500": {
             "description": "Internal server error"
@@ -247,7 +326,7 @@
             "description": "Unauthorized"
           },
           "404": {
-            "description": "No such notification of this user"
+            "description": "No such workspace for this user"
           },
           "500": {
             "description": "Internal server error"
@@ -380,6 +459,14 @@
               "userId": {
                 "type": "string",
                 "format": "uuid"
+              },
+              "workspaceId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "The workspace it belongs to; none for an account-level one (an invite, a new sign-in)."
               }
             }
           }
@@ -1041,7 +1128,7 @@
                   "null"
                 ],
                 "format": "uuid",
-                "description": "`None` until workspaces exist."
+                "description": "The workspace whose Inbox shows it; `None` for an account-level one (an invite, a new\nsign-in), which every workspace's Inbox shows apart."
               }
             }
           }
@@ -1246,12 +1333,19 @@
       "ReadAllNotificationsRequest": {
         "type": "object",
         "required": [
+          "workspace",
           "before"
         ],
         "properties": {
           "before": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "`updatedAt` of the newest notification the user saw: what came later stays unread."
+          },
+          "workspace": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The workspace whose Inbox is read: the others and the account-level ones stay unread."
           }
         }
       },
@@ -1287,14 +1381,27 @@
       },
       "SummaryResponse": {
         "type": "object",
+        "description": "Unread counts (spec: Inbox · 09): the sidebar's Inbox shows `byWorkspace[current] +\naccountUnread`, the workspace menu a dot where that sum is above zero.",
         "required": [
-          "workspaces"
+          "byWorkspace",
+          "accountUnread"
         ],
         "properties": {
-          "workspaces": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WorkspaceSummary"
+          "accountUnread": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unread account-level notifications, shown in every workspace's Inbox."
+          },
+          "byWorkspace": {
+            "type": "object",
+            "description": "Unread in each workspace the user is a member of; a workspace with none is absent.",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "propertyNames": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         }
@@ -1375,23 +1482,6 @@
           },
           "username": {
             "type": "string"
-          }
-        }
-      },
-      "WorkspaceSummary": {
-        "type": "object",
-        "required": [
-          "id",
-          "unread"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "unread": {
-            "type": "integer",
-            "format": "int64"
           }
         }
       }

@@ -7,6 +7,7 @@
 import type {
   ArchiveNotificationRequest,
   CreateNotificationDto,
+  ListAccountNotificationsParams,
   ListNotificationsParams,
   MeResponse,
   Notification,
@@ -35,7 +36,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
     }
 
 export const listNotifications = (
-    params?: ListNotificationsParams,
+    params: ListNotificationsParams,
  options?: SecondParameter<typeof mainFetcher<NotificationPage>>,) => {
       return mainFetcher<NotificationPage>(
       {url: `/notifications`, method: 'GET',
@@ -51,6 +52,20 @@ export const createNotification = (
       {url: `/notifications`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: createNotificationDto
+    },
+      options);
+    }
+
+/**
+ * @summary The account-level notifications (an invite, a new sign-in): every workspace's Inbox shows them
+apart, as the Account group above Today (spec: Inbox · 01).
+ */
+export const listAccountNotifications = (
+    params?: ListAccountNotificationsParams,
+ options?: SecondParameter<typeof mainFetcher<NotificationPage>>,) => {
+      return mainFetcher<NotificationPage>(
+      {url: `/notifications/account`, method: 'GET',
+        params
     },
       options);
     }
@@ -122,6 +137,7 @@ export const unreadNotification = (
 export type GetMeResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
 export type ListNotificationsResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
 export type CreateNotificationResult = NonNullable<Awaited<ReturnType<typeof createNotification>>>
+export type ListAccountNotificationsResult = NonNullable<Awaited<ReturnType<typeof listAccountNotifications>>>
 export type ArchiveNotificationResult = NonNullable<Awaited<ReturnType<typeof archiveNotification>>>
 export type ReadNotificationResult = NonNullable<Awaited<ReturnType<typeof readNotification>>>
 export type ReadAllNotificationsResult = NonNullable<Awaited<ReturnType<typeof readAllNotifications>>>

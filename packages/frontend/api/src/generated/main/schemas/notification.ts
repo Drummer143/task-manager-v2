@@ -16,7 +16,8 @@ export type Notification = NotificationKind & ({
   updatedAt: string;
   userId: string;
   /**
-     * `None` until workspaces exist.
+     * The workspace whose Inbox shows it; `None` for an account-level one (an invite, a new
+     * sign-in), which every workspace's Inbox shows apart.
      * @nullable
      */
   workspaceId?: string | null;

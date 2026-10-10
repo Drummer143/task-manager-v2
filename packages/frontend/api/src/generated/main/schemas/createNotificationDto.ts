@@ -6,6 +6,11 @@
  */
 import type { NotificationKind } from './notificationKind';
 
-export type CreateNotificationDto = NotificationKind & {
+export type CreateNotificationDto = NotificationKind & ({
   userId: string;
-};
+  /**
+     * The workspace it belongs to; none for an account-level one (an invite, a new sign-in).
+     * @nullable
+     */
+  workspaceId?: string | null;
+});

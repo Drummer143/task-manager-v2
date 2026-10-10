@@ -129,9 +129,10 @@ const patchArchiveNotification = (
   };
 
   snapshot.forEach(([key, data]) => {
-    const view = key[1];
+    // ['inbox', workspace, view] (QUERY_KEYS.inboxWithView): only its own workspace's tabs
+    const [, workspace, view] = key;
 
-    if (data && isView(view)) {
+    if (data && workspace === next.workspaceId && isView(view)) {
       queryClient.setQueryData<InboxData>(key, place(view, data, next));
     }
   });
@@ -140,7 +141,10 @@ const patchArchiveNotification = (
     snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
 };
 
-export const useNotificationQueries = (view: ListNotificationsView | null) => {
+export const useNotificationQueries = (
+  workspace: string,
+  view: ListNotificationsView | null,
+) => {
   const {
     data: notifications = [],
     hasNextPage: hasMoreNotifications,
@@ -157,10 +161,13 @@ export const useNotificationQueries = (view: ListNotificationsView | null) => {
     string[],
     string | undefined
   >({
-    queryKey: QUERY_KEYS.inboxWithView(view ?? 'all'),
+    queryKey: QUERY_KEYS.inboxWithView(workspace, view ?? 'all'),
     initialPageParam: undefined,
     queryFn: ({ pageParam, signal }) =>
-      listNotifications({ cursor: pageParam, view: view ?? 'all' }, { signal }),
+      listNotifications(
+        { workspace, cursor: pageParam, view: view ?? 'all' },
+        { signal },
+      ),
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     select: (data) => data.pages.flatMap((page) => page.data),
   });
@@ -184,7 +191,8 @@ export const useNotificationQueries = (view: ListNotificationsView | null) => {
 
   const { mutateAsync: readAll, isPending: isReadingAll } = useMutation({
     mutationFn: () =>
-      readAllNotifications({ before: new Date().toISOString() }),
+      // This workspace's Inbox only: the others keep their unread
+      readAllNotifications({ workspace, before: new Date().toISOString() }),
     onSuccess: (data) => {
       if (data.affected.length === 0) return;
 

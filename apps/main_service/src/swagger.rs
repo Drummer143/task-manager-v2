@@ -9,6 +9,7 @@ use crate::notifications::controllers;
         crate::me::me,
 
         controllers::get_list::get_list,
+        controllers::get_list::get_account_list,
         controllers::summary::get_summary,
         controllers::create::create,
         controllers::read::read_notification,

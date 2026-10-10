@@ -6,5 +6,8 @@
  */
 
 export interface ReadAllNotificationsRequest {
+  /** `updatedAt` of the newest notification the user saw: what came later stays unread. */
   before: string;
+  /** The workspace whose Inbox is read: the others and the account-level ones stay unread. */
+  workspace: string;
 }

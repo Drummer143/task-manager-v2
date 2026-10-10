@@ -4,17 +4,13 @@
  * main_service
  * OpenAPI spec version: 0.1.0
  */
-import type { ListNotificationsView } from './listNotificationsView';
+import type { ListAccountNotificationsView } from './listAccountNotificationsView';
 
-export type ListNotificationsParams = {
-/**
- * The workspace whose Inbox it is.
- */
-workspace: string;
+export type ListAccountNotificationsParams = {
 /**
  * The Inbox tabs.
  */
-view?: ListNotificationsView;
+view?: ListAccountNotificationsView;
 /**
  * Page size, 1 to 100; 50 by default.
  */

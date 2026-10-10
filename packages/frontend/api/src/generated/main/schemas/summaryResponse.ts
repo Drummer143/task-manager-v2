@@ -4,8 +4,15 @@
  * main_service
  * OpenAPI spec version: 0.1.0
  */
-import type { WorkspaceSummary } from './workspaceSummary';
+import type { SummaryResponseByWorkspace } from './summaryResponseByWorkspace';
 
+/**
+ * Unread counts (spec: Inbox · 09): the sidebar's Inbox shows `byWorkspace[current] +
+ * accountUnread`, the workspace menu a dot where that sum is above zero.
+ */
 export interface SummaryResponse {
-  workspaces: WorkspaceSummary[];
+  /** Unread account-level notifications, shown in every workspace's Inbox. */
+  accountUnread: number;
+  /** Unread in each workspace the user is a member of; a workspace with none is absent. */
+  byWorkspace: SummaryResponseByWorkspace;
 }

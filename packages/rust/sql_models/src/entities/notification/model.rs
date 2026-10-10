@@ -30,7 +30,8 @@ pub enum NotificationKind {
 pub struct Notification {
     pub id: Uuid,
     pub user_id: Uuid,
-    /// `None` until workspaces exist.
+    /// The workspace whose Inbox shows it; `None` for an account-level one (an invite, a new
+    /// sign-in), which every workspace's Inbox shows apart.
     pub workspace_id: Option<Uuid>,
 
     #[sqlx(json)]
