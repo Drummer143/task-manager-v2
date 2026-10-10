@@ -300,6 +300,8 @@
   --weight-strong: 600;
   /* A read notification's line: between body and strong (spec: Inbox · 02). */
   --weight-medium: 500;
+  /* The Verso wordmark on the sign-in screens: set a touch wider than body text. */
+  --wordmark-tracking: 0.01em;
   --line-clamp-title: 2;
 }
 

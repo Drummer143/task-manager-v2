@@ -16,13 +16,13 @@
 .header {
   flex-shrink: 0;
 
-  height: 48px;
+  height: var(--canvas-header-height);
 
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-4);
 
-  padding: 0 16px;
+  padding: 0 var(--sp-5);
 }
 
 .viewSwitcher {
