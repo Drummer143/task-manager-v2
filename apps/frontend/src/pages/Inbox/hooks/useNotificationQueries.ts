@@ -12,7 +12,7 @@ import {
   UnreadNotificationRequest,
 } from '@task-manager-v2/api/main/schemas';
 import { QUERY_KEYS, inboxListOf } from '../../../shared/constants/queryKeys';
-import { sortDateOf } from '../grouping';
+import { sortDateOf } from '../utils/grouping';
 import {
   archiveNotification,
   listNotifications,

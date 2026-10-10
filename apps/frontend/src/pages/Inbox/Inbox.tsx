@@ -26,10 +26,10 @@ import { InboxRow, type InboxRowHandlers } from './ui/InboxRow';
 import { InboxListFooter } from './ui/InboxListFooter';
 import styles from './Inbox.module.scss';
 import { useNotificationQueries } from './hooks/useNotificationQueries';
-import { segmentedOptions, viewValidation } from './utils';
+import { segmentedOptions, viewValidation } from './utils/constants';
 import { useRegisterKeyboardHandlers } from './hooks/useRegisterKeyboardHandlers';
-import { stepCursorOff } from './cursor';
-import { firstDayOfWeek, groupEntries } from './grouping';
+import { stepCursorOff } from './utils/cursor';
+import { firstDayOfWeek, groupEntries } from './utils/grouping';
 import { NotificationRowSkeleton } from '../../shared/ui/NotificationRow/NotificationRowSkeleton';
 
 export const Inbox: React.FC = () => {

@@ -6,7 +6,7 @@ import {
   VirtualList,
 } from '@task-manager-v2/ui-kit';
 import type { Notification } from '@task-manager-v2/api/main/schemas';
-import { GROUP_LABELS, type InboxEntry } from '../grouping';
+import { GROUP_LABELS, type InboxEntry } from '../utils/grouping';
 import styles from '../Inbox.module.scss';
 
 export const inboxRowId = (id: string) => `inbox-row-${id}`;

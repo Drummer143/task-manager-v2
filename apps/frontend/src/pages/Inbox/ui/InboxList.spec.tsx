@@ -5,7 +5,7 @@ import { KitRoot, useCursorStore } from '@task-manager-v2/ui-kit';
 import type { Notification } from '@task-manager-v2/api/main/schemas';
 import { InboxList, inboxRowId } from './InboxList';
 import { InboxRow, type InboxRowHandlers } from './InboxRow';
-import { groupEntries } from '../grouping';
+import { groupEntries } from '../utils/grouping';
 
 // jsdom has no layout, so the real VirtualList would render no rows: a plain list stands in
 vi.mock('@task-manager-v2/ui-kit', async (importOriginal) => {

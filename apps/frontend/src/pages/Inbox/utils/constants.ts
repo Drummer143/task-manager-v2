@@ -1,5 +1,5 @@
 import { ListNotificationsView } from '@task-manager-v2/api/main/schemas';
-import { oneOf } from '../../shared/hooks/useSearchParam';
+import { oneOf } from '../../../shared/hooks/useSearchParam';
 import { SegmentedOption } from '@task-manager-v2/ui-kit';
 
 export const VIEW_OPTIONS: ListNotificationsView[] = [
