@@ -13,7 +13,19 @@ export const QUERY_KEYS = {
     workspace,
     view,
   ],
+  /** The pinned Account group of every tab: what the optimistic patches walk. */
+  inboxPinned: ['inbox', 'pinned'],
+  // Per tab, as the lists: a pinned one read in Unread stays there until the tab changes, while
+  // in All it moves to its place in the list (spec: Inbox · 01)
+  inboxPinnedWithView: (view: ListNotificationsView) => [
+    'inbox',
+    'pinned',
+    view,
+  ],
 } as const;
+
+/** The tab of a pinned group's key (`inboxPinnedWithView`). */
+export const inboxPinnedViewOf = (key: readonly unknown[]) => key[2];
 
 /** The workspace and the tab of a list's key (`inboxWithView`). */
 export const inboxListOf = (key: readonly unknown[]) => ({

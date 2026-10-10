@@ -1,84 +1,48 @@
-# Inbox — what is left
+# Inbox — что осталось
 
-Spec: "[Уведомления] Inbox" (section numbers below are its own). Tick a box when it lands;
-move an item to "Deferred" with a reason rather than deleting it.
+Спека: «[Уведомления] Inbox», номера разделов ниже — её. Сделанное удаляем; отложенное переносим
+в «Отложено» с причиной.
 
-What waits for something that does not exist yet (workspaces, real notification kinds and their
-`subject`, invites, the task table, the designer) is in `docs/TODO.md`, not here.
+Всё, что ждёт несуществующего (пространства, настоящие виды уведомлений и их `subject`,
+приглашения, таблица задач, дизайнер), — в `docs/TODO.md`, не здесь.
 
-## Done
+## Реалтайм (§10)
 
-- [x] `NotificationRow` (`shared/ui/NotificationRow`): states, time, actions over the right edge (§02)
-- [x] Cursor: J / K and ↑ / ↓ anywhere on the page, Home / End on the list, a click puts it on the row;
-      kept by id in the kit's `useCursorStore`, cleared on a tab change and on leaving the page;
-      a move re-renders two rows only (§08)
-- [x] Grid semantics: `role="grid"`, `aria-activedescendant`, VirtualList `semantics="rows"`,
-      `aria-rowindex` / `aria-rowcount` (§08)
-- [x] Data on react-query: the list per tab; read / unread / archive / unarchive / read all —
-      optimistic, with an undo toast (§05, §10)
+- [ ] Реалтайм `inbox.updated`. Событие несёт изменения, а не просьбу перезапросить:
+      ```ts
+      type InboxUpdated = {
+        upserted?: Notification[]; // новое, склеенное или изменённое в другой вкладке
+        readAll?: { workspace: string; before: string; readAt: string }; // то же условие, что patchReadAll
+        summary: SummaryResponse; // счётчики сервера после изменения
+      };
+      ```
+      На клиенте:
+      - новое уведомление вставляется на своё место через `place` и подсвечивается на 400 мс
+        (`--highlight-remote`);
+      - уже загруженное обновляется на месте, без перемещения: прочитанное во вкладке Unread
+        остаётся до смены вкладки, ряд не уезжает из-под курсора (Philosophy 14);
+      - сводка записывается из события как есть (`setQueryData`);
+      - события по уведомлениям, чьи мутации ещё в полёте, пропускаем до `onSettled`
+        (бэкенд-спека §4.5), иначе эхо старого состояния затрёт новое;
+      - после переподключения сокета — перезапрос списков и сводки (позже — досылка по `last_seq`).
 
-## Keyboard (§05, §08)
+      Полный `invalidateQueries` списка не годится: перезапрос всех загруженных страниц на каждое
+      событие, ряды прыгают, прочитанные в Unread пропадают.
 
-- [x] E / U on the highlighted row (`useRegisterKeyboardHandlers`); E is Unarchive in the Archived tab
-- [x] Archive / Unarchive moves the cursor to the next row (the previous one at the end) *before*
-      the row leaves, from E and from the row's button (`cursor.ts`, wrapped in the page)
-- [x] G U / G A / G E — the tabs
+## Бэкенд
 
-## List (§04, §06)
+- [ ] Сигнал `inbox.updated` (форма — выше) на каждое изменение: создание, `read`, `unread`,
+      `archive`, `unarchive`, `read_all`, вместо нынешнего `new_notification` только при создании.
+      Сводка в событии — тот же `count_unread` после изменения.
 
-- [x] Next pages: `onEndReached` with `endThreshold` 10; the footer (`InboxListFooter`) is a
-      `row` + `gridcell` inside the grid, only while the next page loads or failed, with Retry.
-      A failed next page or background refetch keeps the list; the error state is for an empty one
-- [x] Groups: Today / Yesterday / This week / Earlier (`grouping.ts`): a flat list of header and
-      row entries for `VirtualList`, headers are grid rows (`rowheader`) the cursor steps over,
-      32 px, text at `--inbox-text-start`; by `sortDateOf` (the sort's own date), local calendar
-      days, the locale's first weekday. `now` is read once per visit
-- [x] States: skeleton after 200 ms (`NotificationRowSkeleton`), empty per tab, load error with Retry
-- [x] No `?view=` is the All tab (`currentView`), also for the empty state
-- [ ] `keepReadIds`: a row read in the Unread tab stays until the tab changes, also across refetches
+## Кит
 
-## Counters and realtime (§09, §10)
+- [ ] `VirtualList`: держать якорь прокрутки при вставке рядов выше видимой области — видимые ряды
+      остаются на месте (нужно реалтайму). Если список в самом верху — ничего не сдвигаем.
 
-- [ ] The Unread tab's count — needs a count in the kit's Segmented
-- [x] The sidebar Inbox count from the summary: `byWorkspace[current]` only. Decided 2026-10-10,
-      against spec 09 / Sidebar 03 (`+ account_unread`): the row counts the workspace you are in.
-      Optimistic on every change; refetched after one the cache cannot count (read-all, its undo)
-- [ ] `inbox.updated`: patch the summary, refetch the list; highlight new rows (`--highlight-remote`);
-      the cursor and the scroll do not move
+## Отложено
 
-## Content (§01)
-
-- [ ] The Account group: `listAccountNotifications` (one page), above Today; its invite actions
-      wait for invites (`docs/TODO.md`)
-
-## Deferred
-
-- The tab title count and the favicon dot
-- One-letter hotkeys (E, U, X, J, K) do nothing in a non-Latin keyboard layout — the kit matches
-  `event.key`; the fix is to fall back to `event.code` in the hotkey matching
-
-## Loose ends
-
-- [x] The route is `/{ws}/inbox` (`ROUTES.INBOX`, `inboxPath`); `/` and unknown paths go to the
-      default space's inbox — for now the nil uuid (`defaultWorkspaceId`)
-- [x] `Inbox.module.scss` header: the literals are tokens (`--canvas-header-height`, `--sp-4`, `--sp-5`)
-- [x] `src/app/app.spec.tsx` imports the deleted `WorkspacePage`: the frontend tests fail
-- [x] ⇧U is registered with an object made in render: it re-registers every render (`useMemo` it)
-
-## For the designer
-
-Open questions are in `docs/TODO.md` ("Waiting on design").
-
-Closed 2026-10-10: the text starts at 56 px (8 + 8 + `--inbox-dot-gap` 8 + 20 + 12; without the gap
-the dot reads as part of the avatar), and the address is `/{ws}/inbox`.
-
-## Backend
-
-- [x] Per workspace (2026-10-10): `GET /notifications?workspace=` (required), the account-level
-      ones apart at `GET /notifications/account`, `read_all { workspace, before }` reads one
-      workspace only, the summary is `{ byWorkspace, accountUnread }`. `workspace_id NULL` is an
-      account-level notification. Membership is a stub (`main_service/src/workspaces.rs`,
-      `TODO(workspaces)`): every workspace is allowed
-- [x] All Rust tests, the DB ones included, pass on a disposable Postgres 18.6 with the squashed
-      `init` migration and UUIDv7 ids (161, 2026-10-10)
-- The `inbox.updated` signal with `patch { unread }` and the list tag
+- Число непрочитанного в заголовке вкладки браузера и точка на favicon — пока не нужно.
+- Однобуквенные хоткеи (E, U, X, J, K) не работают в нелатинской раскладке: кит сравнивает
+  `event.key`. Исправление в ките — если по `event.key` хоткей не нашёлся, сравнивать по
+  `event.code` (физической клавише).

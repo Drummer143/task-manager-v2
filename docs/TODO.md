@@ -56,15 +56,18 @@ Inbox (spec sections in brackets):
 
 ## Waiting on design
 
-- [ ] The sidebar Inbox count is `byWorkspace[current]` without `account_unread` (our decision,
-      2026-10-10); Inbox spec 09 and Sidebar 03 still add it. Unread invites in the Account group
-      are then not in the number
 - [ ] Line heights 14/20 and 12/18 in the Inbox spec; the kit's `--lh-body` / `--lh-meta` give
       21 / 16.8
 - [ ] Inbox row action icons on the inverse surface: the mock has `--text-muted`, built as
       `--text-secondary`
 
 ## Spec corrections to send
+
+- [ ] Workspace menu dots (Sidebar §02, Inbox §09): a dot only where the workspace itself has
+      unread (`byWorkspace[id] > 0`), without `account_unread` — our decision, 2026-10-10.
+      Otherwise one unread invite lights every workspace and the dot no longer says where.
+      The sidebar Inbox count does include it (`byWorkspace[current] + accountUnread`), and
+      "Mark all read" reads the account-level ones too
 
 - [ ] "Verso — backend · notifications and refresh" §8–9 lags behind Inbox v5:
       `workspace_id uuid not null` (Inbox has account-level ones with NULL), no workspace parameter

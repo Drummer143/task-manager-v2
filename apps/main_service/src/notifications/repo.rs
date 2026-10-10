@@ -5,7 +5,7 @@ use sqlx::AssertSqlSafe;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::{notifications::cursor::Cursor, webhooks::authentik::user_sync};
+use crate::notifications::cursor::Cursor;
 
 pub struct NotificationsRepository;
 
@@ -20,30 +20,14 @@ pub struct CreateNotificationDto {
     pub data: NotificationKind,
 }
 
-/// Whose notifications a list shows: a workspace's Inbox, or the account-level ones that every
-/// workspace's Inbox shows apart, as the Account group above Today (spec: Inbox · 01).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InboxScope {
-    Workspace(Uuid),
-    Account,
-}
+/// A workspace's Inbox list (spec: Inbox · 01): its own notifications, and the account-level ones
+/// that are handled (read or archived) — those age in every workspace's list with the rest. The
+/// unread account-level ones are not here: they are pinned above it (`pinned_account`).
+const IN_WORKSPACE: &str = "(workspace_id = $5 OR (workspace_id IS NULL AND (read_at IS NOT NULL OR archived_at IS NOT NULL)))";
 
-impl InboxScope {
-    /// `$n` is bound only for a workspace (see `list`).
-    fn filter(self, n: usize) -> String {
-        match self {
-            Self::Workspace(_) => format!("workspace_id = ${n}"),
-            Self::Account => "workspace_id IS NULL".into(),
-        }
-    }
-
-    fn workspace_id(self) -> Option<Uuid> {
-        match self {
-            Self::Workspace(id) => Some(id),
-            Self::Account => None,
-        }
-    }
-}
+/// How many pinned account-level notifications one answer carries: they are few by nature (an
+/// unread one waits for attention), so there are no pages.
+pub const PINNED_LIMIT: i64 = 100;
 
 /// Unread counts for the sidebar and the workspace menu.
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -101,35 +85,50 @@ const COLUMNS: &str =
     "id, user_id, workspace_id, data, created_at, updated_at, read_at, archived_at";
 
 impl NotificationsRepository {
+    /// One page of a workspace's Inbox tab (`IN_WORKSPACE`).
     pub async fn list(
         pool: &sqlx::PgPool,
         user_id: Uuid,
-        scope: InboxScope,
+        workspace_id: Uuid,
         view: InboxView,
         limit: i64,
         after: Option<Cursor>,
     ) -> Result<Vec<Notification>, sqlx::Error> {
-        // Keyset pagination: rows strictly after the cursor in the tab's order. The row
-        // comparison walks the (user_id, workspace_id, updated_at DESC, id DESC) index
+        // Keyset pagination: rows strictly after the cursor in the tab's order. The workspace's
+        // rows walk the (user_id, workspace_id, updated_at DESC, id DESC) index, the account-level
+        // ones the same index at workspace_id NULL
         let sql = format!(
-            "SELECT {COLUMNS} FROM notifications WHERE user_id = $1 AND {scope} AND {filter} AND ($3::timestamptz IS NULL OR ({sort}, id) < ($3, $4)) ORDER BY {sort} DESC, id DESC LIMIT $2",
-            scope = scope.filter(5),
+            "SELECT {COLUMNS} FROM notifications WHERE user_id = $1 AND {IN_WORKSPACE} AND {filter} AND ($3::timestamptz IS NULL OR ({sort}, id) < ($3, $4)) ORDER BY {sort} DESC, id DESC LIMIT $2",
             filter = view.filter(),
             sort = view.sort_column(),
         );
 
-        let query = sqlx::query_as::<_, Notification>(AssertSqlSafe(sql))
+        sqlx::query_as::<_, Notification>(AssertSqlSafe(sql))
             .bind(user_id)
             .bind(limit)
             .bind(after.map(|c| c.at))
-            .bind(after.map(|c| c.id));
+            .bind(after.map(|c| c.id))
+            .bind(workspace_id)
+            .fetch_all(pool)
+            .await
+    }
 
-        match scope.workspace_id() {
-            Some(workspace_id) => query.bind(workspace_id),
-            None => query,
-        }
-        .fetch_all(pool)
-        .await
+    /// The account-level notifications pinned above every workspace's Inbox, as the Account group
+    /// (spec: Inbox · 01): the unread, not archived ones, newest event first. Once read they leave
+    /// it for the workspace lists. TODO(invites): unhandled invites stay pinned even when read.
+    pub async fn pinned_account(
+        pool: &sqlx::PgPool,
+        user_id: Uuid,
+    ) -> Result<Vec<Notification>, sqlx::Error> {
+        let sql = format!(
+            "SELECT {COLUMNS} FROM notifications WHERE user_id = $1 AND workspace_id IS NULL AND read_at IS NULL AND archived_at IS NULL ORDER BY updated_at DESC, id DESC LIMIT $2"
+        );
+
+        sqlx::query_as::<_, Notification>(AssertSqlSafe(sql))
+            .bind(user_id)
+            .bind(PINNED_LIMIT)
+            .fetch_all(pool)
+            .await
     }
 
     /// Keeps the first read time when it is read again.
@@ -147,8 +146,9 @@ impl NotificationsRepository {
         Ok(())
     }
 
-    /// Reads one workspace's Inbox up to `before`: the other workspaces and the account-level
-    /// notifications keep their unread.
+    /// Reads everything one workspace's Inbox shows, up to `before`: its notifications and the
+    /// account-level ones, which every Inbox shows and counts (decided 2026-10-10: otherwise "Mark
+    /// all read" leaves the sidebar count above zero). The other workspaces keep their unread.
     pub async fn mark_as_read_all(
         pool: &sqlx::PgPool,
         user_id: Uuid,
@@ -158,7 +158,7 @@ impl NotificationsRepository {
         sqlx::query_scalar::<_, Uuid>(
             "UPDATE notifications
          SET read_at = NOW()
-         WHERE user_id = $1 AND workspace_id = $3 AND read_at IS NULL AND archived_at IS NULL AND updated_at <= $2
+         WHERE user_id = $1 AND (workspace_id = $3 OR workspace_id IS NULL) AND read_at IS NULL AND archived_at IS NULL AND updated_at <= $2
          RETURNING id",
         )
         .bind(user_id)
@@ -348,16 +348,16 @@ mod tests {
     }
 
     async fn messages(pool: &PgPool, user_id: Uuid, view: InboxView) -> Vec<String> {
-        messages_in(pool, user_id, InboxScope::Workspace(WS), view).await
+        messages_in(pool, user_id, WS, view).await
     }
 
     async fn messages_in(
         pool: &PgPool,
         user_id: Uuid,
-        scope: InboxScope,
+        workspace_id: Uuid,
         view: InboxView,
     ) -> Vec<String> {
-        NotificationsRepository::list(pool, user_id, scope, view, 50, None)
+        NotificationsRepository::list(pool, user_id, workspace_id, view, 50, None)
             .await
             .unwrap()
             .into_iter()
@@ -490,29 +490,15 @@ mod tests {
             happened_minutes_ago(&pool, n.id, minutes).await;
         }
 
-        let first = NotificationsRepository::list(
-            &pool,
-            me,
-            InboxScope::Workspace(WS),
-            InboxView::All,
-            2,
-            None,
-        )
-        .await
-        .unwrap();
+        let first = NotificationsRepository::list(&pool, me, WS, InboxView::All, 2, None)
+            .await
+            .unwrap();
         // Something new arrives at the top between the pages
         notify(&pool, me, "newest").await;
         let after = InboxView::All.cursor_after(first.last().unwrap());
-        let second = NotificationsRepository::list(
-            &pool,
-            me,
-            InboxScope::Workspace(WS),
-            InboxView::All,
-            2,
-            Some(after),
-        )
-        .await
-        .unwrap();
+        let second = NotificationsRepository::list(&pool, me, WS, InboxView::All, 2, Some(after))
+            .await
+            .unwrap();
 
         let ids = |page: &[Notification]| page.iter().map(|n| n.id).collect::<Vec<_>>();
         assert_eq!(first.len(), 2);
@@ -536,16 +522,9 @@ mod tests {
         let mut seen = Vec::new();
         let mut after = None;
         loop {
-            let page = NotificationsRepository::list(
-                &pool,
-                me,
-                InboxScope::Workspace(WS),
-                InboxView::All,
-                2,
-                after,
-            )
-            .await
-            .unwrap();
+            let page = NotificationsRepository::list(&pool, me, WS, InboxView::All, 2, after)
+                .await
+                .unwrap();
             let Some(last) = page.last() else { break };
             after = Some(InboxView::All.cursor_after(last));
             seen.extend(page.iter().map(|n| n.id));
@@ -578,27 +557,14 @@ mod tests {
             .await
             .unwrap();
 
-        let first = NotificationsRepository::list(
-            &pool,
-            me,
-            InboxScope::Workspace(WS),
-            InboxView::Archived,
-            1,
-            None,
-        )
-        .await
-        .unwrap();
+        let first = NotificationsRepository::list(&pool, me, WS, InboxView::Archived, 1, None)
+            .await
+            .unwrap();
         let after = InboxView::Archived.cursor_after(&first[0]);
-        let second = NotificationsRepository::list(
-            &pool,
-            me,
-            InboxScope::Workspace(WS),
-            InboxView::Archived,
-            1,
-            Some(after),
-        )
-        .await
-        .unwrap();
+        let second =
+            NotificationsRepository::list(&pool, me, WS, InboxView::Archived, 1, Some(after))
+                .await
+                .unwrap();
 
         assert_eq!(first[0].id, b.id);
         assert_eq!(second[0].id, a.id);
@@ -843,27 +809,102 @@ mod tests {
         assert_eq!(1, messages(&pool, me, InboxView::Unread).await.len());
     }
 
-    #[sqlx::test(migrations = "./migrations")]
-    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
-    async fn a_workspace_lists_only_its_own_and_the_account_list_only_the_account_level(
-        pool: PgPool,
-    ) {
-        let me = user(&pool).await;
-        let other = Uuid::from_u128(0x0b);
-        notify(&pool, me, "here").await;
-        notify_in(&pool, me, Some(other), "elsewhere").await;
-        notify_in(&pool, me, None, "invite").await;
+    fn message(n: Notification) -> String {
+        match n.data {
+            NotificationKind::Debug { message } => message,
+            other => panic!("unexpected {other:?}"),
+        }
+    }
 
-        let list = |scope| messages_in(&pool, me, scope, InboxView::All);
-
-        assert_eq!(list(InboxScope::Workspace(WS)).await, ["here"]);
-        assert_eq!(list(InboxScope::Workspace(other)).await, ["elsewhere"]);
-        assert_eq!(list(InboxScope::Account).await, ["invite"]);
+    async fn pinned(pool: &PgPool, user_id: Uuid) -> Vec<String> {
+        NotificationsRepository::pinned_account(pool, user_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(message)
+            .collect()
     }
 
     #[sqlx::test(migrations = "./migrations")]
     #[ignore = "needs DATABASE_URL to a disposable Postgres"]
-    async fn read_all_reads_one_workspace_and_leaves_the_others_and_the_account_unread(
+    async fn a_workspace_list_has_its_own_and_the_handled_account_level_ones_not_the_unread(
+        pool: PgPool,
+    ) {
+        let me = user(&pool).await;
+        let other = Uuid::from_u128(0x0b);
+        let here = notify(&pool, me, "here").await;
+        let elsewhere = notify_in(&pool, me, Some(other), "elsewhere").await;
+        let read = notify_in(&pool, me, None, "read sign-in").await;
+        let unread = notify_in(&pool, me, None, "unread invite").await;
+        for (n, minutes) in [(&here, 1), (&elsewhere, 2), (&read, 3), (&unread, 4)] {
+            happened_minutes_ago(&pool, n.id, minutes).await;
+        }
+        NotificationsRepository::mark_as_read(&pool, me, vec![read.id])
+            .await
+            .unwrap();
+
+        // The read account-level one ages in every workspace's list with the rest
+        assert_eq!(
+            messages_in(&pool, me, WS, InboxView::All).await,
+            ["here", "read sign-in"]
+        );
+        assert_eq!(
+            messages_in(&pool, me, other, InboxView::All).await,
+            ["elsewhere", "read sign-in"]
+        );
+        // The unread one is only pinned, never in a list
+        assert_eq!(messages(&pool, me, InboxView::Unread).await, ["here"]);
+        assert_eq!(pinned(&pool, me).await, ["unread invite"]);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn an_archived_account_level_one_is_in_every_workspaces_archived_tab_and_not_pinned(
+        pool: PgPool,
+    ) {
+        let me = user(&pool).await;
+        let invite = notify_in(&pool, me, None, "invite").await;
+        NotificationsRepository::archive(&pool, me, invite.id)
+            .await
+            .unwrap();
+
+        assert_eq!(messages(&pool, me, InboxView::Archived).await, ["invite"]);
+        assert_eq!(
+            messages_in(&pool, me, Uuid::from_u128(0x0b), InboxView::Archived).await,
+            ["invite"]
+        );
+        assert!(pinned(&pool, me).await.is_empty());
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn pinned_are_the_unread_account_level_ones_newest_first_and_leave_once_read(
+        pool: PgPool,
+    ) {
+        let me = user(&pool).await;
+        let old = notify_in(&pool, me, None, "old").await;
+        let new = notify_in(&pool, me, None, "new").await;
+        let mine = notify(&pool, me, "in a workspace").await;
+        happened_minutes_ago(&pool, old.id, 10).await;
+        happened_minutes_ago(&pool, mine.id, 5).await;
+        happened_minutes_ago(&pool, new.id, 1).await;
+
+        assert_eq!(pinned(&pool, me).await, ["new", "old"]);
+
+        NotificationsRepository::mark_as_read(&pool, me, vec![new.id])
+            .await
+            .unwrap();
+
+        assert_eq!(pinned(&pool, me).await, ["old"]);
+        assert_eq!(
+            messages(&pool, me, InboxView::All).await,
+            ["new", "in a workspace"]
+        );
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn read_all_reads_the_workspace_and_the_account_level_ones_not_the_other_workspaces(
         pool: PgPool,
     ) {
         let me = user(&pool).await;
@@ -875,13 +916,16 @@ mod tests {
             arrived_minutes_ago(&pool, n.id, 20).await;
         }
 
-        let ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
+        let mut ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
             .await
             .unwrap();
+        ids.sort();
+        let mut expected = vec![here.id, invite.id];
+        expected.sort();
 
-        assert_eq!(ids, [here.id]);
+        assert_eq!(ids, expected);
         assert_eq!(get(&pool, elsewhere.id).await.read_at, None);
-        assert_eq!(get(&pool, invite.id).await.read_at, None);
+        assert!(pinned(&pool, me).await.is_empty());
     }
 
     #[sqlx::test(migrations = "./migrations")]

@@ -32,8 +32,9 @@ export const Layout: React.FC = () => {
           inbox={{
             href: inbox,
             current: onInbox,
-            // This workspace's own unread (decided 2026-10-10: not + accountUnread)
-            unread: summary?.byWorkspace[workspace],
+            unread:
+              summary &&
+              (summary.byWorkspace[workspace] ?? 0) + summary.accountUnread,
           }}
         />
       }

@@ -43,6 +43,7 @@
         "tags": [
           "Notifications"
         ],
+        "summary": "A workspace's Inbox tab: its own notifications and the handled account-level ones, which age\nhere with the rest (spec: Inbox · 01). The unread account-level ones are pinned apart\n(`GET /notifications/account_pinned`).",
         "operationId": "listNotifications",
         "parameters": [
           {
@@ -156,62 +157,23 @@
         }
       }
     },
-    "/notifications/account": {
+    "/notifications/account_pinned": {
       "get": {
         "tags": [
           "Notifications"
         ],
-        "summary": "The account-level notifications (an invite, a new sign-in): every workspace's Inbox shows them\napart, as the Account group above Today (spec: Inbox · 01).",
-        "operationId": "listAccountNotifications",
-        "parameters": [
-          {
-            "name": "view",
-            "in": "query",
-            "description": "Inbox tab; `unread` by default.",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "The Inbox tabs.",
-              "enum": [
-                "unread",
-                "all",
-                "archived"
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "Page size, 1 to 100; 50 by default.",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "description": "`nextCursor` of the previous page; none for the first page.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "summary": "The Account group pinned above every workspace's Inbox (spec: Inbox · 01): the unread\naccount-level notifications (an invite, a new sign-in), newest first. Shown in the Unread and\nAll tabs; once read, a notification leaves it for the workspace lists.",
+        "operationId": "listPinnedAccountNotifications",
         "responses": {
           "200": {
-            "description": "One page of the tab, newest first",
+            "description": "The pinned account-level notifications, newest first",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotificationPage"
+                  "$ref": "#/components/schemas/PinnedNotifications"
                 }
               }
             }
-          },
-          "400": {
-            "description": "Malformed query, e.g. an invalid cursor"
           },
           "401": {
             "description": "Unauthorized"
@@ -1327,6 +1289,21 @@
               "null"
             ],
             "description": "Pass it as `cursor` to get the next page; `null` on the last page."
+          }
+        }
+      },
+      "PinnedNotifications": {
+        "type": "object",
+        "description": "The Account group: few by nature, so one answer and no pages.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Notification"
+            }
           }
         }
       },

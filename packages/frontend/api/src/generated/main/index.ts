@@ -7,11 +7,11 @@
 import type {
   ArchiveNotificationRequest,
   CreateNotificationDto,
-  ListAccountNotificationsParams,
   ListNotificationsParams,
   MeResponse,
   Notification,
   NotificationPage,
+  PinnedNotifications,
   ReadAllNotificationsRequest,
   ReadAllNotificationsResponse,
   ReadNotificationRequest,
@@ -35,6 +35,11 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
       options);
     }
 
+/**
+ * @summary A workspace's Inbox tab: its own notifications and the handled account-level ones, which age
+here with the rest (spec: Inbox · 01). The unread account-level ones are pinned apart
+(`GET /notifications/account_pinned`).
+ */
 export const listNotifications = (
     params: ListNotificationsParams,
  options?: SecondParameter<typeof mainFetcher<NotificationPage>>,) => {
@@ -57,15 +62,15 @@ export const createNotification = (
     }
 
 /**
- * @summary The account-level notifications (an invite, a new sign-in): every workspace's Inbox shows them
-apart, as the Account group above Today (spec: Inbox · 01).
+ * @summary The Account group pinned above every workspace's Inbox (spec: Inbox · 01): the unread
+account-level notifications (an invite, a new sign-in), newest first. Shown in the Unread and
+All tabs; once read, a notification leaves it for the workspace lists.
  */
-export const listAccountNotifications = (
-    params?: ListAccountNotificationsParams,
- options?: SecondParameter<typeof mainFetcher<NotificationPage>>,) => {
-      return mainFetcher<NotificationPage>(
-      {url: `/notifications/account`, method: 'GET',
-        params
+export const listPinnedAccountNotifications = (
+
+ options?: SecondParameter<typeof mainFetcher<PinnedNotifications>>,) => {
+      return mainFetcher<PinnedNotifications>(
+      {url: `/notifications/account_pinned`, method: 'GET'
     },
       options);
     }
@@ -137,7 +142,7 @@ export const unreadNotification = (
 export type GetMeResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
 export type ListNotificationsResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
 export type CreateNotificationResult = NonNullable<Awaited<ReturnType<typeof createNotification>>>
-export type ListAccountNotificationsResult = NonNullable<Awaited<ReturnType<typeof listAccountNotifications>>>
+export type ListPinnedAccountNotificationsResult = NonNullable<Awaited<ReturnType<typeof listPinnedAccountNotifications>>>
 export type ArchiveNotificationResult = NonNullable<Awaited<ReturnType<typeof archiveNotification>>>
 export type ReadNotificationResult = NonNullable<Awaited<ReturnType<typeof readNotification>>>
 export type ReadAllNotificationsResult = NonNullable<Awaited<ReturnType<typeof readAllNotifications>>>

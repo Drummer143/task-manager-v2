@@ -67,6 +67,25 @@ describe('groupEntries', () => {
     ]);
   });
 
+  it('puts the pinned Account group first, before the time groups', () => {
+    const invite = notification('invite', local(1));
+    const list = [notification('a', local(15, 9))];
+
+    expect(groupEntries(list, 'all', NOW, 1, [invite]).map((entry) => entry.key)).toEqual([
+      'group:account',
+      'invite',
+      'group:today',
+      'a',
+    ]);
+  });
+
+  it('shows no Account header without pinned rows', () => {
+    expect(groupEntries([notification('a', local(15, 9))], 'all', NOW, 1, []).map((entry) => entry.key)).toEqual([
+      'group:today',
+      'a',
+    ]);
+  });
+
   it('nothing for no rows', () => {
     expect(groupEntries([], 'all', NOW, 1)).toEqual([]);
   });

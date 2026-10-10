@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::notifications::{
     cursor::Cursor,
-    repo::{InboxScope, InboxView, NotificationsRepository},
+    repo::{InboxView, NotificationsRepository},
 };
 use crate::workspaces;
 
@@ -19,8 +19,6 @@ const MAX_LIMIT: i64 = 100;
 pub struct GetListQuery {
     /// The workspace whose Inbox it is.
     pub workspace: Uuid,
-    // `PageQuery`'s fields again, not `#[serde(flatten)]`: through flatten a query string
-    // reaches serde as strings only, and `limit=20` would not parse as a number
     /// Inbox tab; `unread` by default.
     #[serde(default)]
     #[param(inline)]
@@ -33,31 +31,6 @@ pub struct GetListQuery {
 }
 
 impl GetListQuery {
-    fn page(self) -> PageQuery {
-        PageQuery {
-            view: self.view,
-            limit: self.limit,
-            cursor: self.cursor,
-        }
-    }
-}
-
-/// The tab and the page, the same for a workspace's list and the account-level one.
-#[derive(Debug, Default, Deserialize, IntoParams)]
-#[into_params(parameter_in = Query)]
-pub struct PageQuery {
-    /// Inbox tab; `unread` by default.
-    #[serde(default)]
-    #[param(inline)]
-    pub view: InboxView,
-    /// Page size, 1 to 100; 50 by default.
-    pub limit: Option<i64>,
-    /// `nextCursor` of the previous page; none for the first page.
-    #[param(value_type = Option<String>)]
-    pub cursor: Option<Cursor>,
-}
-
-impl PageQuery {
     /// Kept in range: a huge limit would read the whole table, a negative one is a database
     /// error.
     fn limit(&self) -> i64 {
@@ -74,6 +47,9 @@ pub struct NotificationPage {
     pub next_cursor: Option<String>,
 }
 
+/// A workspace's Inbox tab: its own notifications and the handled account-level ones, which age
+/// here with the rest (spec: Inbox · 01). The unread account-level ones are pinned apart
+/// (`GET /notifications/account_pinned`).
 #[axum::debug_handler]
 #[utoipa::path(
     get,
@@ -96,47 +72,18 @@ pub async fn get_list(
 ) -> Result<Json<NotificationPage>, ApiError> {
     workspaces::ensure_member(&pool, user_id, query.workspace).await?;
 
-    let scope = InboxScope::Workspace(query.workspace);
-
-    page(&pool, user_id, scope, query.page()).await
-}
-
-/// The account-level notifications (an invite, a new sign-in): every workspace's Inbox shows them
-/// apart, as the Account group above Today (spec: Inbox · 01).
-#[axum::debug_handler]
-#[utoipa::path(
-    get,
-    path = "/notifications/account",
-    operation_id = "listAccountNotifications",
-    params(PageQuery),
-    responses(
-        (status = 200, description = "One page of the tab, newest first", body = NotificationPage),
-        (status = 400, description = "Malformed query, e.g. an invalid cursor"),
-        (status = 401, description = "Unauthorized"),
-        (status = 500, description = "Internal server error")
-    ),
-    tag = "Notifications"
-)]
-pub async fn get_account_list(
-    State(pool): State<sqlx::PgPool>,
-    ApiQuery(query): ApiQuery<PageQuery>,
-    Extension(user_id): Extension<Uuid>,
-) -> Result<Json<NotificationPage>, ApiError> {
-    page(&pool, user_id, InboxScope::Account, query).await
-}
-
-async fn page(
-    pool: &sqlx::PgPool,
-    user_id: Uuid,
-    scope: InboxScope,
-    query: PageQuery,
-) -> Result<Json<NotificationPage>, ApiError> {
     let limit = query.limit();
 
     // One row more than asked tells whether there is a next page, without a COUNT
-    let mut data =
-        NotificationsRepository::list(pool, user_id, scope, query.view, limit + 1, query.cursor)
-            .await?;
+    let mut data = NotificationsRepository::list(
+        &pool,
+        user_id,
+        query.workspace,
+        query.view,
+        limit + 1,
+        query.cursor,
+    )
+    .await?;
 
     let next_cursor = if data.len() as i64 > limit {
         data.truncate(limit as usize);
@@ -164,10 +111,10 @@ mod tests {
             .map_err(|e| e.to_string())
     }
 
-    /// The page part, through the workspace list as the frontend sends it.
-    fn parse(qs: &str) -> Result<PageQuery, String> {
+    /// The tab and the page, with the workspace the list always needs.
+    fn parse(qs: &str) -> Result<GetListQuery, String> {
         let sep = if qs.is_empty() { "" } else { "&" };
-        parse_list(&format!("workspace={WS}{sep}{qs}")).map(GetListQuery::page)
+        parse_list(&format!("workspace={WS}{sep}{qs}"))
     }
 
     #[test]
@@ -178,17 +125,6 @@ mod tests {
         );
         assert!(parse_list("view=all").is_err());
         assert!(parse_list("workspace=acme").is_err());
-    }
-
-    #[test]
-    fn the_account_list_reads_the_same_page_query() {
-        let uri: Uri = "/notifications/account?view=archived&limit=5"
-            .parse()
-            .unwrap();
-        let Query(query) = Query::<PageQuery>::try_from_uri(&uri).unwrap();
-
-        assert_eq!(query.view, InboxView::Archived);
-        assert_eq!(query.limit(), 5);
     }
 
     #[test]

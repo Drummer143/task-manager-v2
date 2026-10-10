@@ -2,6 +2,7 @@ import {
   InfiniteData,
   useInfiniteQuery,
   useMutation,
+  useQuery,
 } from '@tanstack/react-query';
 import {
   ListNotificationsView,
@@ -11,11 +12,16 @@ import {
   SummaryResponse,
   UnreadNotificationRequest,
 } from '@task-manager-v2/api/main/schemas';
-import { QUERY_KEYS, inboxListOf } from '../../../shared/constants/queryKeys';
+import {
+  QUERY_KEYS,
+  inboxListOf,
+  inboxPinnedViewOf,
+} from '../../../shared/constants/queryKeys';
 import { sortDateOf } from '../utils/grouping';
 import {
   archiveNotification,
   listNotifications,
+  listPinnedAccountNotifications,
   readAllNotifications,
   readNotification,
   unarchiveNotification,
@@ -26,16 +32,37 @@ import { toast } from '@task-manager-v2/ui-kit';
 import { useCallback } from 'react';
 
 type InboxData = InfiniteData<NotificationPage, string | undefined>;
+/** The pinned Account group of one tab. */
+type PinnedData = Notification[];
 
 /** What the summary counts (`count_unread`): neither read nor archived. */
 const isUnread = (n: Notification) => !n.readAt && !n.archivedAt;
 
-/** A notification as the cached lists have it, the first copy found. */
+/** A notification as the cache has it, in a list or pinned, the first copy found. */
 const cachedNotification = (id: string) =>
-  queryClient
-    .getQueriesData<InboxData>({ queryKey: QUERY_KEYS.inboxLists })
-    .flatMap(([, data]) => data?.pages.flatMap((page) => page.data) ?? [])
-    .find((n) => n.id === id);
+  [
+    ...queryClient
+      .getQueriesData<InboxData>({ queryKey: QUERY_KEYS.inboxLists })
+      .flatMap(([, data]) => data?.pages.flatMap((page) => page.data) ?? []),
+    ...queryClient
+      .getQueriesData<PinnedData>({ queryKey: QUERY_KEYS.inboxPinned })
+      .flatMap(([, data]) => data ?? []),
+  ].find((n) => n.id === id);
+
+/** Every cached list and pinned group as they are now; returns a rollback to that. */
+const snapshotInbox = () => {
+  const lists = queryClient.getQueriesData<InboxData>({
+    queryKey: QUERY_KEYS.inboxLists,
+  });
+  const pinned = queryClient.getQueriesData<PinnedData>({
+    queryKey: QUERY_KEYS.inboxPinned,
+  });
+
+  return () =>
+    [...lists, ...pinned].forEach(([key, data]) =>
+      queryClient.setQueryData(key, data),
+    );
+};
 
 /**
  * Moves the unread counts by what a change did to each notification: -1 where an unread one
@@ -85,16 +112,22 @@ const patchSummary = (
  * The summary from the server: after a change the cache could not count, because some of its
  * notifications are not loaded (read-all, its undo).
  */
-const refreshSummary = () =>
-  queryClient.invalidateQueries({ queryKey: QUERY_KEYS.inboxSummary });
+const refreshSummary = () => {
+  void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.inboxSummary });
+  // Undo of read-all brings account-level ones back to unread: they are pinned again
+  void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.inboxPinned });
+};
 
+/**
+ * Reads or unreads notifications in place, in every cached list and pinned group. A pinned one
+ * read in the All tab leaves the group for its place in the All lists (spec: Inbox · 01); in the
+ * Unread tab it stays until the tab changes, like any row read there.
+ */
 const patchReadNotification = (
   ids: string[],
   patch: Partial<Pick<Notification, 'readAt'>>,
 ) => {
-  const snapshot = queryClient.getQueriesData<InboxData>({
-    queryKey: QUERY_KEYS.inboxLists,
-  });
+  const rollbackCache = snapshotInbox();
 
   const rollbackSummary = patchSummary(
     ids.flatMap((id) => {
@@ -118,23 +151,46 @@ const patchReadNotification = (
       },
   );
 
+  queryClient
+    .getQueriesData<PinnedData>({ queryKey: QUERY_KEYS.inboxPinned })
+    .forEach(([key, data]) => {
+      if (!data) return;
+
+      const moving: Notification[] = [];
+      const next = data.flatMap((n) => {
+        if (!ids.includes(n.id)) return [n];
+
+        const changed = { ...n, ...patch };
+
+        if (inboxPinnedViewOf(key) === 'all' && !isUnread(changed)) {
+          moving.push(changed);
+          return [];
+        }
+
+        return [changed];
+      });
+
+      queryClient.setQueryData<PinnedData>(key, next);
+      moving.forEach((n) => placeInLists(n, ['all']));
+    });
+
   return () => {
-    snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    rollbackCache();
     rollbackSummary();
   };
 };
 
 /**
- * What the server's read-all reads (`mark_as_read_all`): the workspace's unread, not archived
- * notifications whose last event is not after `before`. Marks them read in every cached tab of
- * that workspace; returns their ids and a rollback.
+ * What the server's read-all reads (`mark_as_read_all`): the unread, not archived notifications of
+ * the workspace and of the account, whose last event is not after `before`. Marks them read in
+ * every cached tab of that workspace and in the pinned groups; returns their ids and a rollback.
  */
 const patchReadAll = (workspace: string, before: string, readAt: string) => {
   const limit = Date.parse(before);
   const ids = new Set<string>();
 
   const isRead = (n: Notification) =>
-    n.workspaceId === workspace &&
+    (n.workspaceId === workspace || n.workspaceId === null) &&
     n.readAt === null &&
     n.archivedAt === null &&
     Date.parse(n.updatedAt) <= limit;
@@ -149,6 +205,11 @@ const patchReadAll = (workspace: string, before: string, readAt: string) => {
       );
     });
 
+  // The pinned ones are account-level and unread: read-all reads them too
+  queryClient
+    .getQueriesData<PinnedData>({ queryKey: QUERY_KEYS.inboxPinned })
+    .forEach(([, data]) => data?.forEach((n) => isRead(n) && ids.add(n.id)));
+
   return {
     ids: [...ids],
     rollback: patchReadNotification([...ids], { readAt }),
@@ -157,10 +218,15 @@ const patchReadAll = (workspace: string, before: string, readAt: string) => {
 
 const VIEWS: readonly ListNotificationsView[] = ['all', 'unread', 'archived'];
 
+const NO_PINNED: Notification[] = [];
+
 const isView = (value: unknown): value is ListNotificationsView =>
   VIEWS.includes(value as ListNotificationsView);
 
 const belongsTo = (view: ListNotificationsView, n: Notification) => {
+  // An unread account-level one is pinned above the list, never in it (spec: Inbox · 01)
+  if (n.workspaceId === null && isUnread(n)) return false;
+
   switch (view) {
     case 'unread':
       return !n.readAt && !n.archivedAt;
@@ -212,13 +278,39 @@ const place = (
   return { ...data, pages };
 };
 
+/**
+ * Puts a notification where it belongs in the cached lists: its own workspace's, or every
+ * workspace's for an account-level one. `views` limits the tabs.
+ */
+function placeInLists(
+  notification: Notification,
+  views: readonly ListNotificationsView[] = VIEWS,
+) {
+  queryClient
+    .getQueriesData<InboxData>({ queryKey: QUERY_KEYS.inboxLists })
+    .forEach(([key, data]) => {
+      const { workspace, view } = inboxListOf(key);
+
+      if (
+        data &&
+        (workspace === notification.workspaceId ||
+          notification.workspaceId === null) &&
+        isView(view) &&
+        views.includes(view)
+      ) {
+        queryClient.setQueryData<InboxData>(
+          key,
+          place(view, data, notification),
+        );
+      }
+    });
+}
+
 const patchArchiveNotification = (
   notification: Notification,
   archivedAt: string | null,
 ) => {
-  const snapshot = queryClient.getQueriesData<InboxData>({
-    queryKey: QUERY_KEYS.inboxLists,
-  });
+  const rollbackCache = snapshotInbox();
 
   const current = cachedNotification(notification.id) ?? notification;
 
@@ -230,17 +322,16 @@ const patchArchiveNotification = (
 
   const rollbackSummary = patchSummary([{ before: current, after: next }]);
 
-  snapshot.forEach(([key, data]) => {
-    // Only its own workspace's tabs
-    const { workspace, view } = inboxListOf(key);
+  placeInLists(next);
 
-    if (data && workspace === next.workspaceId && isView(view)) {
-      queryClient.setQueryData<InboxData>(key, place(view, data, next));
-    }
-  });
+  // Archived is read: it leaves the pinned groups (unarchived, it stays read and in the lists)
+  queryClient.setQueriesData<PinnedData>(
+    { queryKey: QUERY_KEYS.inboxPinned },
+    (data) => data?.filter((n) => n.id !== next.id),
+  );
 
   return () => {
-    snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    rollbackCache();
     rollbackSummary();
   };
 };
@@ -275,6 +366,16 @@ export const useNotificationQueries = (
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     select: (data) => data.pages.flatMap((page) => page.data),
   });
+
+  // The Account group: in the Unread and All tabs, not in Archived (spec: Inbox · 01)
+  const pinnedQuery = useQuery({
+    queryKey: QUERY_KEYS.inboxPinnedWithView(view ?? 'all'),
+    queryFn: ({ signal }) =>
+      listPinnedAccountNotifications({ signal }).then(({ data }) => data),
+    enabled: view !== 'archived',
+  });
+  const pinned =
+    view === 'archived' ? NO_PINNED : (pinnedQuery.data ?? NO_PINNED);
 
   // Every mutation here is `mutate`, not `mutateAsync`: nobody awaits them, and a failure is
   // handled in onError (rollback, toast), not rejected into an unhandled promise
@@ -413,6 +514,8 @@ export const useNotificationQueries = (
 
   return {
     notifications,
+    pinned,
+    isLoadingPinned: pinnedQuery.isLoading,
     hasMoreNotifications,
     isNotificationsError,
     refetchNotifications,

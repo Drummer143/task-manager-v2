@@ -46,6 +46,8 @@ export const Inbox: React.FC = () => {
     isReadingAll,
     onMarkAsRead,
     notifications,
+    pinned,
+    isLoadingPinned,
     onMarkAsUnread,
     isNotificationsError,
     hasMoreNotifications,
@@ -56,11 +58,18 @@ export const Inbox: React.FC = () => {
     isFirstLoadingNotifications,
   } = useNotificationQueries(workspace, view);
 
-  const notificationsRef = useRef(notifications);
+  // What the page shows, in order: the pinned Account group, then the list. The cursor, the
+  // hotkeys and the step off an archived row walk this, so they work on pinned rows too
+  const pinnedIds = new Set(pinned.map((n) => n.id));
+  const feed = notifications.filter((n) => !pinnedIds.has(n.id));
+  const visible = [...pinned, ...feed];
 
+  const notificationsRef = useRef(visible);
+
+  // After every render: the handlers read the rows as they are now
   useLayoutEffect(() => {
-    notificationsRef.current = notifications;
-  }, [notifications]);
+    notificationsRef.current = visible;
+  });
 
   const archive = useCallback(
     (item: Notification) => {
@@ -81,7 +90,7 @@ export const Inbox: React.FC = () => {
   const readAllDisabled = currentView === 'archived';
 
   useRegisterKeyboardHandlers({
-    notifications,
+    notifications: visible,
     readAllDisabled,
     onReadAll,
     onMarkAsRead,
@@ -102,11 +111,7 @@ export const Inbox: React.FC = () => {
   );
 
   const renderItem = (item: Notification, index: number) => (
-    <InboxRow
-      item={item}
-      index={index}
-      handlers={handlers}
-    />
+    <InboxRow item={item} index={index} handlers={handlers} />
   );
 
   useEffect(() => () => useCursorStore.getState().clearCursor(), [view]);
@@ -114,13 +119,13 @@ export const Inbox: React.FC = () => {
   // Read once per visit: past midnight the groups keep their names until the page opens again
   const [now] = useState(() => new Date());
   const [weekStart] = useState(() => firstDayOfWeek());
-  const entries = groupEntries(notifications, currentView, now, weekStart);
+  const entries = groupEntries(feed, currentView, now, weekStart, pinned);
 
   let content;
 
-  if (isFirstLoadingNotifications) {
+  if (isFirstLoadingNotifications || isLoadingPinned) {
     content = <NotificationRowSkeleton rows={6} />;
-  } else if (isNotificationsError && notifications.length === 0) {
+  } else if (isNotificationsError && visible.length === 0) {
     // Only with nothing to show: a failed next page or background refetch keeps the list
     content = (
       <ErrorState
@@ -129,7 +134,7 @@ export const Inbox: React.FC = () => {
         onRetry={refetchNotifications}
       />
     );
-  } else if (notifications.length === 0) {
+  } else if (visible.length === 0) {
     switch (currentView) {
       case 'all':
         content = (
