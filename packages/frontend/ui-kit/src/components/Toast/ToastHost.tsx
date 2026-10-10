@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { raw } from '../../tokens';
 import { composeRefs } from '../../utils';
@@ -287,14 +287,14 @@ const NoticeToastView: React.FC<{
 /** A lane keeps its last toast while it fades out; a replacement comes in without the old one's exit. */
 const useLane = <T extends { key: number }>(current: T | null, instant = false) => {
   const ref = useRef<HTMLDivElement>(null);
-  const last = useRef(current);
+  const [last, setLast] = useState(current);
 
-  if (current) {
-    last.current = current;
+  if (current && current !== last) {
+    setLast(current);
   }
 
   const mounted = usePresence(current !== null, ref);
-  const item = current ?? (mounted && !instant ? last.current : null);
+  const item = current ?? (mounted && !instant ? last : null);
 
   return { ref, item, leaving: current === null };
 };
@@ -334,27 +334,30 @@ const Announcer: React.FC = () => {
   const [polite, setPolite] = useState({ key: 0, text: '' });
   const [assertive, setAssertive] = useState({ key: 0, text: '' });
   const actionStage = action ? `${action.key}:${action.kind}` : '';
+  const noticeKey = notice?.key;
+  // What was announced already: a re-render showing the same toast stage or the same
+  // notification must not announce it again. Adjusted during render, not in an effect
+  const [heardStage, setHeardStage] = useState('');
+  const [heardNotice, setHeardNotice] = useState<number | undefined>(undefined);
 
-  useEffect(() => {
-    if (!action) {
-      return;
+  if (heardStage !== actionStage) {
+    setHeardStage(actionStage);
+
+    if (action) {
+      const text = [action.message, 'detail' in action ? action.detail : undefined].filter(Boolean).join('. ');
+      const say = action.kind === 'error' ? setAssertive : setPolite;
+
+      say((current) => ({ key: current.key + 1, text }));
     }
+  }
 
-    const text = [action.message, 'detail' in action ? action.detail : undefined].filter(Boolean).join('. ');
-    const say = action.kind === 'error' ? setAssertive : setPolite;
+  if (heardNotice !== noticeKey) {
+    setHeardNotice(noticeKey);
 
-    say((current) => ({ key: current.key + 1, text }));
-    // Keyed by the stage: a re-render showing the same toast must not announce it again
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actionStage]);
-
-  useEffect(() => {
     if (notice) {
       setPolite((current) => ({ key: current.key + 1, text: notice.notification.announcement }));
     }
-    // Keyed by the notification: announced once, not on every re-render
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notice?.key]);
+  }
 
   return (
     <div className={styles.srOnly}>
@@ -397,9 +400,7 @@ export const ToastHost: React.FC<ToastHostProps> = ({ notifyPolicy = allowAll })
   const tone = oppositeSurface(surfaceOf(area) ?? hostSurface);
   const viewportRef = useRef<HTMLDivElement>(null);
   const runUndo = useRunUndo(messages);
-  const latestRunUndo = useRef(runUndo);
-
-  latestRunUndo.current = runUndo;
+  const undoFromKeys = useEffectEvent((redo: boolean) => runUndo(redo));
 
   useEffect(() => {
     if (primary) {
@@ -452,7 +453,7 @@ export const ToastHost: React.FC<ToastHostProps> = ({ notifyPolicy = allowAll })
 
       if (redo || matchKeys('mod+z', event)) {
         event.preventDefault();
-        latestRunUndo.current(redo);
+        undoFromKeys(redo);
       }
     };
 

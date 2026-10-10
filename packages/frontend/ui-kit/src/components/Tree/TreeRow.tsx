@@ -1,6 +1,6 @@
 import React, { memo, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDownIcon, ChevronRightIcon, MoreHorizontalIcon, PlusIcon } from '../../icons';
-import type { KitMessages } from '../../messages';
+import { useMessages } from '../../messages';
 import { LinkBase } from '../Link';
 import { skeletonWidth, Skeleton } from '../States';
 import { tooltipProps } from '../Tooltip';
@@ -13,7 +13,6 @@ type NodeRow = Extract<Row, { kind: 'node' }>;
 
 /** What a row may ask of the tree. One object for all rows, read at call time: rows re-render only for their own state. */
 export interface RowControls {
-  messages: KitMessages;
   /** Anything on the row except its buttons and link: the cursor, and opening the node. */
   click(node: TreeNode, event: React.MouseEvent<HTMLElement>): void;
   toggle(id: string): void;
@@ -141,7 +140,7 @@ export const TreeRow: React.FC<TreeRowProps> = memo(
     const { node, depth, expanded } = row;
     const expandable = isExpandable(node);
     const locked = node.disabledReason !== undefined;
-    const messages = controls.current.messages;
+    const messages = useMessages();
     const meta = locked ? messages.treeNoAccess : node.meta;
     const showActions = (canAdd || hasActions) && !renaming;
 
@@ -257,7 +256,7 @@ export const TreeNote: React.FC<{
   row: Exclude<Row, { kind: 'node' }>;
   controls: React.RefObject<RowControls>;
 }> = ({ row, controls }) => {
-  const { messages } = controls.current;
+  const messages = useMessages();
   const style = { '--_depth': row.depth } as DepthStyle;
 
   if (row.kind === 'loading') {

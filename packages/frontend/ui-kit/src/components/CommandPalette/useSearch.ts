@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PaletteItem, PaletteSource } from './types';
 
 export interface SearchGroup {
@@ -23,7 +23,9 @@ export const useSearch = (sources: PaletteSource[], query: string, scoped: boole
   const key = `${sources.map((source) => source.id).join('|')}\u0000${scoped}\u0000${query}`;
   const [late, setLate] = useState<{ key: string; items: Map<string, PaletteItem[]> }>({ key: '', items: new Map() });
 
-  const run = useMemo<Run>(() => {
+  // A new run only for a new key (the sources, the scope and the query), not for a new
+  // `sources` array: started during render, so a source's cache is on screen in this frame
+  const begin = (): Run => {
     const controller = new AbortController();
     const sync = new Map<string, PaletteItem[]>();
     const pending: Run['pending'] = [];
@@ -39,9 +41,13 @@ export const useSearch = (sources: PaletteSource[], query: string, scoped: boole
     }
 
     return { key, controller, sync, pending };
-    // `key` covers the sources, the scope and the query.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  };
+
+  const [run, setRun] = useState(begin);
+
+  if (run.key !== key) {
+    setRun(begin());
+  }
 
   useEffect(() => {
     for (const [id, promise] of run.pending) {

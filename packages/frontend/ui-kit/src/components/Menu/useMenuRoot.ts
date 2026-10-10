@@ -1,4 +1,4 @@
-import { useEffect, useId } from 'react';
+import { useEffect, useEffectEvent, useId } from 'react';
 import * as menu from '@zag-js/menu';
 import { normalizeProps, useMachine } from '@zag-js/react';
 import { raw } from '../../tokens';
@@ -73,13 +73,10 @@ export const useMenuRoot = ({
     }
   };
 
-  const { setOpen: syncAsyncOpen } = asyncItems;
+  // Only the open state matters; the setter is recreated every render
+  const syncAsyncOpen = useEffectEvent((open: boolean) => asyncItems.setOpen(open));
 
-  useEffect(() => {
-    syncAsyncOpen(api.open);
-    // Only the open state matters; the setter is recreated every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api.open]);
+  useEffect(() => syncAsyncOpen(api.open), [api.open]);
 
   useExclusiveOverlay(api.open, close);
 

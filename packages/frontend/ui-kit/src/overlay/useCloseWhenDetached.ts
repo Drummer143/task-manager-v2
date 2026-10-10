@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent } from 'react';
 
 /**
  * An overlay follows its trigger while the page scrolls; once the trigger
@@ -6,11 +6,12 @@ import { useEffect, useRef } from 'react';
  * nothing hangs over a place the user no longer sees.
  */
 export const useCloseWhenDetached = (open: boolean, getTrigger: () => Element | null, close: () => void) => {
-  const closeRef = useRef(close);
-  closeRef.current = close;
+  const onDetached = useEffectEvent(close);
+  // getTrigger reads the DOM by a stable id: only `open` matters
+  const triggerNow = useEffectEvent(getTrigger);
 
   useEffect(() => {
-    const trigger = getTrigger();
+    const trigger = triggerNow();
 
     if (!open || !trigger || typeof IntersectionObserver === 'undefined') {
       return;
@@ -18,14 +19,12 @@ export const useCloseWhenDetached = (open: boolean, getTrigger: () => Element | 
 
     const observer = new IntersectionObserver(([entry]) => {
       if (entry && !entry.isIntersecting) {
-        closeRef.current();
+        onDetached();
       }
     });
 
     observer.observe(trigger);
 
     return () => observer.disconnect();
-    // getTrigger reads the DOM by a stable id — only `open` matters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 };

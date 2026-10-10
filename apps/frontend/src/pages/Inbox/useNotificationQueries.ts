@@ -142,9 +142,9 @@ const patchArchiveNotification = (
 };
 
 export const useNotificationQueries = (view: ListNotificationsView | null) => {
-  const { data: notifications = [], hasNextPage: hasMoreNotifications } = useInfiniteQuery({
+  const { data: notifications = [], hasNextPage: hasMoreNotifications } = useInfiniteQuery<NotificationPage, Error, Notification[], string[], string | undefined>({
     queryKey: QUERY_KEYS.inboxWithView(view ?? 'all'),
-    initialPageParam: undefined as string | undefined,
+    initialPageParam: undefined,
     queryFn: ({ pageParam, signal }) =>
       listNotifications({ cursor: pageParam, view: view ?? 'all' }, { signal }),
     getNextPageParam: (lastPage) => lastPage.nextCursor,

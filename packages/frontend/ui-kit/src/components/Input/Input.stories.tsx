@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import React, { ComponentProps, CSSProperties, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import React, { ComponentProps, CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
 import { Input } from './Input';
 import { FieldInput } from './FieldInput';
 import { InlineInput, type InlineEditStart, type InlineSaveStatus } from './InlineInput';
@@ -191,21 +191,15 @@ function LiveTable() {
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   // The app's hotkey, not the kit's: in a table Enter edits, ⌘Enter opens (spec 10).
-  const openTask = useMemo(() => {
-    const mac = detectPlatform() === 'mac';
+  const mac = detectPlatform() === 'mac';
 
-    return {
-      key: 'Enter',
-      meta: mac,
-      ctrl: !mac,
-      description: 'Open task',
-      callback: () => setLog(cursorRef.current ? `${cursorRef.current}: open task` : 'no cursor'),
-    };
-  }, []);
-  const cursorRef = useRef(cursor);
-  cursorRef.current = cursor;
-
-  useRegisterHotkey(openTask);
+  useRegisterHotkey({
+    key: 'Enter',
+    meta: mac,
+    ctrl: !mac,
+    description: 'Open task',
+    callback: () => setLog(cursor ? `${cursor}: open task` : 'no cursor'),
+  });
 
   const patch = (id: string, change: Partial<Row>) =>
     setRows((current) => current.map((row) => (row.id === id ? { ...row, ...change } : row)));

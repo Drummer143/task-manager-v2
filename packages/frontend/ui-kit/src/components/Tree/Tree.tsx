@@ -1,7 +1,6 @@
-import React, { useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cx, detectPlatform } from '../../utils';
-import { useMessages } from '../../messages';
 import { useRouter } from '../../router';
 import { isAppHotkey } from '../../interaction/hotkeys';
 import { ContextMenu, type ContextMenuHandle } from '../Menu';
@@ -71,7 +70,6 @@ export const Tree: React.FC<TreeProps> = ({
   className,
   ref,
 }) => {
-  const messages = useMessages();
   const surface = useSurface();
   const router = useRouter();
   const baseId = useId();
@@ -83,7 +81,8 @@ export const Tree: React.FC<TreeProps> = ({
   const [menuNodeId, setMenuNodeId] = useState<string | null>(null);
   /** The cursor moved from the keyboard: bring its row into view. */
   const revealCursor = useRef(false);
-  const lastCursorIndex = useRef(0);
+  /** Where the cursor last stood: a row that is gone hands the cursor to the one in its place. */
+  const [lastCursorIndex, setLastCursorIndex] = useState(0);
   const mounted = useRef(true);
 
   const index = useMemo(() => indexTree(nodes), [nodes]);
@@ -118,16 +117,17 @@ export const Tree: React.FC<TreeProps> = ({
       return activeId;
     }
 
-    return nodeRows[Math.min(lastCursorIndex.current, nodeRows.length - 1)]?.node.id;
+    return nodeRows[Math.min(lastCursorIndex, nodeRows.length - 1)]?.node.id;
   })();
 
+  // Adjusted during render: React re-runs Tree at once, before its rows render
+  const cursorPosition = nodeRows.findIndex((row) => row.node.id === cursor);
+
+  if (cursorPosition >= 0 && cursorPosition !== lastCursorIndex) {
+    setLastCursorIndex(cursorPosition);
+  }
+
   useLayoutEffect(() => {
-    const position = nodeRows.findIndex((row) => row.node.id === cursor);
-
-    if (position >= 0) {
-      lastCursorIndex.current = position;
-    }
-
     if (revealCursor.current && cursor !== undefined) {
       revealCursor.current = false;
       elementOf(cursor)?.scrollIntoView?.({ block: 'nearest' });
@@ -157,9 +157,16 @@ export const Tree: React.FC<TreeProps> = ({
     };
   }, []);
 
-  useEffect(() => {
+  // Runs when the visible rows change. It reads the latest `loads` (its own output) and
+  // `loadChildren` (often a new function every parent render) without re-running on them
+  const startLoads = useEffectEvent(() => {
     let next: Map<string, Load> | null = null;
-    const edit = () => (next ??= new Map(loads));
+    // Not `next ??= …`: React Compiler 1.0 cannot lower `??=`
+    const edit = () => {
+      next = next ?? new Map(loads);
+
+      return next;
+    };
 
     // Loaded lists that are now in the data are forgotten: a later invalidation loads again.
     for (const id of loads.keys()) {
@@ -184,11 +191,12 @@ export const Tree: React.FC<TreeProps> = ({
     if (next) {
       setLoads(next);
     }
-    // Runs when the visible rows change. `loads` is this effect's own output and
-    // `loadChildren` is often a new function every parent render: re-running on them would
-    // only repeat the pass over rows already handled
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodeRows, index]);
+  });
+
+  // It starts loads (outside React) and marks them pending at once, so the rows show it in the
+  // same frame: the case the rule allows for
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => startLoads(), [nodeRows, index]);
 
   const retryLoad = (id: string) =>
     setLoads((state) => {
@@ -204,16 +212,17 @@ export const Tree: React.FC<TreeProps> = ({
   const activeAncestors = activeId === undefined ? [] : ancestorsOf(index, activeId);
   const activeAncestorsKey = activeAncestors.join('\u0000');
 
-  useEffect(() => {
+  const openActivePath = useEffectEvent(() => {
     const closed = activeAncestors.filter((id) => !expanded.has(id));
 
     if (closed.length > 0) {
       setOpen(closed, true);
     }
-    // Only when the open page (or its path) changes: `activeAncestors` is a new array every
-    // render, and a branch the user closed later must stay closed
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId, activeAncestorsKey]);
+  });
+
+  // Only when the open page (or its path) changes: `activeAncestors` is a new array every
+  // render, and a branch the user closed later must stay closed
+  useEffect(() => openActivePath(), [activeId, activeAncestorsKey]);
 
   const revealedActive = useRef<string | undefined>(undefined);
 
@@ -275,7 +284,8 @@ export const Tree: React.FC<TreeProps> = ({
     }
   };
 
-  const drag = useTreeDrag({
+  // Taken apart: the ghost's ref must not make the drag state look like a ref to the compiler
+  const { drag, ghostRef, start: startDrag } = useTreeDrag({
     containerRef,
     targetAt: (draggedId, rowId, fraction) => {
       const row = rowById.get(rowId);
@@ -292,51 +302,54 @@ export const Tree: React.FC<TreeProps> = ({
       move(id, target.move, target.line === null ? (target.move.parentId ?? undefined) : undefined),
   });
 
+  // Rows are memoized and hold this one object; their handlers call the latest controls,
+  // written after each render (rows read them only in handlers)
   const controls = useRef<RowControls>(null as unknown as RowControls);
 
-  controls.current = {
-    messages,
-    click: (node, event) => {
-      setCursorId(node.id);
+  useLayoutEffect(() => {
+    controls.current = {
+      click: (node, event) => {
+        setCursorId(node.id);
 
-      // A link handles its own click (the router, a new tab); the rest of the row opens the node.
-      if (!(event.target as HTMLElement).closest('a')) {
-        openNode(node, event.metaKey || event.ctrlKey);
-      }
-    },
-    toggle: (id) => {
-      setCursorId(id);
-      setOpen([id], !expanded.has(id));
-    },
-    pointerDown: (event, node) => {
-      if (onMove && node.disabledReason === undefined && renamingId !== node.id) {
-        drag.start(event, node.id);
-      }
-    },
-    add: (id) => onAdd?.(id),
-    more: (id, anchor) => {
-      setCursorId(id);
-      openMenu(id, anchor);
-    },
-    retry: (id) => onRetry?.(id),
-    retryLoad,
-    renamed: (id, value, byKey) => {
-      setRenamingId(null);
+        // A link handles its own click (the router, a new tab); the rest of the row opens the node.
+        if (!(event.target as HTMLElement).closest('a')) {
+          openNode(node, event.metaKey || event.ctrlKey);
+        }
+      },
+      toggle: (id) => {
+        setCursorId(id);
+        setOpen([id], !expanded.has(id));
+      },
+      pointerDown: (event, node) => {
+        if (onMove && node.disabledReason === undefined && renamingId !== node.id) {
+          startDrag(event, node.id);
+        }
+      },
+      add: (id) => onAdd?.(id),
+      more: (id, anchor) => {
+        setCursorId(id);
+        openMenu(id, anchor);
+      },
+      retry: (id) => onRetry?.(id),
+      retryLoad,
+      renamed: (id, value, byKey) => {
+        setRenamingId(null);
 
-      const label = value?.trim();
-      const node = index.get(id)?.node;
+        const label = value?.trim();
+        const node = index.get(id)?.node;
 
-      // An empty name is not saved (product §4.3); an unchanged one is not a change.
-      if (label && node && label !== node.label) {
-        onRename?.(id, label);
-      }
+        // An empty name is not saved (product §4.3); an unchanged one is not a change.
+        if (label && node && label !== node.label) {
+          onRename?.(id, label);
+        }
 
-      // Enter / Esc return to the tree; a click elsewhere keeps focus where it went.
-      if (byKey) {
-        containerRef.current?.focus({ preventScroll: true });
-      }
-    },
-  };
+        // Enter / Esc return to the tree; a click elsewhere keeps focus where it went.
+        if (byKey) {
+          containerRef.current?.focus({ preventScroll: true });
+        }
+      },
+    };
+  });
 
   useImperativeHandle(ref, () => ({
     rename: (id) => {
@@ -482,8 +495,8 @@ export const Tree: React.FC<TreeProps> = ({
   };
 
   const menuNode = menuNodeId === null ? undefined : index.get(menuNodeId)?.node;
-  const draggedNode = drag.drag ? index.get(drag.drag.id)?.node : undefined;
-  const target = drag.drag?.target;
+  const draggedNode = drag ? index.get(drag.id)?.node : undefined;
+  const target = drag?.target;
 
   const tree = (
     <div
@@ -493,7 +506,7 @@ export const Tree: React.FC<TreeProps> = ({
       tabIndex={0}
       aria-activedescendant={cursor === undefined ? undefined : domIdOf(cursor)}
       className={cx(styles.tree, className)}
-      data-dragging={drag.drag ? '' : undefined}
+      data-dragging={drag ? '' : undefined}
       onKeyDown={handleKeyDown}
       onMouseDown={(event) => {
         // Focus stays on the tree whatever part of a row is pressed (and no text gets selected).
@@ -531,7 +544,7 @@ export const Tree: React.FC<TreeProps> = ({
             cursor={id === cursor}
             active={id === activeId}
             renaming={id === renamingId}
-            dragSource={id === drag.drag?.id}
+            dragSource={id === drag?.id}
             drop={drop}
             dropDepth={drop && target?.line ? target.line.depth : undefined}
             canAdd={onAdd !== undefined && canContain(row.node)}
@@ -557,12 +570,12 @@ export const Tree: React.FC<TreeProps> = ({
       ) : (
         tree
       )}
-      {drag.drag &&
+      {drag &&
         draggedNode &&
         createPortal(
           // The lifted row keeps the tree's surface: the portal is out of reach of CSS inheritance.
           <Surface tone={surface} asChild>
-            <div ref={drag.ghostRef} className={styles.ghost} style={{ width: drag.drag.width }} aria-hidden="true">
+            <div ref={ghostRef} className={styles.ghost} style={{ width: drag.width }} aria-hidden="true">
               {draggedNode.icon !== undefined && <span className={styles.icon}>{draggedNode.icon}</span>}
               <span className={styles.label}>{draggedNode.label}</span>
             </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import * as menu from '@zag-js/menu';
 import { mergeProps, normalizeProps, useMachine, type PropTypes } from '@zag-js/react';
@@ -281,16 +281,13 @@ const SubmenuRow: React.FC<{ item: MenuSubmenuItem; level: MenuLevelContext; slo
 
   // Registered once: the parent and this child live and go together. The
   // services are stable; `api` and `level` are new objects every render.
-  const { setChild } = level.api;
-  const { setParent } = api;
   const parentService = level.service;
+  const link = useEffectEvent(() => {
+    level.api.setChild(service);
+    api.setParent(parentService);
+  });
 
-  useEffect(() => {
-    setChild(service);
-    setParent(parentService);
-    // The setters come from `api` objects that are new every render (see above)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [service, parentService]);
+  useEffect(() => link(), [service, parentService]);
 
   const childLevel = childLevelOf(api, service, level);
   const triggerProps = mergeProps(level.api.getTriggerItemProps(api), {
@@ -386,7 +383,7 @@ export const MenuPanel: React.FC<{ level: MenuLevelContext; items: MenuItem[]; c
       if (!item) {
         // Typing in a menu with a filter goes into the field. Focus moves before the
         // character lands, so the browser puts it there; Zag's typeahead never sees it.
-        const field = contentRef.current?.querySelector<HTMLInputElement>('[data-menu-filter]');
+        const field = (event.currentTarget as HTMLElement).querySelector<HTMLInputElement>('[data-menu-filter]');
 
         if (field && isTyping(event) && !isEditable(event.target)) {
           field.focus();

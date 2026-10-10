@@ -1,4 +1,4 @@
-import React, { cloneElement, isValidElement, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { cloneElement, isValidElement, useEffect, useEffectEvent, useImperativeHandle, useRef, useState } from 'react';
 import { MenuPanel } from './MenuContent';
 import type { MenuItem } from './types';
 import { useMenuRoot } from './useMenuRoot';
@@ -31,10 +31,6 @@ interface OpenRequest {
   element: HTMLElement;
 }
 
-interface LiveMenuHandle {
-  open(request: OpenRequest): void;
-}
-
 type ChildProps = {
   onContextMenu?: React.MouseEventHandler<HTMLElement>;
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>;
@@ -51,14 +47,16 @@ const cornerOf = (element: HTMLElement): OpenRequest => {
   return { x: rect.left, y: rect.bottom, keyboard: true, element };
 };
 
-/** The menu machine, mounted on the first request and kept for the next ones. */
+/**
+ * The menu machine, mounted on the first request and kept for the next ones. Each request is a
+ * new object, so the same point asked twice opens the menu twice.
+ */
 const LiveMenu: React.FC<{
   items: MenuItem[];
-  first: OpenRequest;
+  request: OpenRequest;
   'aria-label'?: string;
-  ref: React.Ref<LiveMenuHandle>;
-}> = ({ items, first, 'aria-label': ariaLabel, ref }) => {
-  const openedFrom = useRef<OpenRequest>(first);
+}> = ({ items, request, 'aria-label': ariaLabel }) => {
+  const openedFrom = useRef<OpenRequest>(request);
   const { api, level } = useMenuRoot({
     items,
     'aria-label': ariaLabel,
@@ -73,27 +71,17 @@ const LiveMenu: React.FC<{
     },
   });
 
-  const open = (request: OpenRequest) => {
-    openedFrom.current = request;
+  const open = useEffectEvent((next: OpenRequest) => {
+    openedFrom.current = next;
     // Zag's own context-menu path — it takes the point and positions the menu there.
     api.getContextTriggerProps().onContextMenu?.({
-      clientX: request.x,
-      clientY: request.y,
+      clientX: next.x,
+      clientY: next.y,
       preventDefault: () => undefined,
     } as unknown as React.MouseEvent<HTMLElement>);
-  };
-
-  useImperativeHandle(ref, () => ({ open }));
-
-  const served = useRef(false);
-
-  useEffect(() => {
-    // The request that brought this menu to life is served once it exists.
-    if (!served.current) {
-      served.current = true;
-      open(first);
-    }
   });
+
+  useEffect(() => open(request), [request]);
 
   return <MenuPanel level={level} items={items} />;
 };
@@ -105,16 +93,7 @@ const LiveMenu: React.FC<{
  * cost two handlers. The element itself is never re-created.
  */
 export const ContextMenu: React.FC<ContextMenuProps> = ({ children, items, 'aria-label': ariaLabel, ref }) => {
-  const [first, setFirst] = useState<OpenRequest | null>(null);
-  const live = useRef<LiveMenuHandle>(null);
-
-  const ask = (request: OpenRequest) => {
-    if (live.current) {
-      live.current.open(request);
-    } else {
-      setFirst(request);
-    }
-  };
+  const [request, ask] = useState<OpenRequest | null>(null);
 
   useImperativeHandle(ref, () => ({
     openAt: (anchor, returnFocusTo = anchor) => ask({ ...cornerOf(anchor), element: returnFocusTo }),
@@ -145,7 +124,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ children, items, 'aria
           }
         },
       })}
-      {first && <LiveMenu ref={live} items={items} first={first} aria-label={ariaLabel} />}
+      {request && <LiveMenu items={items} request={request} aria-label={ariaLabel} />}
     </>
   );
 };

@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useLayoutEffect,
   useRef,
+  useState,
   type ReactNode,
 } from 'react';
 import { raw } from '../../tokens';
@@ -78,6 +79,17 @@ const paint = (shell: HTMLElement | null, layout: ShellLayout) => {
  * `useShell()`, not in props; the layout comes from `resolveShell` for the
  * frame's own width, measured by one ResizeObserver.
  */
+/** The panel's content; once closed, the last one it had: an overlay fades out with it inside. */
+const KeptPanel: React.FC<{ open: boolean; children: ReactNode }> = ({ open, children }) => {
+  const [kept, setKept] = useState(children);
+
+  if (open && kept !== children) {
+    setKept(children);
+  }
+
+  return open ? children : kept;
+};
+
 export const AppShell: React.FC<AppShellProps> = ({
   sidebar,
   status,
@@ -280,8 +292,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   /* ── Esc: peek → overlay panel → docked panel (spec 07); layers stand above ── */
 
-  const escape = useRef<() => boolean>(() => false);
-  escape.current = () => {
+  useEscapeStack(() => {
     if (peek) {
       closePeek();
       return true;
@@ -293,9 +304,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     }
 
     return false;
-  };
-
-  useEscapeStack(useCallback(() => escape.current(), []));
+  });
 
   /* ── The panel: focus and the overlay's exit ── */
 
@@ -336,19 +345,17 @@ export const AppShell: React.FC<AppShellProps> = ({
     }
   }, [panelOpen]);
 
-  /** The last open panel: an overlay fades out with its content still in it. */
-  const lastPanel = useRef<{ node: ReactNode; overlay: boolean }>({
-    node: null,
-    overlay: false,
-  });
+  /** Whether the last open panel was an overlay: only an overlay has an exit (spec: animations). */
+  const [wasOverlay, setWasOverlay] = useState(false);
+  const isOverlay = layout.panel === 'overlay';
 
-  if (panelOpen) {
-    lastPanel.current = { node: panel, overlay: layout.panel === 'overlay' };
+  if (panelOpen && wasOverlay !== isOverlay) {
+    setWasOverlay(isOverlay);
   }
 
   const panelMounted = usePresence(panelOpen, panelRef);
-  // A docked panel closes at once; only an overlay has an exit (spec: animations).
-  const showPanel = panelOpen || (panelMounted && lastPanel.current.overlay);
+  // A docked panel closes at once
+  const showPanel = panelOpen || (panelMounted && wasOverlay);
   const panelMode = panelOpen ? layout.panel : 'overlay';
 
   /* ── Canvas scroll per route ── */
@@ -464,7 +471,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           data-mode={panelMode}
           data-state={panelOpen ? 'open' : 'closed'}
         >
-          {panelOpen ? panel : lastPanel.current.node}
+          <KeptPanel open={panelOpen}>{panel}</KeptPanel>
         </aside>
       )}
     </div>

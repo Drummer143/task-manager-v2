@@ -166,7 +166,8 @@ export const ReducedMotion: Story = {
 };
 
 const WithDelayDemo: React.FC<ComponentProps<typeof Spinner>> = (args) => {
-  const [isVisible, setIsVisible] = useState(false);
+  // Visible from the start, as if `run` had been pressed
+  const [isVisible, setIsVisible] = useState(true);
   const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const show = useDelayedFlag(isVisible, { delay: 1000, minVisible: 5000 });
@@ -181,12 +182,14 @@ const WithDelayDemo: React.FC<ComponentProps<typeof Spinner>> = (args) => {
   }, []);
 
   useEffect(() => {
-    run();
+    timeout.current = setTimeout(() => {
+      setIsVisible(false);
+    }, 2000);
 
     return () => {
       clearTimeout(timeout.current);
     };
-  }, [run]);
+  }, []);
 
   return (
     <div

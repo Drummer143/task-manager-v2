@@ -38,6 +38,9 @@ export const Surface: React.FC<SurfaceProps> = ({ tone, asChild = false, classNa
   const parent = useSurface();
   const slotChild = asChild && isValidElement<ChildProps>(children) ? children : null;
   const childRef = slotChild?.props.ref;
+  // composeRefs only wraps the refs in a callback ref, it never reads them during render; the
+  // rule cannot see that. The compiler skips Surface for it, which costs nothing: a thin wrapper
+  // eslint-disable-next-line react-hooks/refs
   const slotRef = useMemo(() => composeRefs(ref, childRef), [ref, childRef]);
 
   if (import.meta.env.DEV && tone === 'inverse' && parent === 'inverse') {

@@ -13,12 +13,10 @@ const Harness: React.FC<{ openInbox: () => void }> = ({ openInbox }) => {
   return <Sidebar inbox={{ href: '/inbox', unread: 3 }} />;
 };
 
-let view: () => string = () => 'expanded';
-const ViewProbe: React.FC = () => {
-  const { sidebarView } = useShell();
-  view = () => sidebarView;
-  return null;
-};
+// The shell's sidebar view, read from the DOM: a render must not write outside the component
+const ViewProbe: React.FC = () => <output data-testid="sidebar-view">{useShell().sidebarView}</output>;
+
+const view = () => screen.getByTestId('sidebar-view').textContent;
 
 const setup = () => {
   const router: RouterAdapter = { navigate: vi.fn() };

@@ -1,5 +1,5 @@
-import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
-import { useCursorStore, useRegisterHotkey, VirtualList, type HotkeyHandlerConfig } from '@task-manager-v2/ui-kit';
+import React, { useCallback, useLayoutEffect, useRef } from 'react';
+import { useCursorStore, useRegisterHotkey, VirtualList } from '@task-manager-v2/ui-kit';
 import type { Notification } from '@task-manager-v2/api/main/schemas';
 import styles from '../Inbox.module.scss';
 
@@ -32,42 +32,23 @@ export const InboxList: React.FC<InboxListProps> = ({ items, renderItem, hasMore
     }
   }, [items]);
 
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
+  const move = (delta: number) => {
+    const { cursor: current, setCursor } = useCursorStore.getState();
+    const index = items.findIndex((item) => item.id === current);
+    const next = items[Math.min(Math.max(index + delta, 0), items.length - 1)];
 
-  const hotkeys = useMemo(() => {
-    const move = (delta: number) => {
-      const list = itemsRef.current;
-      const { cursor: current, setCursor } = useCursorStore.getState();
-      const index = list.findIndex((item) => item.id === current);
-      const next = list[Math.min(Math.max(index + delta, 0), list.length - 1)];
+    if (next) {
+      setCursor(next.id);
+    }
+  };
 
-      if (next) {
-        setCursor(next.id);
-      }
-    };
-
-    const config = (key: string, description: string, delta: number): HotkeyHandlerConfig => ({
-      key,
-      description,
-      callback: () => move(delta),
-    });
-
-    return {
-      move,
-      next: config('j', 'Next notification', 1),
-      previous: config('k', 'Previous notification', -1),
-      // The arrows too, anywhere on the page (spec 08): a widget that takes its own arrows (the
-      // tree, a radio group, a menu) handles them first, and the registry leaves a handled key
-      down: config('ArrowDown', 'Next notification', 1),
-      up: config('ArrowUp', 'Previous notification', -1),
-    };
-  }, []);
-
-  useRegisterHotkey(hotkeys.next);
-  useRegisterHotkey(hotkeys.previous);
-  useRegisterHotkey(hotkeys.down);
-  useRegisterHotkey(hotkeys.up);
+  // The registry calls the latest callback, so `move` sees the current items
+  useRegisterHotkey({ key: 'j', description: 'Next notification', callback: () => move(1) });
+  useRegisterHotkey({ key: 'k', description: 'Previous notification', callback: () => move(-1) });
+  // The arrows too, anywhere on the page (spec 08): a widget that takes its own arrows (the
+  // tree, a radio group, a menu) handles them first, and the registry leaves a handled key
+  useRegisterHotkey({ key: 'ArrowDown', description: 'Next notification', callback: () => move(1) });
+  useRegisterHotkey({ key: 'ArrowUp', description: 'Previous notification', callback: () => move(-1) });
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     // Home and End only while the list has focus: elsewhere they scroll the page
@@ -82,7 +63,7 @@ export const InboxList: React.FC<InboxListProps> = ({ items, renderItem, hasMore
     }
 
     event.preventDefault();
-    hotkeys.move(delta);
+    move(delta);
   };
 
   return (

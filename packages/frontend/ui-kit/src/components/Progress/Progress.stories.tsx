@@ -90,12 +90,16 @@ export const Determinate: Story = {
 
 const WithValueDemo: React.FC<ComponentProps<typeof Progress>> = (args) => {
   const [progressValue, setProgressValue] = useState(args.value ?? 0);
+  // A new value from the controls replaces the one set by the buttons
+  const [argsValue, setArgsValue] = useState(args.value);
 
-  useEffect(() => {
+  if (argsValue !== args.value) {
+    setArgsValue(args.value);
+
     if (args.value !== undefined) {
       setProgressValue(args.value);
     }
-  }, [args.value]);
+  }
 
   return (
     <div style={{ ...frame, display: 'grid', gap: cssVar('sp-4') }}>
@@ -139,8 +143,6 @@ const UnknownThenKnownDemo: React.FC = () => {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
-    setValue(undefined);
-
     // 1.5 s of unknown size, then 20% steps every 600 ms.
     const steps = [0.2, 0.4, 0.6, 0.8, 1];
     timers.current = steps.map((step, index) => setTimeout(() => setValue(step), 1500 + index * 600));
@@ -153,7 +155,13 @@ const UnknownThenKnownDemo: React.FC = () => {
       <Progress label="Uploading attachment" value={value} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: cssVar('sp-4') }}>
-        <button type="button" onClick={() => setRun((prev) => prev + 1)}>
+        <button
+          type="button"
+          onClick={() => {
+            setValue(undefined);
+            setRun((prev) => prev + 1);
+          }}
+        >
           Restart
         </button>
         <Caption>{value === undefined ? 'size unknown' : percent(value)}</Caption>

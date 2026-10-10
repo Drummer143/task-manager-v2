@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 
 /** The overlay on screen now: popover, menu, select — one at a time (spec 07). */
 let active: { id: symbol; close: () => void } | null = null;
@@ -10,8 +10,7 @@ let active: { id: symbol; close: () => void } | null = null;
  */
 export const useExclusiveOverlay = (open: boolean, close: () => void) => {
   const [id] = useState(() => Symbol('overlay'));
-  const closeRef = useRef(close);
-  closeRef.current = close;
+  const closeLatest = useEffectEvent(close);
 
   useEffect(() => {
     if (!open) {
@@ -22,7 +21,7 @@ export const useExclusiveOverlay = (open: boolean, close: () => void) => {
       active.close();
     }
 
-    active = { id, close: () => closeRef.current() };
+    active = { id, close: () => closeLatest() };
 
     return () => {
       if (active?.id === id) {

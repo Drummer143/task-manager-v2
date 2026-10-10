@@ -1,6 +1,7 @@
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
 import dts from 'vite-plugin-dts';
 import * as path from 'path';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
@@ -11,6 +12,8 @@ export default defineConfig(() => ({
   cacheDir: '../../../node_modules/.vite/packages/frontend/ui-kit',
   plugins: [
     react(),
+    // React Compiler, as in the app: tests and stories run the code the app ships
+    babel({ presets: [reactCompilerPreset()] }),
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md']),
     dts({

@@ -145,12 +145,14 @@ export const VirtualList = <Item,>({
         : estimateSize,
   });
 
-  useLayoutEffect(() => {
+  const revealCursor = useEffectEvent(() => {
     if (cursorIndex >= 0) {
       virtualizer.scrollToIndex(cursorIndex, { align: 'auto' });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cursorKey]);
+  });
+
+  // When the cursor moves, not when the rows around it change
+  useLayoutEffect(() => revealCursor(), [cursorKey]);
 
   const start = virtualizer.range?.startIndex ?? -1;
   const end = virtualizer.range?.endIndex ?? -1;

@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useEffect } from 'react';
 import { useRouter, type RouterAdapter } from './RouterContext';
 
 /** Anything with a scheme (`https:`, `mailto:`…) or protocol-relative leaves the app. */
@@ -74,19 +75,18 @@ const navigateOnClick = (
  */
 export const useLinkClick = (options: LinkClickOptions) => {
   const router = useRouter();
+  const hasHref = options.href !== undefined;
 
-  if (
-    import.meta.env.DEV &&
-    !router &&
-    options.href !== undefined &&
-    !warnedNoRouter
-  ) {
-    warnedNoRouter = true;
-    console.warn(
-      'A kit link rendered without a router adapter: it will reload the page. ' +
-        'Pass `router` to KitRoot.',
-    );
-  }
+  // Once per page, after render: a render must not write outside the component
+  useEffect(() => {
+    if (import.meta.env.DEV && !router && hasHref && !warnedNoRouter) {
+      warnedNoRouter = true;
+      console.warn(
+        'A kit link rendered without a router adapter: it will reload the page. ' +
+          'Pass `router` to KitRoot.',
+      );
+    }
+  }, [router, hasHref]);
 
   return (event: React.MouseEvent<HTMLAnchorElement>) =>
     navigateOnClick(router, event, options);

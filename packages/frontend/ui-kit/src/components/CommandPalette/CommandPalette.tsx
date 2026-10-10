@@ -48,6 +48,20 @@ export interface CommandPaletteProps {
   initialQuery?: string;
 }
 
+/** A source prefix at the start of what is typed: the source to narrow to, and the rest. */
+const splitPrefix = (
+  value: string,
+  registered: readonly { current: PaletteSource }[],
+): { scope: PaletteSource | null; query: string } => {
+  const prefixed = registered
+    .map((entry) => entry.current)
+    .find((source) => source.prefix && value.startsWith(source.prefix));
+
+  return prefixed
+    ? { scope: prefixed, query: value.slice(prefixed.prefix?.length ?? 0) }
+    : { scope: null, query: value };
+};
+
 export const CommandPalette: React.FC<CommandPaletteProps> = ({ initialQuery }) => {
   const messages = useMessages();
   const router = useRouter();
@@ -58,9 +72,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ initialQuery }) 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const [query, setQuery] = useState('');
+  // The initial query is read as if typed: its prefix narrows at once
+  const [query, setQuery] = useState(() => splitPrefix(initialQuery ?? '', registered).query);
   /** A prefix typed first narrows the search to that source. */
-  const [scope, setScope] = useState<PaletteSource | null>(null);
+  const [scope, setScope] = useState(() => splitPrefix(initialQuery ?? '', registered).scope);
   /** Second steps: "Move 2 tasks to…" replaces the list with its variants. */
   const [steps, setSteps] = useState<PaletteSource[]>([]);
   const [confirming, setConfirming] = useState<PaletteItem | null>(null);
@@ -91,17 +106,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ initialQuery }) 
   const current = selectable.length > 0 ? selectable[Math.min(cursor, selectable.length - 1)] : undefined;
 
   useLayoutEffect(() => {
-    // The field is focused in the first frame: typing never waits (spec 06).
-    inputRef.current?.focus({ preventScroll: true });
-
-    if (initialQuery) {
-      changeQuery(initialQuery);
-    }
-    // Once, on open: the first keystroke, not a controlled value.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useLayoutEffect(() => {
     if (current) {
       document.getElementById(current.domId)?.scrollIntoView?.({ block: 'nearest' });
     }
@@ -109,19 +113,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ initialQuery }) 
 
   const changeQuery = (value: string) => {
     // A prefix typed first narrows the search — only at the top, not inside a step.
-    const prefixed = narrowed
-      ? undefined
-      : registered.map((entry) => entry.current).find((source) => source.prefix && value.startsWith(source.prefix));
+    const typed = narrowed ? { scope: null, query: value } : splitPrefix(value, registered);
 
-    if (prefixed) {
-      setScope(prefixed);
-      setQuery(value.slice(prefixed.prefix?.length ?? 0));
-    } else {
-      setQuery(value);
+    if (typed.scope) {
+      setScope(typed.scope);
     }
 
+    setQuery(typed.query);
     setCursor(0);
   };
+
+  useLayoutEffect(() => {
+    // The field is focused in the first frame: typing never waits (spec 06).
+    inputRef.current?.focus({ preventScroll: true });
+  }, []);
 
   const run = (item: PaletteItem, newTab = false) => {
     if (item.disabledReason !== undefined) {

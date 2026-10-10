@@ -1,4 +1,4 @@
-import React, { useCallback, useId, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffectEvent, useId, useLayoutEffect, useRef, useState } from 'react';
 import { cx } from '../../utils';
 import { tooltipProps } from '../Tooltip';
 import { useEscapeStack } from '../../interaction/escape';
@@ -63,6 +63,10 @@ export interface InlineInputProps
   ref?: React.Ref<HTMLDivElement>;
 }
 
+type EditStart = { how: InlineEditStart; char?: string };
+
+const CARET: EditStart = { how: 'caret' };
+
 const isTextKey = (event: React.KeyboardEvent) =>
   event.key.length === 1 && event.key.trim() !== '' && !event.metaKey && !event.ctrlKey && !event.altKey;
 
@@ -106,9 +110,21 @@ export const InlineInput: React.FC<InlineInputProps> = ({
 }) => {
   const displayRef = useRef<HTMLSpanElement | null>(null);
   /** How the edit the cell asked for should start; read once by the editor. */
-  const startRef = useRef<{ how: InlineEditStart; char?: string }>({ how: 'caret' });
+  const [start, setStart] = useState<EditStart>(CARET);
   const wasEditing = useRef(editing);
   const [problem, setProblem] = useState<string | null>(null);
+  // The edit ended: the next one starts at the caret unless the cell asks otherwise, with no
+  // problem left over. Adjusted during render, so no render shows the stale ones
+  const [editingBefore, setEditingBefore] = useState(editing);
+
+  if (editingBefore !== editing) {
+    setEditingBefore(editing);
+
+    if (!editing) {
+      setStart(CARET);
+      setProblem(null);
+    }
+  }
   const readOnly = readOnlyReason !== undefined;
   const messages = useMessages();
   // The key the cell was born with is not an edit: only a change lights it up.
@@ -116,7 +132,7 @@ export const InlineInput: React.FC<InlineInputProps> = ({
   const remoteKey = remoteEdit && remoteEdit.key !== firstRemoteKey ? remoteEdit.key : undefined;
 
   const requestEdit = (how: InlineEditStart, char?: string) => {
-    startRef.current = { how, char };
+    setStart({ how, char });
     onEditingChange(true, how, char);
   };
 
@@ -129,9 +145,6 @@ export const InlineInput: React.FC<InlineInputProps> = ({
       if (!active || active === document.body) {
         displayRef.current?.focus({ preventScroll: true });
       }
-
-      startRef.current = { how: 'caret' };
-      setProblem(null);
     }
 
     wasEditing.current = editing;
@@ -224,7 +237,7 @@ export const InlineInput: React.FC<InlineInputProps> = ({
 
       {editing && !readOnly ? (
         <InlineEditor
-          start={startRef.current}
+          start={start}
           value={value}
           status={status}
           unsavedValue={unsavedValue}
@@ -296,7 +309,7 @@ interface InlineEditorProps
     | 'onCancel'
     | 'onEditingChange'
   > {
-  start: { how: InlineEditStart; char?: string };
+  start: EditStart;
   ariaLabel?: string;
   ariaLabelledBy?: string;
   onProblem(problem: string | null): void;
@@ -336,10 +349,8 @@ const InlineEditor: React.FC<InlineEditorProps> = ({
   const message = validate?.(draft) ?? null;
   const problem = message ?? (tooLong ? `${draft.length} / ${maxLength}` : null);
 
-  // The latest draft for handlers that outlive a render (Esc ladder, blur).
-  const latest = useRef({ draft, problem, settled: false });
-  latest.current.draft = draft;
-  latest.current.problem = problem;
+  /** Saved or cancelled: Enter then blur, or Esc then blur, must not settle the edit twice. */
+  const settled = useRef(false);
 
   useLayoutEffect(() => {
     onProblem(problem);
@@ -347,7 +358,7 @@ const InlineEditor: React.FC<InlineEditorProps> = ({
 
   useAutoGrow(editorRef, draft, { enabled: Boolean(multiline) });
 
-  useLayoutEffect(() => {
+  const focusEditor = useEffectEvent(() => {
     const editor = editorRef.current;
 
     if (!editor) {
@@ -361,31 +372,30 @@ const InlineEditor: React.FC<InlineEditorProps> = ({
     } else {
       editor.setSelectionRange(editor.value.length, editor.value.length);
     }
-    // Once, when the edit starts: `start` is read at mount on purpose.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
+
+  // Once, when the edit starts: `start` is read at mount on purpose
+  useLayoutEffect(() => focusEditor(), []);
 
   const cancel = useCallback(() => {
-    latest.current.settled = true;
+    settled.current = true;
     onCancel?.();
     onEditingChange(false);
   }, [onCancel, onEditingChange]);
 
   const save = (move?: 1 | -1) => {
-    const { draft: next, problem: blocking, settled } = latest.current;
-
     // With a problem nothing is saved; Esc still cancels (spec 04).
-    if (settled || blocking) {
+    if (settled.current || problem) {
       return;
     }
 
-    if (required && next.trim() === '') {
+    if (required && draft.trim() === '') {
       cancel();
       return;
     }
 
-    latest.current.settled = true;
-    onCommit(next, move);
+    settled.current = true;
+    onCommit(draft, move);
 
     if (move === undefined) {
       onEditingChange(false);
@@ -393,15 +403,13 @@ const InlineEditor: React.FC<InlineEditorProps> = ({
   };
 
   // Esc is a level of the ladder (spec 05): the edit is the first thing it undoes.
-  const handleEscape = useCallback(() => {
-    if (!latest.current.settled) {
+  useEscapeStack(() => {
+    if (!settled.current) {
       cancel();
     }
 
     return true;
-  }, [cancel]);
-
-  useEscapeStack(handleEscape);
+  });
 
   const editorProps = {
     ref: editorRef,

@@ -1,6 +1,7 @@
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
 import { existsSync, readFileSync } from 'node:fs';
@@ -31,7 +32,15 @@ export default defineConfig(() => ({
     port: 2346,
     host: 'localhost',
   },
-  plugins: [react(), nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
+  plugins: [
+    react(),
+    // React Compiler (the stable one, through Babel): memoizes components and hooks, the kit's
+    // too, as its sources come in through the path alias. A component that breaks the rules of
+    // React is left uncompiled; eslint-plugin-react-hooks reports it
+    babel({ presets: [reactCompilerPreset()] }),
+    nxViteTsPaths(),
+    nxCopyAssetsPlugin(['*.md']),
+  ],
   // The upload worker (@task-manager-v2/uploader) imports workspace libs, and workers are bundled
   // separately, so they need the path aliases too
   worker: {
