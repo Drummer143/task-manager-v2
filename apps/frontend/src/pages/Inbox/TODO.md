@@ -3,6 +3,9 @@
 Spec: "[Уведомления] Inbox" (section numbers below are its own). Tick a box when it lands;
 move an item to "Deferred" with a reason rather than deleting it.
 
+What waits for something that does not exist yet (workspaces, real notification kinds and their
+`subject`, invites, the task table, the designer) is in `docs/TODO.md`, not here.
+
 ## Done
 
 - [x] `NotificationRow` (`shared/ui/NotificationRow`): states, time, actions over the right edge (§02)
@@ -19,11 +22,6 @@ move an item to "Deferred" with a reason rather than deleting it.
 - [x] E / U on the highlighted row (`useRegisterKeyboardHandlers`); E is Unarchive in the Archived tab
 - [x] Archive / Unarchive moves the cursor to the next row (the previous one at the end) *before*
       the row leaves, from E and from the row's button (`cursor.ts`, wrapped in the page)
-- [ ] Enter / O — open in the panel: real `href`s (`?task=` / `?invite=`, replace) instead of `#`.
-      Spec 11: the API gives only `subject { type, id, key, pageId }`; the front builds
-      `inboxHref(n, view)` and `objectHref(subject)` in one place, beside `parseSidePanel` / `writeSidePanel`
-- [ ] ⌘Enter — a new tab; G O — the object's own page (`objectHref`)
-- [ ] J / K with the panel open — the panel follows the cursor (navigate with replace)
 - [x] G U / G A / G E — the tabs
 
 ## List (§04, §06)
@@ -48,18 +46,13 @@ move an item to "Deferred" with a reason rather than deleting it.
 - [ ] `inbox.updated`: patch the summary, refetch the list; highlight new rows (`--highlight-remote`);
       the cursor and the scroll do not move
 
-## Content (§01, §02, §03, §05)
+## Content (§01)
 
-- [ ] Texts per kind (`inbox.messages.ts`); only `debug` exists so far
-- [ ] System avatars (due soon, overdue) and `--state-warning` with its palette steps
-- [ ] The Account group (`listAccountNotifications`, one page, above Today) and invites: Join / Decline in the row, ⇧Enter / ⇧⌫, the palette, `?invite=` in the panel
-- [ ] Auto-read after `--inbox-auto-read` (1 s) of showing in the panel
+- [ ] The Account group: `listAccountNotifications` (one page), above Today; its invite actions
+      wait for invites (`docs/TODO.md`)
 
 ## Deferred
 
-- Selection (X, ⇧J / ⇧K) and SelectionBar — nothing to share it with until the task table exists;
-  when it comes, E / U act on the selection: keep "which rows" in one `targets()` function
-- ⇧M Unfollow — no model of following yet
 - The tab title count and the favicon dot
 - One-letter hotkeys (E, U, X, J, K) do nothing in a non-Latin keyboard layout — the kit matches
   `event.key`; the fix is to fall back to `event.code` in the hotkey matching
@@ -68,27 +61,19 @@ move an item to "Deferred" with a reason rather than deleting it.
 
 - [x] The route is `/{ws}/inbox` (`ROUTES.INBOX`, `inboxPath`); `/` and unknown paths go to the
       default space's inbox — for now the nil uuid (`defaultWorkspaceId`)
-- [ ] `defaultWorkspaceId`: the active space from localStorage, else the first from `/me`
-- [ ] `Inbox.module.scss` header: `48px`, `12px`, `16px` fail the literal check —
-      `--canvas-header-height`, `--sp-4`, `--sp-5`
+- [x] `Inbox.module.scss` header: the literals are tokens (`--canvas-header-height`, `--sp-4`, `--sp-5`)
 - [ ] `src/app/app.spec.tsx` imports the deleted `WorkspacePage`: the frontend tests fail
 - [x] ⇧U is registered with an object made in render: it re-registers every render (`useMemo` it)
 
 ## For the designer
 
-- The sidebar Inbox count is `byWorkspace[current]` without `account_unread` (our decision,
-  2026-10-10): spec 09 and Sidebar 03 still add it. Unread invites in the Account group are then
-  not in the number.
-
-- Line heights 14/20 and 12/18 in the spec, the kit's `--lh-body` / `--lh-meta` give 21 / 16.8.
-- Row action icons on the inverse surface: the mock has `--text-muted`, built as `--text-secondary`.
+Open questions are in `docs/TODO.md` ("Waiting on design").
 
 Closed 2026-10-10: the text starts at 56 px (8 + 8 + `--inbox-dot-gap` 8 + 20 + 12; without the gap
 the dot reads as part of the avatar), and the address is `/{ws}/inbox`.
 
 ## Backend
 
-- Folding notifications (count, last actor, moves up on a new event; safe under concurrent inserts)
 - [x] Per workspace (2026-10-10): `GET /notifications?workspace=` (required), the account-level
       ones apart at `GET /notifications/account`, `read_all { workspace, before }` reads one
       workspace only, the summary is `{ byWorkspace, accountUnread }`. `workspace_id NULL` is an
@@ -96,5 +81,4 @@ the dot reads as part of the avatar), and the address is `/{ws}/inbox`.
       `TODO(workspaces)`): every workspace is allowed
 - [x] All Rust tests, the DB ones included, pass on a disposable Postgres 18.6 with the squashed
       `init` migration and UUIDv7 ids (161, 2026-10-10)
-- Invites: `decline` / `undecline` with a 60 s window, `409 invite.decline_final` after it
 - The `inbox.updated` signal with `patch { unread }` and the list tag

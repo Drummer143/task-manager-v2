@@ -101,11 +101,12 @@ export const Inbox: React.FC = () => {
     [onMarkAsRead, onMarkAsUnread, archive, unarchive],
   );
 
-  const renderItem = useCallback(
-    (item: Notification, index: number) => (
-      <InboxRow item={item} index={index} handlers={handlers} />
-    ),
-    [handlers],
+  const renderItem = (item: Notification, index: number) => (
+    <InboxRow
+      item={item}
+      index={index}
+      handlers={handlers}
+    />
   );
 
   useEffect(() => () => useCursorStore.getState().clearCursor(), [view]);

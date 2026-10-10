@@ -417,8 +417,8 @@ export const useNotificationQueries = (
     isNotificationsError,
     refetchNotifications,
     loadNextNotifications,
-    isLoadingNextNotifications,
     isNextNotificationsError,
+    isLoadingNextNotifications,
     isFirstLoadingNotifications,
 
     isReadingAll,

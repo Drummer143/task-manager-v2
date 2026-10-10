@@ -21,8 +21,11 @@ export interface NotificationAction {
 export interface NotificationRowProps {
   /** For the list's aria-activedescendant: the row under the cursor is named by its id. */
   id: string;
-  /** Opens it in the panel: /{ws}/inbox?view=unread&task=TM-248. Always replace — history does not pile up. */
-  href: string;
+  /**
+   * Opens it in the panel: /{ws}/inbox?view=unread&task=TM-248. Always replace — history does not
+   * pile up. None for a notification with nothing to open: the row is not a link then.
+   */
+  href?: string;
   /** updated_at: the last event in the notification. */
   time: Date;
   unread: boolean;
@@ -51,6 +54,19 @@ export interface NotificationRowProps {
   /** A change of it is on its way; it dims only if that takes a while. */
   pending?: boolean;
 }
+
+/** The whole row as a link, or the same box without one when there is nothing to open. */
+const RowBody: React.FC<{ href?: string; children: React.ReactNode }> = ({
+  href,
+  children,
+}) =>
+  href === undefined ? (
+    <div className={styles.link}>{children}</div>
+  ) : (
+    <LinkBase href={href} replace tabIndex={-1} className={styles.link}>
+      {children}
+    </LinkBase>
+  );
 
 /**
  * One row of Inbox (spec: Inbox · 02): an unread dot, who, what and where on
@@ -106,11 +122,10 @@ export const NotificationRow: React.FC<NotificationRowProps> = ({
       onMouseDown={(event) => event.preventDefault()}
     >
       <div role="gridcell" className={styles.cell}>
-        <LinkBase href={href} replace tabIndex={-1} className={styles.link}>
+        <RowBody href={href}>
           <span className={styles.dot} aria-hidden="true" />
           <span className={styles.avatar}>{avatar}</span>
           <span className={styles.text}>
-
             {unread && <span className={styles.srOnly}>Unread. </span>}
 
             <span className={styles.title}>{title}</span>
@@ -132,7 +147,7 @@ export const NotificationRow: React.FC<NotificationRowProps> = ({
               {when.short}
             </time>
           </span>
-        </LinkBase>
+        </RowBody>
 
         {actions.length > 0 && (
           <div className={styles.actions}>

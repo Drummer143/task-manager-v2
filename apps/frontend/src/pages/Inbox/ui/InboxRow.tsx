@@ -51,7 +51,6 @@ export const InboxRow: React.FC<InboxRowProps> = memo(({ item, index, handlers }
     <NotificationRow
       id={inboxRowId(item.id)}
       rowIndex={index + 1}
-      href="#"
       unread={item.readAt === null}
       title={title}
       context={context}

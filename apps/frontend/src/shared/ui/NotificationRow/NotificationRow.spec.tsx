@@ -31,7 +31,10 @@ const setup = (props: Partial<NotificationRowProps> = {}) => {
     </KitRoot>,
   );
 
-  return { router, onArchive, row: screen.getByRole('row'), link: screen.getByRole('link') };
+  // `null` only for a row rendered without `href`
+  const link = screen.queryByRole('link') as HTMLElement;
+
+  return { router, onArchive, row: screen.getByRole('row'), link };
 };
 
 describe('formatNotificationTime (spec 02)', () => {
@@ -83,6 +86,16 @@ describe('NotificationRow', () => {
     fireEvent.click(link);
 
     expect(router.navigate).toHaveBeenCalledWith('/inbox?view=unread&task=TM-248', { replace: true });
+  });
+
+  it('without an href it is not a link, keeps its content, and a click navigates nowhere', () => {
+    const { router, link, row } = setup({ href: undefined });
+
+    expect(link).toBeNull();
+    expect(row.textContent).toContain('Mira Sato mentioned you');
+
+    fireEvent.click(screen.getByText('Mira Sato mentioned you'));
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('nothing in it is a Tab stop, and a click does not take the list’s focus', () => {
