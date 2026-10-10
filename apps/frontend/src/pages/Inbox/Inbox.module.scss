@@ -5,16 +5,12 @@
   flex-direction: column;
 }
 
+// The list's scroller: a bounded height, or the virtual list loses its rows (see VirtualList)
 .grid {
-  display: flex;
   flex: 1;
-  flex-direction: column;
-  // A bounded height for the virtual list inside (see VirtualList)
   min-height: 0;
-}
 
-.list {
-  flex: 1;
+  overflow-y: auto;
 }
 
 .header {

@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { useCursorStore, useRegisterHotkey, VirtualList, type HotkeyHandlerConfig } from '@task-manager-v2/ui-kit';
 import type { Notification } from '@task-manager-v2/api/main/schemas';
 import styles from '../Inbox.module.scss';
@@ -19,7 +19,10 @@ export interface InboxListProps {
 
 export const InboxList: React.FC<InboxListProps> = ({ items, renderItem, hasMore = false }) => {
   const listRef = useRef<HTMLDivElement>(null);
+
   const cursor = useCursorStore((state) => state.cursor);
+
+  const getScrollElement = useCallback(() => listRef.current, []);
 
   useLayoutEffect(() => {
     const { cursor: current, setCursor } = useCursorStore.getState();
@@ -107,7 +110,7 @@ export const InboxList: React.FC<InboxListProps> = ({ items, renderItem, hasMore
         data={items}
         getKey={getKey}
         cursorKey={cursor ?? undefined}
-        className={styles.list}
+        getScrollElement={getScrollElement}
         renderItem={renderItem}
       />
     </div>
