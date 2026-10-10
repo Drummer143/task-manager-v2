@@ -62,7 +62,7 @@ What waits for something that does not exist yet (workspaces, real notification 
 - [x] The route is `/{ws}/inbox` (`ROUTES.INBOX`, `inboxPath`); `/` and unknown paths go to the
       default space's inbox — for now the nil uuid (`defaultWorkspaceId`)
 - [x] `Inbox.module.scss` header: the literals are tokens (`--canvas-header-height`, `--sp-4`, `--sp-5`)
-- [ ] `src/app/app.spec.tsx` imports the deleted `WorkspacePage`: the frontend tests fail
+- [x] `src/app/app.spec.tsx` imports the deleted `WorkspacePage`: the frontend tests fail
 - [x] ⇧U is registered with an object made in render: it re-registers every render (`useMemo` it)
 
 ## For the designer
