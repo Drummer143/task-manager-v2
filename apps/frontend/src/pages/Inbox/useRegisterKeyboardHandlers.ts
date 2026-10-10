@@ -6,22 +6,25 @@ import { useCursorStore, useRegisterHotkey } from '@task-manager-v2/ui-kit';
 
 interface Props {
   notifications: Notification[];
+  readAllDisabled: boolean;
+
+  setView: (view: ListNotificationsView) => void;
   onReadAll: () => void;
-  onMarkAsRead: (params: { ids: string[] }) => void;
-  onMarkAsUnread: (params: { ids: string[] }) => void;
   onArchive: (notification: Notification) => void;
   onUnarchive: (notification: Notification) => void;
-  setView: (view: ListNotificationsView) => void;
+  onMarkAsRead: (params: { ids: string[] }) => void;
+  onMarkAsUnread: (params: { ids: string[] }) => void;
 }
 
 export const useRegisterKeyboardHandlers = ({
   notifications,
+  readAllDisabled,
+  setView,
   onReadAll,
-  onMarkAsRead,
-  onMarkAsUnread,
   onArchive,
   onUnarchive,
-  setView,
+  onMarkAsRead,
+  onMarkAsUnread,
 }: Props) => {
   const highlighted = () => {
     const cursor = useCursorStore.getState().cursor;
@@ -33,7 +36,11 @@ export const useRegisterKeyboardHandlers = ({
     key: 'u',
     shift: true,
     description: 'Mark all notifications as read',
-    callback: () => onReadAll(),
+    callback: () => {
+      if (readAllDisabled) return;
+
+      onReadAll();
+    },
   });
 
   useRegisterHotkey({

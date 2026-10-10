@@ -26,12 +26,12 @@ move an item to "Deferred" with a reason rather than deleting it.
 
 ## List (§04, §06)
 
-- [ ] Next pages: `onEndReached`, and the keyboard cursor within 10 rows of the end;
-      a footer "Loading…" / "Couldn't load more · Retry". The grid is the list's scroller
-      (`getScrollElement`), so the footer renders inside the grid: make it a `row` with a
-      `gridcell`, or put it after the grid
+- [x] Next pages: `onEndReached` with `endThreshold` 10; the footer (`InboxListFooter`) is a
+      `row` + `gridcell` inside the grid, only while the next page loads or failed, with Retry.
+      A failed next page or background refetch keeps the list; the error state is for an empty one
 - [ ] Groups: Today / Yesterday / This week / Earlier (`--inbox-group-height`, text at `--inbox-text-start`)
-- [ ] States: skeleton after 200 ms, empty per tab, load error with Retry
+- [x] States: skeleton after 200 ms (`NotificationRowSkeleton`), empty per tab, load error with Retry
+- [x] No `?view=` is the All tab (`currentView`), also for the empty state
 - [ ] `keepReadIds`: a row read in the Unread tab stays until the tab changes, also across refetches
 
 ## Counters and realtime (§09, §10)

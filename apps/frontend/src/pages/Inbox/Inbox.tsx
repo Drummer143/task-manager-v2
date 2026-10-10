@@ -6,31 +6,48 @@ import React, {
   useRef,
 } from 'react';
 import { useSearchParam } from '../../shared/hooks/useSearchParam';
-import { Button, Segmented, useCursorStore } from '@task-manager-v2/ui-kit';
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  Kbd,
+  Segmented,
+  useCursorStore,
+} from '@task-manager-v2/ui-kit';
 import {
   ListNotificationsView,
   Notification,
 } from '@task-manager-v2/api/main/schemas';
 import { InboxList } from './ui/InboxList';
 import { InboxRow, type InboxRowHandlers } from './ui/InboxRow';
+import { InboxListFooter } from './ui/InboxListFooter';
 import styles from './Inbox.module.scss';
 import { useNotificationQueries } from './useNotificationQueries';
 import { segmentedOptions, viewValidation } from './utils';
 import { useRegisterKeyboardHandlers } from './useRegisterKeyboardHandlers';
 import { stepCursorOff } from './cursor';
+import { NotificationRowSkeleton } from '../../shared/ui/NotificationRow/NotificationRowSkeleton';
 
 export const Inbox: React.FC = () => {
   const [view, setView] = useSearchParam('view', viewValidation);
+  // No `?view=` (the sidebar's link) is the All tab
+  const currentView = view ?? 'all';
 
   const {
-    notifications,
-    onMarkAsRead,
-    onMarkAsUnread,
+    onReadAll,
     onArchive,
     onUnarchive,
     isReadingAll,
-    onReadAll,
+    onMarkAsRead,
+    notifications,
+    onMarkAsUnread,
+    isNotificationsError,
     hasMoreNotifications,
+    refetchNotifications,
+    loadNextNotifications,
+    isLoadingNextNotifications,
+    isNextNotificationsError,
+    isFirstLoadingNotifications,
   } = useNotificationQueries(view);
 
   const notificationsRef = useRef(notifications);
@@ -57,8 +74,11 @@ export const Inbox: React.FC = () => {
     [onUnarchive],
   );
 
+  const readAllDisabled = currentView === 'archived';
+
   useRegisterKeyboardHandlers({
     notifications,
+    readAllDisabled,
     onReadAll,
     onMarkAsRead,
     onMarkAsUnread,
@@ -86,6 +106,77 @@ export const Inbox: React.FC = () => {
 
   useEffect(() => () => useCursorStore.getState().clearCursor(), [view]);
 
+  let content;
+
+  if (isFirstLoadingNotifications) {
+    content = <NotificationRowSkeleton rows={6} />;
+  } else if (isNotificationsError && notifications.length === 0) {
+    // Only with nothing to show: a failed next page or background refetch keeps the list
+    content = (
+      <ErrorState
+        title="Couldn’t load notifications"
+        reason="Check your connection and try again."
+        onRetry={refetchNotifications}
+      />
+    );
+  } else if (notifications.length === 0) {
+    switch (currentView) {
+      case 'all':
+        content = (
+          <EmptyState
+            title="No notifications yet"
+            description="You’ll be notified when someone assigns you a task or mentions you."
+          />
+        );
+        break;
+      case 'archived':
+        content = (
+          <EmptyState
+            title="Nothing archived"
+            description={
+              <>
+                Press <Kbd keys="e" variant="inline" /> on a notification to
+                archive it.
+              </>
+            }
+          />
+        );
+        break;
+      case 'unread':
+        content = (
+          <EmptyState
+            title="You’re all caught up"
+            description="New mentions and assignments will show up here."
+            secondary={{
+              label: 'View all',
+              onAction: () => setView('all'),
+              keys: 'g>a',
+            }}
+          />
+        );
+        break;
+      default:
+        throw new Error(`Invalid view: ${currentView satisfies never}`);
+    }
+  } else {
+    content = (
+      <InboxList
+        items={notifications}
+        renderItem={renderItem}
+        hasMore={hasMoreNotifications}
+        onEndReached={loadNextNotifications}
+        footer={
+          <InboxListFooter
+            loading={isLoadingNextNotifications}
+            failed={isNextNotificationsError}
+            rowIndex={notifications.length + 1}
+            onRetry={() => void loadNextNotifications()}
+          />
+        }
+      />
+    );
+  }
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
@@ -94,7 +185,7 @@ export const Inbox: React.FC = () => {
         <div className={styles.viewSwitcher}>
           <Segmented<ListNotificationsView>
             options={segmentedOptions}
-            value={view ?? 'all'}
+            value={currentView}
             aria-label="Filter notifications"
             onValueChange={setView}
           />
@@ -105,17 +196,13 @@ export const Inbox: React.FC = () => {
           keys="shift+U"
           onClick={() => onReadAll()}
           loading={isReadingAll}
-          disabled={view === 'archived'}
+          disabled={readAllDisabled}
         >
           Mark all read
         </Button>
       </div>
 
-      <InboxList
-        items={notifications}
-        renderItem={renderItem}
-        hasMore={hasMoreNotifications}
-      />
+      {content}
     </div>
   );
 };

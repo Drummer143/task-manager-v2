@@ -208,3 +208,16 @@
     transition: none;
   }
 }
+
+// Skeleton styles
+
+.slot {
+  display: flex;
+  align-items: center;
+}
+
+// A skeleton row is not interactive: no hover, no pointer
+.row[data-skeleton] {
+  pointer-events: none;
+}
+

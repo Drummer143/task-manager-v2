@@ -1,5 +1,10 @@
 import React, { useCallback, useLayoutEffect, useRef } from 'react';
-import { useCursorStore, useRegisterHotkey, VirtualList } from '@task-manager-v2/ui-kit';
+import {
+  raw,
+  useCursorStore,
+  useRegisterHotkey,
+  VirtualList,
+} from '@task-manager-v2/ui-kit';
 import type { Notification } from '@task-manager-v2/api/main/schemas';
 import styles from '../Inbox.module.scss';
 
@@ -12,12 +17,21 @@ const getKey = (item: Notification) => item.id;
 export interface InboxListProps {
   items: readonly Notification[];
 
-  renderItem(item: Notification, index: number): React.ReactNode;
+  footer?: React.ReactNode;
   /** More pages to come: the row count is not known yet (aria-rowcount -1). */
   hasMore?: boolean;
+
+  renderItem: (item: Notification, index: number) => React.ReactNode;
+  onEndReached: () => void;
 }
 
-export const InboxList: React.FC<InboxListProps> = ({ items, renderItem, hasMore = false }) => {
+export const InboxList: React.FC<InboxListProps> = ({
+  items,
+  footer,
+  hasMore = false,
+  renderItem,
+  onEndReached
+}) => {
   const listRef = useRef<HTMLDivElement>(null);
 
   const cursor = useCursorStore((state) => state.cursor);
@@ -43,12 +57,28 @@ export const InboxList: React.FC<InboxListProps> = ({ items, renderItem, hasMore
   };
 
   // The registry calls the latest callback, so `move` sees the current items
-  useRegisterHotkey({ key: 'j', description: 'Next notification', callback: () => move(1) });
-  useRegisterHotkey({ key: 'k', description: 'Previous notification', callback: () => move(-1) });
+  useRegisterHotkey({
+    key: 'j',
+    description: 'Next notification',
+    callback: () => move(1),
+  });
+  useRegisterHotkey({
+    key: 'k',
+    description: 'Previous notification',
+    callback: () => move(-1),
+  });
   // The arrows too, anywhere on the page (spec 08): a widget that takes its own arrows (the
   // tree, a radio group, a menu) handles them first, and the registry leaves a handled key
-  useRegisterHotkey({ key: 'ArrowDown', description: 'Next notification', callback: () => move(1) });
-  useRegisterHotkey({ key: 'ArrowUp', description: 'Previous notification', callback: () => move(-1) });
+  useRegisterHotkey({
+    key: 'ArrowDown',
+    description: 'Next notification',
+    callback: () => move(1),
+  });
+  useRegisterHotkey({
+    key: 'ArrowUp',
+    description: 'Previous notification',
+    callback: () => move(-1),
+  });
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     // Home and End only while the list has focus: elsewhere they scroll the page
@@ -58,7 +88,13 @@ export const InboxList: React.FC<InboxListProps> = ({ items, renderItem, hasMore
     };
     const delta = deltas[event.key];
 
-    if (delta === undefined || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+    if (
+      delta === undefined ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey
+    ) {
       return;
     }
 
@@ -79,10 +115,14 @@ export const InboxList: React.FC<InboxListProps> = ({ items, renderItem, hasMore
       onMouseDown={(event) => {
         listRef.current?.focus({ preventScroll: true });
 
-        const row = (event.target as Element).closest<HTMLElement>('[role="row"]');
+        const row = (event.target as Element).closest<HTMLElement>(
+          '[role="row"]',
+        );
 
         if (row?.id.startsWith(ROW_ID_PREFIX)) {
-          useCursorStore.getState().setCursor(row.id.slice(ROW_ID_PREFIX.length));
+          useCursorStore
+            .getState()
+            .setCursor(row.id.slice(ROW_ID_PREFIX.length));
         }
       }}
     >
@@ -93,6 +133,10 @@ export const InboxList: React.FC<InboxListProps> = ({ items, renderItem, hasMore
         cursorKey={cursor ?? undefined}
         getScrollElement={getScrollElement}
         renderItem={renderItem}
+        estimateSize={raw['inbox-row']}
+        onEndReached={onEndReached}
+        footer={footer}
+        endThreshold={10}
       />
     </div>
   );

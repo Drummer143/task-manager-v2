@@ -142,7 +142,22 @@ const patchArchiveNotification = (
 };
 
 export const useNotificationQueries = (view: ListNotificationsView | null) => {
-  const { data: notifications = [], hasNextPage: hasMoreNotifications } = useInfiniteQuery<NotificationPage, Error, Notification[], string[], string | undefined>({
+  const {
+    data: notifications = [],
+    hasNextPage: hasMoreNotifications,
+    isLoading: isFirstLoadingNotifications,
+    fetchNextPage: loadNextNotifications,
+    isFetchingNextPage: isLoadingNextNotifications,
+    isFetchNextPageError: isNextNotificationsError,
+    isError: isNotificationsError,
+    refetch: refetchNotifications,
+  } = useInfiniteQuery<
+    NotificationPage,
+    Error,
+    Notification[],
+    string[],
+    string | undefined
+  >({
     queryKey: QUERY_KEYS.inboxWithView(view ?? 'all'),
     initialPageParam: undefined,
     queryFn: ({ pageParam, signal }) =>
@@ -263,6 +278,12 @@ export const useNotificationQueries = (view: ListNotificationsView | null) => {
   return {
     notifications,
     hasMoreNotifications,
+    isNotificationsError,
+    refetchNotifications,
+    loadNextNotifications,
+    isLoadingNextNotifications,
+    isNextNotificationsError,
+    isFirstLoadingNotifications,
 
     isReadingAll,
     onReadAll: readAll,

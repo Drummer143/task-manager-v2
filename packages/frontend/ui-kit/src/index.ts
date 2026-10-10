@@ -4,11 +4,18 @@ export * from './hooks';
 export * from './interaction/cursor';
 export * from './interaction/escape';
 // The app's side of the hotkey registry; the listener runs in KitRoot
-export { useRegisterHotkey, type HotkeyConfig, type HotkeyHandlerConfig, type HotkeyCallback } from './interaction/hotkeys';
+export {
+  useRegisterHotkey,
+  type HotkeyConfig,
+  type HotkeyHandlerConfig,
+  type HotkeyCallback,
+} from './interaction/hotkeys';
 export * from './interaction/layers';
 export * from './interaction/undo';
 export * from './router';
 export * from './messages';
+
+export { cx } from './utils';
 
 export * from './components/AppShell';
 export * from './components/Resizer';
