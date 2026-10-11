@@ -46,6 +46,23 @@
   font-size: var(--type-meta);
 }
 
+// A failed part of the list, inside the grid: a row with one cell (a grid holds rows only).
+// The Account group's line sits in the rows' text column; the list's banner takes the width
+.errorRow {
+  display: flex;
+}
+
+.errorCell {
+  flex: 1;
+  min-width: 0;
+  padding-inline: var(--sp-5);
+}
+
+.errorBanner {
+  flex: 1;
+  min-width: 0;
+}
+
 // A time group's header (spec 04): its text in the rows' text column
 .group {
   display: flex;

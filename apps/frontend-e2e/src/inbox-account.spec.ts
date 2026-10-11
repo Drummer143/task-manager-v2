@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { type FakeApi, json } from './support/api';
+import { type FakeApi, json, status } from './support/api';
 import { expect, test } from './support/fixtures';
 
 /**
@@ -124,4 +124,50 @@ test('Archived: no Account group', async ({ page, api }) => {
   await expect(page.getByText('Nothing archived')).toBeVisible();
   await expect(page.getByRole('rowheader', { name: 'Account' })).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test.describe('a failed part stays in its place', () => {
+  const setupFailing = async (page: Page, api: FakeApi, failing: { pinned?: boolean; list?: boolean }) => {
+    let pinnedFails = failing.pinned ?? false;
+
+    api.on('GET /notifications', failing.list ? status(500) : json({ data: [notification('task', 5, WS)], nextCursor: null }));
+    api.on('GET /notifications/account_pinned', (route, request) =>
+      pinnedFails ? status(500)(route, request) : json({ data: [notification('invite', 30, null)] })(route, request),
+    );
+    api.on('GET /notifications/summary', json({ byWorkspace: { [WS]: 1 }, accountUnread: 1 }));
+
+    await page.goto(`/${WS}/inbox?view=all`);
+
+    return { recoverPinned: () => (pinnedFails = false) };
+  };
+
+  test('the pinned group failed: a line under its header, the list below; Retry brings it back', async ({ page, api }) => {
+    const { recoverPinned } = await setupFailing(page, api, { pinned: true });
+
+    await expect(headers(page)).toHaveText(['Account', 'Today'], { timeout: 15_000 });
+    await expect(grid(page).getByText('Couldn’t load account notifications')).toBeVisible();
+    await expect(page.locator('#inbox-row-task')).toBeVisible();
+
+    recoverPinned();
+    await grid(page).getByRole('button', { name: 'Retry' }).click();
+
+    await expect(page.locator('#inbox-row-invite')).toBeVisible();
+    await expect(grid(page).getByText('Couldn’t load account notifications')).toHaveCount(0);
+  });
+
+  test('the list failed: the pinned group on top, the banner under it', async ({ page, api }) => {
+    await setupFailing(page, api, { list: true });
+
+    await expect(page.getByText('Couldn’t load notifications')).toBeVisible({ timeout: 15_000 });
+    await expect(headers(page)).toHaveText(['Account']);
+    await expect(page.locator('#inbox-row-invite')).toBeVisible();
+  });
+
+  test('both failed: the banner alone', async ({ page, api }) => {
+    await setupFailing(page, api, { pinned: true, list: true });
+
+    await expect(page.getByText('Couldn’t load notifications')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('rowheader', { name: 'Account' })).toHaveCount(0);
+    await expect(page.getByText('Couldn’t load account notifications')).toHaveCount(0);
+  });
 });

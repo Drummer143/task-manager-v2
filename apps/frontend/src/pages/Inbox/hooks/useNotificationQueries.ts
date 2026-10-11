@@ -516,6 +516,10 @@ export const useNotificationQueries = (
     notifications,
     pinned,
     isLoadingPinned: pinnedQuery.isLoading,
+    // Only with nothing to show: a failed refetch keeps the group it had
+    isPinnedError:
+      view !== 'archived' && pinnedQuery.isError && !pinnedQuery.data,
+    refetchPinned: () => void pinnedQuery.refetch(),
     hasMoreNotifications,
     isNotificationsError,
     refetchNotifications,

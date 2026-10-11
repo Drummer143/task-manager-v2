@@ -22,7 +22,9 @@ export const GROUP_LABELS: Record<InboxGroup, string> = {
 
 export type InboxEntry =
   | { kind: 'group'; key: string; group: InboxGroup }
-  | { kind: 'row'; key: string; item: Notification };
+  | { kind: 'row'; key: string; item: Notification }
+  /** The pinned group failed to load: its line under the Account header, with Retry. */
+  | { kind: 'pinnedError'; key: string };
 
 /** 1 — Monday … 7 — Sunday, as `Intl.Locale#getWeekInfo` counts. */
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -78,13 +80,19 @@ export const groupEntries = (
   now: Date,
   weekStart: Weekday,
   pinned: readonly Notification[] = [],
+  pinnedFailed = false,
 ): InboxEntry[] => {
   const entries: InboxEntry[] = [];
   let current: InboxGroup | null = null;
 
-  if (pinned.length > 0) {
+  if (pinned.length > 0 || pinnedFailed) {
     entries.push({ kind: 'group', key: 'group:account', group: 'account' });
     pinned.forEach((item) => entries.push({ kind: 'row', key: item.id, item }));
+  }
+
+  // The rest of the list stays: a section's error stays in the section (spec: States · 03)
+  if (pinnedFailed) {
+    entries.push({ kind: 'pinnedError', key: 'account:error' });
   }
 
   for (const item of list) {

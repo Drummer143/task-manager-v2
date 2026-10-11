@@ -48,6 +48,8 @@ export const Inbox: React.FC = () => {
     notifications,
     pinned,
     isLoadingPinned,
+    isPinnedError,
+    refetchPinned,
     onMarkAsUnread,
     isNotificationsError,
     hasMoreNotifications,
@@ -119,22 +121,54 @@ export const Inbox: React.FC = () => {
   // Read once per visit: past midnight the groups keep their names until the page opens again
   const [now] = useState(() => new Date());
   const [weekStart] = useState(() => firstDayOfWeek());
-  const entries = groupEntries(feed, currentView, now, weekStart, pinned);
+  const entries = groupEntries(
+    feed,
+    currentView,
+    now,
+    weekStart,
+    pinned,
+    isPinnedError,
+  );
+  // The list failed with nothing loaded; a failed next page or background refetch keeps it
+  const listFailed = isNotificationsError && notifications.length === 0;
+
+  const listError = (
+    <ErrorState
+      title="Couldn’t load notifications"
+      reason="Check your connection and try again."
+      onRetry={refetchNotifications}
+    />
+  );
 
   let content;
 
   if (isFirstLoadingNotifications || isLoadingPinned) {
     content = <NotificationRowSkeleton rows={6} />;
-  } else if (isNotificationsError && visible.length === 0) {
-    // Only with nothing to show: a failed next page or background refetch keeps the list
+  } else if (listFailed && pinned.length === 0) {
+    // Nothing to show at all (the pinned group failed too, or is empty): one banner
+    content = listError;
+  } else if (listFailed) {
+    // The pinned group stays on top; the banner takes the list's place under it
     content = (
-      <ErrorState
-        title="Couldn’t load notifications"
-        reason="Check your connection and try again."
-        onRetry={refetchNotifications}
+      <InboxList
+        entries={entries}
+        renderItem={renderItem}
+        onEndReached={() => undefined}
+        onRetryPinned={refetchPinned}
+        footer={
+          <div
+            role="row"
+            aria-rowindex={entries.length + 1}
+            className={styles.errorRow}
+          >
+            <div role="gridcell" className={styles.errorBanner}>
+              {listError}
+            </div>
+          </div>
+        }
       />
     );
-  } else if (visible.length === 0) {
+  } else if (visible.length === 0 && !isPinnedError) {
     switch (currentView) {
       case 'all':
         content = (
@@ -180,6 +214,7 @@ export const Inbox: React.FC = () => {
         renderItem={renderItem}
         hasMore={hasMoreNotifications}
         onEndReached={loadNextNotifications}
+        onRetryPinned={refetchPinned}
         footer={
           <InboxListFooter
             loading={isLoadingNextNotifications}

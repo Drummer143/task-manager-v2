@@ -1,5 +1,6 @@
 import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import {
+  ErrorState,
   raw,
   useCursorStore,
   useRegisterHotkey,
@@ -26,6 +27,8 @@ export interface InboxListProps {
   /** A notification's row; `index` is its place among the entries, headers counted (aria-rowindex). */
   renderItem: (item: Notification, index: number) => React.ReactNode;
   onEndReached: () => void;
+  /** Loads the pinned Account group again, after it failed (a `pinnedError` entry). */
+  onRetryPinned?(): void;
 }
 
 export const InboxList: React.FC<InboxListProps> = ({
@@ -33,7 +36,8 @@ export const InboxList: React.FC<InboxListProps> = ({
   footer,
   hasMore = false,
   renderItem,
-  onEndReached
+  onEndReached,
+  onRetryPinned,
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +46,9 @@ export const InboxList: React.FC<InboxListProps> = ({
   const getScrollElement = useCallback(() => listRef.current, []);
 
   // What the cursor walks: J / K, the arrows, Home / End never land on a header
-  const items = entries.flatMap((entry) => (entry.kind === 'row' ? [entry.item] : []));
+  const items = entries.flatMap((entry) =>
+    entry.kind === 'row' ? [entry.item] : [],
+  );
 
   useLayoutEffect(() => {
     const { cursor: current, setCursor } = useCursorStore.getState();
@@ -139,14 +145,40 @@ export const InboxList: React.FC<InboxListProps> = ({
         // A row's key is its notification's id: the cursor names the row directly
         cursorKey={cursor ?? undefined}
         getScrollElement={getScrollElement}
-        renderItem={(entry, index) =>
-          entry.kind === 'group' ? (
-            <InboxGroupHeader label={GROUP_LABELS[entry.group]} rowIndex={index + 1} />
-          ) : (
-            renderItem(entry.item, index)
-          )
+        renderItem={(entry, index) => {
+          switch (entry.kind) {
+            case 'group':
+              return (
+                <InboxGroupHeader
+                  label={GROUP_LABELS[entry.group]}
+                  rowIndex={index + 1}
+                />
+              );
+            case 'pinnedError':
+              return (
+                <div
+                  role="row"
+                  aria-rowindex={index + 1}
+                  className={styles.errorRow}
+                >
+                  <div role="gridcell" className={styles.errorCell}>
+                    <ErrorState
+                      scale="row"
+                      title="Couldn’t load account notifications"
+                      onRetry={onRetryPinned}
+                    />
+                  </div>
+                </div>
+              );
+            case 'row':
+              return renderItem(entry.item, index);
+          }
+        }}
+        estimateSize={(index) =>
+          entries[index]?.kind === 'group'
+            ? raw['inbox-group-height']
+            : raw['inbox-row']
         }
-        estimateSize={(index) => (entries[index]?.kind === 'group' ? raw['inbox-group-height'] : raw['inbox-row'])}
         onEndReached={onEndReached}
         footer={footer}
         endThreshold={10}
@@ -159,7 +191,10 @@ export const InboxList: React.FC<InboxListProps> = ({
  * A time group's header (spec 04): a row of the grid with its name, so a screen reader walking
  * the grid hears "Today". Not clickable, never the cursor.
  */
-const InboxGroupHeader: React.FC<{ label: string; rowIndex: number }> = ({ label, rowIndex }) => (
+const InboxGroupHeader: React.FC<{ label: string; rowIndex: number }> = ({
+  label,
+  rowIndex,
+}) => (
   <div role="row" aria-rowindex={rowIndex} className={styles.group}>
     <div role="rowheader" className={styles.groupLabel}>
       {label}
