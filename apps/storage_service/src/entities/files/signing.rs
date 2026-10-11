@@ -74,8 +74,8 @@ mod tests {
 
     fn claims(exp: u64) -> FileLinkClaims {
         FileLinkClaims {
-            asset: Uuid::new_v4(),
-            blob: Uuid::new_v4(),
+            asset: Uuid::now_v7(),
+            blob: Uuid::now_v7(),
             name: "cat.png".into(),
             exp,
         }
@@ -114,7 +114,7 @@ mod tests {
         let claims = claims(now_secs() + 60);
         let token = sign(SECRET, &claims).unwrap();
 
-        let error = verify(SECRET, &token, Uuid::new_v4()).unwrap_err();
+        let error = verify(SECRET, &token, Uuid::now_v7()).unwrap_err();
 
         assert_eq!(error.code(), &ErrorCode::FileLinkInvalid);
     }
@@ -140,12 +140,12 @@ mod tests {
             blob: Uuid,
             name: String,
         }
-        let asset = Uuid::new_v4();
+        let asset = Uuid::now_v7();
         let token = encode(
             &Header::new(Algorithm::HS256),
             &NoExp {
                 asset,
-                blob: Uuid::new_v4(),
+                blob: Uuid::now_v7(),
                 name: "x".into(),
             },
             &EncodingKey::from_secret(SECRET.as_bytes()),

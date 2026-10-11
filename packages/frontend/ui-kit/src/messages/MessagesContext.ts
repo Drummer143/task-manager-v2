@@ -20,6 +20,9 @@ export interface KitMessages {
   assign: string;
   /** After a failed async menu item: how to try again. */
   menuRetryHint: string;
+  /** A long choice's filter field (workspaces), and what it says when nothing matches. */
+  menuFilter: string;
+  menuFilterEmpty: string;
   /** Command palette: its name, the field, the empty result, the footer hints. */
   palette: string;
   paletteInput: string;
@@ -63,6 +66,8 @@ export interface KitMessages {
   toastRegion: string;
   notifyMore(count: number): string;
   undoFailed(label: string): string;
+  /** What readers hear after a link that opens a new tab (its ↗ is decorative). */
+  linkOpensNewTab: string;
   /** "+N" of a tag list or an avatar stack: what readers hear. */
   more(count: number): string;
 }
@@ -76,6 +81,7 @@ export const DEFAULT_MESSAGES: KitMessages = {
   removeTag: 'Remove',
   assign: 'Assign',
   close: 'Close',
+  linkOpensNewTab: '(opens in a new tab)',
   treeEmpty: 'No pages inside',
   treeNoAccess: 'no access',
   treeLoadFailed: 'Couldn’t load',
@@ -112,6 +118,8 @@ export const DEFAULT_MESSAGES: KitMessages = {
   paletteEscClear: 'clear',
   paletteEscBack: 'back',
   menuRetryHint: 'Enter to retry',
+  menuFilter: 'Filter',
+  menuFilterEmpty: 'Nothing found',
   more: (count) => `${count} more`,
 };
 

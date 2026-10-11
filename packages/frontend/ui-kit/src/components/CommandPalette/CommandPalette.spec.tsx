@@ -125,6 +125,18 @@ describe('CommandPalette · opening', () => {
     expect(document.activeElement).toBe(field());
   });
 
+  it('starts with the key that opened it, and a prefix in it narrows at once', () => {
+    renderPalette();
+
+    act(() => palette.open('r'));
+    expect((field() as HTMLInputElement).value).toBe('r');
+    act(() => palette.close());
+
+    act(() => palette.open('@'));
+    expect((field() as HTMLInputElement).value).toBe('');
+    expect((field() as HTMLInputElement).placeholder.toLowerCase()).toContain('people');
+  });
+
   it('is the app layer: a light scrim, the window, a modal dialog', () => {
     renderPalette();
 

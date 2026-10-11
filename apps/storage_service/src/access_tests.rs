@@ -54,7 +54,7 @@ fn signed(asset: Uuid, exp: u64, secret: &str) -> String {
         secret,
         &FileLinkClaims {
             asset,
-            blob: Uuid::new_v4(),
+            blob: Uuid::now_v7(),
             name: "cat.png".into(),
             exp,
         },
@@ -68,7 +68,7 @@ fn signed(asset: Uuid, exp: u64, secret: &str) -> String {
 async fn a_private_file_without_a_signature_is_refused() {
     let app = app(&AppState::for_tests(NO_MAIN));
 
-    let (status, body) = call(&app, get(&format!("/files/{}", Uuid::new_v4()))).await;
+    let (status, body) = call(&app, get(&format!("/files/{}", Uuid::now_v7()))).await;
 
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(body["code"], "FILE_LINK_INVALID");
@@ -77,7 +77,7 @@ async fn a_private_file_without_a_signature_is_refused() {
 #[tokio::test]
 async fn a_garbage_or_foreign_signature_is_refused() {
     let app = app(&AppState::for_tests(NO_MAIN));
-    let asset_id = Uuid::new_v4();
+    let asset_id = Uuid::now_v7();
     let foreign = signed(asset_id, signing::now_secs() + 60, "another-secret-another-secret-123");
 
     for sig in ["nonsense", foreign.as_str()] {
@@ -91,14 +91,14 @@ async fn a_garbage_or_foreign_signature_is_refused() {
 #[tokio::test]
 async fn an_expired_link_says_so_and_a_link_for_another_asset_is_invalid() {
     let app = app(&AppState::for_tests(NO_MAIN));
-    let asset_id = Uuid::new_v4();
+    let asset_id = Uuid::now_v7();
 
     let expired = signed(asset_id, signing::now_secs() - 1, AppState::TEST_LINK_SECRET);
     let (status, body) = call(&app, get(&format!("/files/{asset_id}?sig={expired}"))).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(body["code"], "FILE_LINK_EXPIRED");
 
-    let other = signed(Uuid::new_v4(), signing::now_secs() + 60, AppState::TEST_LINK_SECRET);
+    let other = signed(Uuid::now_v7(), signing::now_secs() + 60, AppState::TEST_LINK_SECRET);
     let (status, body) = call(&app, get(&format!("/files/{asset_id}?sig={other}"))).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(body["code"], "FILE_LINK_INVALID");
@@ -107,7 +107,7 @@ async fn an_expired_link_says_so_and_a_link_for_another_asset_is_invalid() {
 #[tokio::test]
 async fn a_valid_link_passes_the_gate_and_only_then_needs_the_database() {
     let app = app(&AppState::for_tests(NO_MAIN));
-    let asset_id = Uuid::new_v4();
+    let asset_id = Uuid::now_v7();
     let sig = signed(asset_id, signing::now_secs() + 60, AppState::TEST_LINK_SECRET);
 
     let (status, body) = call(&app, get(&format!("/files/{asset_id}?sig={sig}"))).await;
@@ -125,7 +125,7 @@ async fn a_private_or_unknown_asset_is_not_found_on_the_public_route() {
     let mock = spawn_mock(vec![private.clone()], false).await;
     let app = app(&AppState::for_tests(&mock.url));
 
-    for id in [private.id, Uuid::new_v4()] {
+    for id in [private.id, Uuid::now_v7()] {
         let (status, body) = call(&app, get(&format!("/public/files/{id}"))).await;
 
         assert_eq!(status, StatusCode::NOT_FOUND, "{id}");
@@ -151,7 +151,7 @@ async fn a_public_asset_passes_the_gate_without_any_credentials() {
 async fn the_public_route_reports_an_unreachable_main_service_as_502() {
     let app = app(&AppState::for_tests(NO_MAIN));
 
-    let (status, body) = call(&app, get(&format!("/public/files/{}", Uuid::new_v4()))).await;
+    let (status, body) = call(&app, get(&format!("/public/files/{}", Uuid::now_v7()))).await;
 
     assert_eq!(status, StatusCode::BAD_GATEWAY);
     assert_eq!(body["code"], "UPSTREAM_UNAVAILABLE");
@@ -161,7 +161,7 @@ async fn the_public_route_reports_an_unreachable_main_service_as_502() {
 async fn repeated_public_requests_do_not_hammer_the_main_service() {
     let mock = spawn_mock(vec![], false).await;
     let app = app(&AppState::for_tests(&mock.url));
-    let id = Uuid::new_v4();
+    let id = Uuid::now_v7();
 
     for _ in 0..5 {
         call(&app, get(&format!("/public/files/{id}"))).await;
@@ -180,16 +180,16 @@ fn links_request(ids: Vec<Uuid>) -> ApiJson<FileLinksRequest> {
 async fn many_assets_cost_one_call_to_the_main_service() {
     let public = asset(AssetVisibility::Public);
     let private = asset(AssetVisibility::Private);
-    let hidden = Uuid::new_v4();
+    let hidden = Uuid::now_v7();
     let mock = spawn_mock(vec![public.clone(), private.clone()], false).await;
     let state = AppState::for_tests(&mock.url);
 
     let mut ids = vec![public.id, private.id, hidden];
-    ids.extend((0..100).map(|_| Uuid::new_v4()));
+    ids.extend((0..100).map(|_| Uuid::now_v7()));
 
     let Json(response) = issue_links(
         State(state),
-        Extension(Uuid::new_v4()),
+        Extension(Uuid::now_v7()),
         links_request(ids),
     )
     .await
@@ -218,7 +218,7 @@ async fn an_issued_private_link_is_accepted_by_the_download_route() {
 
     let Json(response) = issue_links(
         State(state.clone()),
-        Extension(Uuid::new_v4()),
+        Extension(Uuid::now_v7()),
         links_request(vec![private.id]),
     )
     .await
@@ -238,7 +238,7 @@ async fn an_empty_batch_does_not_call_the_main_service_at_all() {
 
     let Json(response) = issue_links(
         State(AppState::for_tests(&mock.url)),
-        Extension(Uuid::new_v4()),
+        Extension(Uuid::now_v7()),
         links_request(vec![]),
     )
     .await
@@ -251,11 +251,11 @@ async fn an_empty_batch_does_not_call_the_main_service_at_all() {
 #[tokio::test]
 async fn an_oversized_batch_is_rejected_before_asking_the_main_service() {
     let mock = spawn_mock(vec![], false).await;
-    let ids = (0..=MAX_LINKS_PER_REQUEST).map(|_| Uuid::new_v4()).collect();
+    let ids = (0..=MAX_LINKS_PER_REQUEST).map(|_| Uuid::now_v7()).collect();
 
     let error = issue_links(
         State(AppState::for_tests(&mock.url)),
-        Extension(Uuid::new_v4()),
+        Extension(Uuid::now_v7()),
         links_request(ids),
     )
     .await
@@ -276,8 +276,8 @@ async fn issuing_links_surfaces_a_failing_main_service_as_502() {
 
     let error = issue_links(
         State(AppState::for_tests(&mock.url)),
-        Extension(Uuid::new_v4()),
-        links_request(vec![Uuid::new_v4()]),
+        Extension(Uuid::now_v7()),
+        links_request(vec![Uuid::now_v7()]),
     )
     .await
     .unwrap_err();
@@ -344,7 +344,7 @@ async fn internal_endpoints_open_for_the_service_token() {
 #[tokio::test]
 async fn upload_steps_still_require_a_signed_in_user_and_ignore_tokens_in_the_url() {
     let app = app(&AppState::for_tests(NO_MAIN));
-    let id = Uuid::new_v4();
+    let id = Uuid::now_v7();
 
     for uri in [
         format!("/actions/upload/{id}/status"),

@@ -1,0 +1,79 @@
+.wrapper {
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+}
+
+// The list's scroller: a bounded height, or the virtual list loses its rows (see VirtualList)
+.grid {
+  flex: 1;
+  min-height: 0;
+
+  overflow-y: auto;
+}
+
+.header {
+  flex-shrink: 0;
+
+  height: var(--canvas-header-height);
+
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+
+  padding: 0 var(--sp-5);
+}
+
+.viewSwitcher {
+  flex: 1;
+}
+
+// The row after the loaded ones: as tall as a row, its text where the rows' text starts
+.footer {
+  display: flex;
+  min-height: var(--inbox-row);
+}
+
+.footerCell {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--sp-3);
+  padding-inline-start: var(--inbox-text-start);
+
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+}
+
+// A failed part of the list, inside the grid: a row with one cell (a grid holds rows only).
+// The Account group's line sits in the rows' text column; the list's banner takes the width
+.errorRow {
+  display: flex;
+}
+
+.errorCell {
+  flex: 1;
+  min-width: 0;
+  padding-inline: var(--sp-5);
+}
+
+.errorBanner {
+  flex: 1;
+  min-width: 0;
+}
+
+// A time group's header (spec 04): its text in the rows' text column
+.group {
+  display: flex;
+  align-items: center;
+  height: var(--inbox-group-height);
+}
+
+.groupLabel {
+  padding-inline-start: var(--inbox-text-start);
+
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: var(--lh-meta);
+}

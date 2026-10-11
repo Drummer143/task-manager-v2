@@ -91,6 +91,23 @@ describe('Input · field error', () => {
     screen.getByRole('textbox', { description: 'No task with this ID' });
   });
 
+  it.each([
+    ['Input', (error: React.ReactNode) => <Input aria-label="Task" value="" onValueChange={() => undefined} error={error} />],
+    ['Textarea', (error: React.ReactNode) => <Textarea aria-label="Task" value="" onValueChange={() => undefined} error={error} />],
+  ])('%s: the error line is a danger tone and may hold a link', (_, field) => {
+    render(
+      field(
+        <>
+          No task with this ID. <a href="/search">Search all tasks</a>
+        </>,
+      ),
+    );
+
+    const link = screen.getByRole('link', { name: 'Search all tasks' });
+    expect(link.closest('[data-tone="danger"]')).not.toBeNull();
+    screen.getByRole('textbox', { description: 'No task with this ID. Search all tasks' });
+  });
+
   it('holds an error that arrives mid-typing until blur', () => {
     const view = render(<Owned />);
     const input = screen.getByRole('textbox');

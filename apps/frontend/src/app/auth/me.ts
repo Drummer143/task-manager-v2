@@ -1,21 +1,14 @@
 /**
  * `GET /me` of main-service: the step after authentik that decides whether this person may use
- * the app (and creates them on their first sign-in).
+ * the app (and creates them on their first sign-in). The call itself is the generated contract
+ * client (`@task-manager-v2/api/main`), pointed at main-service by `configureMain` in main.tsx.
  */
 
-export interface MeUser {
-  id: string;
-  username: string;
-  email?: string;
-  picture: string | null;
-  isActive: boolean;
-}
+import { getMe } from '@task-manager-v2/api/main';
+import type { MeResponse } from '@task-manager-v2/api/main/schemas';
+import { isAxiosError } from 'axios';
 
-export interface MeResponse {
-  user: MeUser;
-  workspaces: unknown[];
-  pendingInvites: unknown[];
-}
+export type { MeResponse };
 
 /** A `/me` call that did not end in 200. `status` is undefined when no response arrived. */
 export class MeError extends Error {
@@ -28,23 +21,20 @@ export class MeError extends Error {
   }
 }
 
-const apiUrl = () => (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
-
 /**
- * `requestId` goes along as `X-Request-Id`, so the id shown next to an error is the one in the
- * server's logs.
+ * The token goes explicitly: the callback has it before anything else may. `requestId` goes
+ * along as `X-Request-Id`, so the id shown next to an error is the one in the server's logs.
  */
 export async function fetchMe(accessToken: string, requestId: string, signal?: AbortSignal): Promise<MeResponse> {
-  let response: Response;
   try {
-    response = await fetch(`${apiUrl()}/me`, {
+    return await getMe({
       headers: { Authorization: `Bearer ${accessToken}`, 'X-Request-Id': requestId },
       signal,
     });
   } catch (error) {
+    // An abort or a timeout of the caller's signal is the caller's to read
     if (signal?.aborted) throw error;
-    throw new MeError(undefined, requestId);
+    if (!isAxiosError(error)) throw error;
+    throw new MeError(error.response?.status, requestId);
   }
-  if (!response.ok) throw new MeError(response.status, requestId);
-  return (await response.json()) as MeResponse;
 }

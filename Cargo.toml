@@ -22,6 +22,7 @@ error_handlers = { path = "packages/rust/error_handlers" }
 jsonwebtoken = { version = "11.1.0", default-features = false, features = [
     "rust_crypto",
 ] }
+lapin = "4.12.0"
 mimalloc = { version = "0.1.52", default-features = false }
 reqwest = { version = "0.13.5", default-features = false, features = [
     "charset",
@@ -53,7 +54,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 utils = { path = "packages/rust/utils" }
 utoipa = "6.0.0"
 utoipa-swagger-ui = "10.0.1"
-uuid ={ version = "1.26.1", features = ["v4"] }
+uuid ={ version = "1.26.1", features = ["v7"] }
 
 [profile.release]
 lto = "thin"

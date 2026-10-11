@@ -132,7 +132,7 @@ impl ActionsService {
 
         match blob {
             Ok(blob) => {
-                let transaction_id: Uuid = Uuid::new_v4();
+                let transaction_id: Uuid = Uuid::now_v7();
                 let ranges = Self::generate_challenge_ranges(blob.size, 10, 1024 * 1024);
                 let repo_ranges = ranges.to_vec();
 
@@ -158,7 +158,7 @@ impl ActionsService {
                 }))
             }
             Err(sqlx::Error::RowNotFound) => {
-                let transaction_id = Uuid::new_v4();
+                let transaction_id = Uuid::now_v7();
 
                 let path_to_file =
                     build_path_to_temp_file(&state.temp_folder_path, &transaction_id);
@@ -752,14 +752,14 @@ mod tests {
 
     #[test]
     fn the_owner_may_act_on_the_transaction() {
-        let owner = Uuid::new_v4();
+        let owner = Uuid::now_v7();
 
         assert!(ensure_owner(&meta_owned_by(owner), owner).is_ok());
     }
 
     #[test]
     fn another_user_gets_not_found_not_forbidden() {
-        let error = ensure_owner(&meta_owned_by(Uuid::new_v4()), Uuid::new_v4()).unwrap_err();
+        let error = ensure_owner(&meta_owned_by(Uuid::now_v7()), Uuid::now_v7()).unwrap_err();
 
         assert_eq!(error.code(), &ErrorCode::NotFound);
     }
@@ -774,6 +774,6 @@ mod tests {
         .unwrap();
 
         assert_eq!(legacy.user_id, Uuid::nil());
-        assert!(ensure_owner(&legacy, Uuid::new_v4()).is_err());
+        assert!(ensure_owner(&legacy, Uuid::now_v7()).is_err());
     }
 }

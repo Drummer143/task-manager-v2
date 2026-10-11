@@ -31,6 +31,7 @@ Write-Host "Starting SSH tunnel to $SshHost ..." -ForegroundColor Cyan
 Write-Host "  localhost:5432  -> postgres"
 Write-Host "  localhost:6379  -> redis"
 Write-Host "  localhost:9000  -> authentik"
+Write-Host "  localhost:5672  -> rabbitmq"
 Write-Host ""
 Write-Host "These are the production databases. Press Ctrl+C to stop." -ForegroundColor Yellow
 
@@ -43,4 +44,5 @@ ssh -N `
     -L 5432:127.0.0.1:5432 `
     -L 6379:127.0.0.1:6379 `
     -L 9000:127.0.0.1:9000 `
+    -L 5672:127.0.0.1:5672 `
     $SshHost

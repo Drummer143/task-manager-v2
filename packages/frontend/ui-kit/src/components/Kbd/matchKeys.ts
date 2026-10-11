@@ -1,4 +1,4 @@
-import { detectPlatform, type KeyPlatform } from '../../utils';
+import { detectPlatform, latinKey, type KeyPlatform } from '../../utils';
 import { parseKeys } from './formatKeys';
 
 type ModifierFlags = { meta: boolean; ctrl: boolean; alt: boolean; shift: boolean };
@@ -42,7 +42,7 @@ const flagOf = (token: string, platform: KeyPlatform): keyof ModifierFlags | nul
  */
 export const matchKeys = (
   keys: string,
-  event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey' | 'altKey' | 'shiftKey'>,
+  event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey' | 'altKey' | 'shiftKey'> & { code?: string },
   platform: KeyPlatform = detectPlatform(),
 ) => {
   const steps = parseKeys(keys);
@@ -68,7 +68,8 @@ export const matchKeys = (
     return false;
   }
 
-  const pressed = event.key.toLowerCase();
+  // A non-Latin layout's letter reads as the Latin one on its key: ⌘Z is ⌘Z in Russian too
+  const pressed = latinKey(event).toLowerCase();
   // A printed character already carries Shift (`?` is Shift+/): only named
   // keys and letters compare it, so `shift+?` and `?` both match a `?` press.
   const shiftMatters = key.length > 1 || /[a-z]/.test(key);

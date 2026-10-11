@@ -6,7 +6,9 @@ interface ImportMetaEnv {
   /** authentik's client id of the app (AUTHENTIK_CLIENT_ID). */
   readonly VITE_CLIENT_ID: string;
   /** Origin of main-service, e.g. https://api.DOMAIN */
-  readonly VITE_API_URL?: string;
+  readonly VITE_API_URL: string;
+  /** Origin of socket-service, e.g. https://socket.DOMAIN */
+  readonly VITE_SOCKET_URL: string;
 }
 
 interface ImportMeta {

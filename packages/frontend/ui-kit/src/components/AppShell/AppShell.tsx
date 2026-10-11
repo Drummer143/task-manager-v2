@@ -1,17 +1,28 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { raw } from '../../tokens';
 import { useMessages } from '../../messages';
 import { useEscapeStack } from '../../interaction/escape/useEscapeStack';
 import { usePresence } from '../../overlay';
 import { Resizer } from '../Resizer';
 import { useToastArea } from '../Toast/ToastHost';
-import { panelMaxFor, resolveShell, type ShellLayout, type ShellPrefs } from './resolveShell';
+import {
+  panelMaxFor,
+  resolveShell,
+  type ShellLayout,
+  type ShellPrefs,
+} from './resolveShell';
 import { STORAGE_KEY, readPrefs, useShellStore } from './shellStore';
-import { SidebarContext, sidebarState } from './SidebarContext';
 import styles from './AppShell.module.scss';
 
 export interface AppShellProps {
-  /** The sidebar: space switcher, sections, the page tree. Its items read `useSidebar()`: rail or full. */
+  /** The sidebar: space switcher, sections, the page tree. Its items read `useShell().sidebarView`: rail or full. */
   sidebar: ReactNode;
   /** The status bar at the foot of the sidebar (24 px). */
   status?: ReactNode;
@@ -50,9 +61,15 @@ const paint = (shell: HTMLElement | null, layout: ShellLayout) => {
   }
 
   shell.style.setProperty('--_sidebar', `${layout.sidebarPx}px`);
-  shell.style.setProperty('--_panel-col', `${layout.panel === 'docked' ? layout.panelPx : 0}px`);
+  shell.style.setProperty(
+    '--_panel-col',
+    `${layout.panel === 'docked' ? layout.panelPx : 0}px`,
+  );
   shell.style.setProperty('--_panel-px', `${layout.panelPx}px`);
-  shell.style.setProperty('--_peek', `${useShellStore.getState().prefs.sidebarWidth}px`);
+  shell.style.setProperty(
+    '--_peek',
+    `${useShellStore.getState().prefs.sidebarWidth}px`,
+  );
 };
 
 /**
@@ -62,6 +79,17 @@ const paint = (shell: HTMLElement | null, layout: ShellLayout) => {
  * `useShell()`, not in props; the layout comes from `resolveShell` for the
  * frame's own width, measured by one ResizeObserver.
  */
+/** The panel's content; once closed, the last one it had: an overlay fades out with it inside. */
+const KeptPanel: React.FC<{ open: boolean; children: ReactNode }> = ({ open, children }) => {
+  const [kept, setKept] = useState(children);
+
+  if (open && kept !== children) {
+    setKept(children);
+  }
+
+  return open ? children : kept;
+};
+
 export const AppShell: React.FC<AppShellProps> = ({
   sidebar,
   status,
@@ -86,12 +114,16 @@ export const AppShell: React.FC<AppShellProps> = ({
   const vw = useShellStore((state) => state.vw);
   const prefs = useShellStore((state) => state.prefs);
   const peek = useShellStore((state) => state.peek);
+  const peekTarget = useShellStore((state) => state.peekTarget);
   const storeLayout = useShellStore((state) => state.layout);
   const storePanelOpen = useShellStore((state) => state.panelOpen);
 
   const panelOpen = panel != null;
   // The store learns about the panel in an effect; this render already lays it out right.
-  const layout = storePanelOpen === panelOpen ? storeLayout : resolveShell(vw, prefs, panelOpen, storeLayout);
+  const layout =
+    storePanelOpen === panelOpen
+      ? storeLayout
+      : resolveShell(vw, prefs, panelOpen, storeLayout);
 
   useLayoutEffect(() => {
     useShellStore.getState().setPanelOpen(panelOpen);
@@ -120,7 +152,9 @@ export const AppShell: React.FC<AppShellProps> = ({
       return;
     }
 
-    const observer = new ResizeObserver(([entry]) => measure(entry.contentRect.width));
+    const observer = new ResizeObserver(([entry]) =>
+      measure(entry.contentRect.width),
+    );
     observer.observe(shell);
 
     return () => observer.disconnect();
@@ -147,28 +181,49 @@ export const AppShell: React.FC<AppShellProps> = ({
   useLayoutEffect(() => {
     const width = useShellStore.getState().vw;
 
-    paint(shellRef.current, draft.current ? resolveShell(width, draft.current, panelOpen, layout) : layout);
+    paint(
+      shellRef.current,
+      draft.current
+        ? resolveShell(width, draft.current, panelOpen, layout)
+        : layout,
+    );
   });
 
   const live = (patch: Partial<ShellPrefs>) => {
     const { vw: width, prefs: current } = useShellStore.getState();
 
     draft.current = { ...(draft.current ?? current), ...patch };
-    paint(shellRef.current, resolveShell(width, draft.current, panelOpen, layout));
+    paint(
+      shellRef.current,
+      resolveShell(width, draft.current, panelOpen, layout),
+    );
   };
 
   const snapSidebar = (collapsed: boolean) => {
     live({ sidebarCollapsed: collapsed });
     // The sidebar's own view (full / rail) follows at once, in the same gesture; stored at its end.
-    useShellStore.getState().syncPrefs({ ...useShellStore.getState().prefs, sidebarCollapsed: collapsed });
+    useShellStore
+      .getState()
+      .syncPrefs({
+        ...useShellStore.getState().prefs,
+        sidebarCollapsed: collapsed,
+      });
   };
 
   const commitSidebar = (px: number) => {
-    const collapsed = draft.current?.sidebarCollapsed ?? useShellStore.getState().prefs.sidebarCollapsed;
+    const collapsed =
+      draft.current?.sidebarCollapsed ??
+      useShellStore.getState().prefs.sidebarCollapsed;
 
     draft.current = null;
     // Collapsed by the gesture: the width it had stays remembered (spec 03).
-    useShellStore.getState().commitPrefs(collapsed ? { sidebarCollapsed: true } : { sidebarCollapsed: false, sidebarWidth: px });
+    useShellStore
+      .getState()
+      .commitPrefs(
+        collapsed
+          ? { sidebarCollapsed: true }
+          : { sidebarCollapsed: false, sidebarWidth: px },
+      );
   };
 
   const commitPanel = (px: number) => {
@@ -178,20 +233,40 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   /* ── Peek ── */
 
-  const closePeek = useCallback(() => useShellStore.getState().setPeek(false), []);
+  const closePeek = useCallback(
+    () => useShellStore.getState().setPeek(false),
+    [],
+  );
+  // A peek opened for a section (a rail button) starts scrolled to it.
+  useLayoutEffect(() => {
+    if (peek && peekTarget) {
+      const target = document.getElementById(peekTarget);
+
+      if (target && sidebarRef.current?.contains(target)) {
+        target.scrollIntoView?.({ block: 'start' });
+      }
+    }
+  }, [peek, peekTarget]);
+
   /** Where focus was before the peek opened: it goes back there on close. */
   const beforePeek = useRef<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
     if (peek) {
-      beforePeek.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      beforePeek.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
       return;
     }
 
     const aside = sidebarRef.current;
     const active = document.activeElement;
 
-    if (beforePeek.current && (!active || active === document.body || aside?.contains(active))) {
+    if (
+      beforePeek.current &&
+      (!active || active === document.body || aside?.contains(active))
+    ) {
       beforePeek.current.focus({ preventScroll: true });
     }
 
@@ -217,8 +292,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   /* ── Esc: peek → overlay panel → docked panel (spec 07); layers stand above ── */
 
-  const escape = useRef<() => boolean>(() => false);
-  escape.current = () => {
+  useEscapeStack(() => {
     if (peek) {
       closePeek();
       return true;
@@ -230,9 +304,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     }
 
     return false;
-  };
-
-  useEscapeStack(useCallback(() => escape.current(), []));
+  });
 
   /* ── The panel: focus and the overlay's exit ── */
 
@@ -244,7 +316,10 @@ export const AppShell: React.FC<AppShellProps> = ({
       const target = event.target as Element;
 
       // The panel's border goes with it: focus on it counts as focus in the panel.
-      focusInPanel.current = Boolean(panelRef.current?.contains(target) || target.closest?.(`[aria-controls="${PANEL_ID}"]`));
+      focusInPanel.current = Boolean(
+        panelRef.current?.contains(target) ||
+        target.closest?.(`[aria-controls="${PANEL_ID}"]`),
+      );
     };
 
     document.addEventListener('focusin', track);
@@ -261,21 +336,26 @@ export const AppShell: React.FC<AppShellProps> = ({
 
     focusInPanel.current = false;
 
-    if (!active || active === document.body || panelRef.current?.contains(active)) {
+    if (
+      !active ||
+      active === document.body ||
+      panelRef.current?.contains(active)
+    ) {
       canvasRef.current?.focus({ preventScroll: true });
     }
   }, [panelOpen]);
 
-  /** The last open panel: an overlay fades out with its content still in it. */
-  const lastPanel = useRef<{ node: ReactNode; overlay: boolean }>({ node: null, overlay: false });
+  /** Whether the last open panel was an overlay: only an overlay has an exit (spec: animations). */
+  const [wasOverlay, setWasOverlay] = useState(false);
+  const isOverlay = layout.panel === 'overlay';
 
-  if (panelOpen) {
-    lastPanel.current = { node: panel, overlay: layout.panel === 'overlay' };
+  if (panelOpen && wasOverlay !== isOverlay) {
+    setWasOverlay(isOverlay);
   }
 
   const panelMounted = usePresence(panelOpen, panelRef);
-  // A docked panel closes at once; only an overlay has an exit (spec: animations).
-  const showPanel = panelOpen || (panelMounted && lastPanel.current.overlay);
+  // A docked panel closes at once
+  const showPanel = panelOpen || (panelMounted && wasOverlay);
   const panelMode = panelOpen ? layout.panel : 'overlay';
 
   /* ── Canvas scroll per route ── */
@@ -306,9 +386,11 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   const autoCollapsed = layout.sidebar === 'auto-collapsed';
   const sidebarCollapsed = layout.sidebar !== 'expanded';
-  const peeking = peek && autoCollapsed;
+  // Over any collapsed sidebar: by the window, or by the user with a rail button (spec: Sidebar · 05).
+  const peeking = peek && sidebarCollapsed;
   // What the sidebar's content draws: the rail, or full (expanded, or a peek over the canvas).
-  const sidebarContext = useMemo(() => sidebarState(sidebarCollapsed && !peeking, peeking), [sidebarCollapsed, peeking]);
+  // The same rule as `useShell().sidebarView`.
+  const rail = sidebarCollapsed && !peeking;
 
   return (
     <div
@@ -325,15 +407,13 @@ export const AppShell: React.FC<AppShellProps> = ({
         className={styles.sidebar}
         aria-label={messages.shellSidebar}
         data-peek={peeking ? '' : undefined}
-        data-collapsed={sidebarContext.collapsed ? '' : undefined}
+        data-collapsed={rail ? '' : undefined}
       >
-        <SidebarContext.Provider value={sidebarContext}>
-          <div className={styles.sidebarBody}>{sidebar}</div>
-          {status != null && <div className={styles.status}>{status}</div>}
-        </SidebarContext.Provider>
+        <div className={styles.sidebarBody}>{sidebar}</div>
+        {status != null && <div className={styles.status}>{status}</div>}
       </aside>
 
-      {!autoCollapsed && (
+      {!autoCollapsed && !peeking && (
         <Resizer
           side="sidebar"
           className={styles.sidebarResizer}
@@ -391,7 +471,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           data-mode={panelMode}
           data-state={panelOpen ? 'open' : 'closed'}
         >
-          {panelOpen ? panel : lastPanel.current.node}
+          <KeptPanel open={panelOpen}>{panel}</KeptPanel>
         </aside>
       )}
     </div>

@@ -1,4 +1,4 @@
-export { CommandPalette } from './CommandPalette';
+export { CommandPalette, type CommandPaletteProps } from './CommandPalette';
 export {
   palette,
   usePaletteOpen,

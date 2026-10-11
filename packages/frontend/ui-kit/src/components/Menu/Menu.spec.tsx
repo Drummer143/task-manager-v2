@@ -388,3 +388,77 @@ describe('Menu · links', () => {
     expect(item('Open board').getAttribute('href')).toBe('/app/board');
   });
 });
+
+describe('Menu · the workspace menu (spec: Sidebar · 01)', () => {
+  const workspaces = (count: number) =>
+    Array.from({ length: count }, (_, index) => ({ value: `w${index}`, label: `Workspace ${index}` }));
+
+  const renderSwitcher = (options: { value: string; label: string; dot?: string }[], onValueChange = vi.fn()) =>
+    render(
+      <Menu
+        items={[
+          {
+            type: 'radio-group',
+            id: 'workspaces',
+            label: 'Workspaces',
+            value: 'w0',
+            onValueChange,
+            filterable: true,
+            options,
+          },
+          { type: 'separator' },
+          { type: 'label', label: 'Alex Kim', content: <span data-testid="who">Alex Kim · alex@verso.dev</span> },
+          { type: 'action', id: 'sign-out', label: 'Sign out', keys: 's' },
+        ]}
+        trigger={<Button>Actions</Button>}
+      />,
+    );
+
+  it('names the account items by who is signed in; the block itself is no item', async () => {
+    renderSwitcher(workspaces(2));
+    const content = await open();
+
+    const group = within(content).getByRole('group', { name: 'Alex Kim · alex@verso.dev' });
+    expect(within(group).getByRole('menuitem', { name: /^Sign out/ })).toBeTruthy();
+    expect(screen.getByTestId('who').closest('[role^="menuitem"]')).toBeNull();
+  });
+
+  it('a dot tells readers what is new and shows it in a tooltip', async () => {
+    renderSwitcher([...workspaces(1), { value: 'side', label: 'Side project', dot: '3 unread' }]);
+    await open();
+
+    const side = item('Side project, 3 unread');
+    expect(side.querySelector('[data-tooltip="3 unread"]')).not.toBeNull();
+    expect(item('Workspace 0').querySelector('[data-tooltip]')).toBeNull();
+  });
+
+  it('a short choice has no filter', async () => {
+    renderSwitcher(workspaces(8));
+    await open();
+
+    expect(screen.queryByRole('textbox', { name: 'Filter' })).toBeNull();
+  });
+
+  it('a long one gets a filter: typing anywhere goes there, items keep their hotkeys out of it', async () => {
+    const onValueChange = vi.fn();
+    renderSwitcher(workspaces(12), onValueChange);
+    await open();
+    const filter = screen.getByRole('textbox', { name: 'Filter' });
+
+    // A letter typed on the menu moves focus into the field (the browser then types it there)
+    key('w');
+    expect(document.activeElement).toBe(filter);
+
+    fireEvent.change(filter, { target: { value: '11' } });
+    expect(screen.queryByRole('menuitemradio', { name: 'Workspace 3' })).toBeNull();
+    expect(item('Workspace 11')).toBeTruthy();
+    await waitFor(() => expect(item('Workspace 11').hasAttribute('data-highlighted')).toBe(true));
+
+    // "s" is Sign out's hotkey, but in the field it is just a letter
+    fireEvent.keyDown(filter, { key: 's' });
+    expect(menu()).not.toBeNull();
+
+    fireEvent.change(filter, { target: { value: 'nothing like it' } });
+    expect(within(screen.getByRole('menu')).getByText('Nothing found')).toBeTruthy();
+  });
+});

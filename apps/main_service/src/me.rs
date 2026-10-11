@@ -3,33 +3,51 @@
 //! The frontend calls it right after signing in. A valid authentik token alone does not let
 //! anyone in: this is where the user is created and the app's own rules are applied.
 
-use axum::extract::State;
+use axum::extract::{FromRef, State};
 use axum::{Extension, Json, Router, middleware::from_fn_with_state, routing::get};
 use error_handlers::{ApiError, ErrorCode};
 use serde::Serialize;
 use sql_models::user::model::User;
 use sqlx::PgPool;
 use utils::auth_middleware::{Claims, InternalAuthState, auth_guard};
+use utoipa::ToSchema;
 
 use crate::repos::users::{TokenUserDto, UsersRepository};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MeResponse {
     pub user: User,
     /// Workspaces the user is a member of; there are none until workspaces exist.
+    #[schema(value_type = Vec<Object>)]
     pub workspaces: Vec<serde_json::Value>,
     /// Invitations waiting for the user's email.
+    #[schema(value_type = Vec<Object>)]
     pub pending_invites: Vec<serde_json::Value>,
 }
 
-pub fn router(auth: InternalAuthState) -> Router<PgPool> {
+pub fn router<S>(auth: InternalAuthState) -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    PgPool: FromRef<S>,
+{
     Router::new()
         .route("/me", get(me))
         .layer(from_fn_with_state(auth, auth_guard))
 }
 
-async fn me(
+#[utoipa::path(
+    get,
+    path = "/me",
+    operation_id = "getMe",
+    responses(
+        (status = 200, description = "The signed-in user", body = MeResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "The user is deactivated"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+pub async fn me(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<MeResponse>, ApiError> {

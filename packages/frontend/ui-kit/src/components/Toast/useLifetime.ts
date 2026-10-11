@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 
 /**
  * A toast's time on screen: `duration` ms of being seen, then `onExpire`.
@@ -7,18 +7,17 @@ import { useEffect, useRef } from 'react';
  * window. `null` — it does not expire (an error, a progress).
  */
 export const useLifetime = (duration: number | null, paused: boolean, onExpire: () => void) => {
-  const expire = useRef(onExpire);
+  const expire = useEffectEvent(onExpire);
   const remaining = useRef(duration);
   const forDuration = useRef(duration);
 
-  expire.current = onExpire;
-
-  if (forDuration.current !== duration) {
-    forDuration.current = duration;
-    remaining.current = duration;
-  }
-
   useEffect(() => {
+    // A new duration starts over; the cleanup before this has already counted the old one down
+    if (forDuration.current !== duration) {
+      forDuration.current = duration;
+      remaining.current = duration;
+    }
+
     const left = remaining.current;
 
     if (left === null || paused) {
@@ -26,7 +25,7 @@ export const useLifetime = (duration: number | null, paused: boolean, onExpire: 
     }
 
     const startedAt = performance.now();
-    const timer = setTimeout(() => expire.current(), left);
+    const timer = setTimeout(() => expire(), left);
 
     return () => {
       clearTimeout(timer);

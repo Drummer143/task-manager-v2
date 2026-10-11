@@ -52,6 +52,8 @@ export const Switch: React.FC<SwitchProps> = ({
 }) => {
   const descriptionId = useId();
   const errorId = useId();
+  // Its `|| undefined` stays apart: React Compiler 1.0 cannot lower `cx(a && b) || c`
+  const describedBy = cx(props['aria-describedby'], description !== undefined && descriptionId, error && errorId);
   const messages = useMessages();
   const reason = disabled && disabledReason ? disabledReason : undefined;
 
@@ -89,9 +91,7 @@ export const Switch: React.FC<SwitchProps> = ({
             checked={checked}
             aria-disabled={disabled || undefined}
             aria-busy={pending || undefined}
-            aria-describedby={
-              cx(props['aria-describedby'], description !== undefined && descriptionId, error && errorId) || undefined
-            }
+            aria-describedby={describedBy || undefined}
             // No preventDefault when disabled (see Checkbox): React puts `checked` back.
             onChange={() => {
               if (!disabled) {

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { CSSProperties, ReactNode, useRef, useState } from 'react';
+import React, { CSSProperties, ReactNode, useRef, useState } from 'react';
 import { Menu } from './Menu';
 import { ContextMenu } from './ContextMenu';
 import type { MenuItem } from './types';
@@ -129,6 +129,21 @@ const meta: Meta<typeof Menu> = {
 export default meta;
 type Story = StoryObj<typeof Menu>;
 
+const LiveDemo: React.FC = () => {
+  const [last, setLast] = useState('—');
+  const items = useTaskActions(setLast);
+
+  return (
+    <div style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start' }}>
+      <div style={row}>
+        <Menu items={items} trigger={<Button>Actions ▾</Button>} />
+        <Menu items={items} aria-label="Task actions" trigger={<IconButton icon={ICONS.more} label="More actions" />} />
+      </div>
+      <Caption>Last action: {last}</Caption>
+    </div>
+  );
+};
+
 /**
  * ↓ / Enter / Space on the button — open, cursor on the first item (↑ — the
  * last). ↑↓ — the cursor, the unavailable one is skipped. A letter — jump to an
@@ -138,35 +153,24 @@ type Story = StoryObj<typeof Menu>;
  * Enter retries.
  */
 export const Live: Story = {
-  render: () => {
-    const [last, setLast] = useState('—');
-    const items = useTaskActions(setLast);
+  render: () => <LiveDemo />,
+};
 
-    return (
-      <div style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start' }}>
-        <div style={row}>
-          <Menu items={items} trigger={<Button>Actions ▾</Button>} />
-          <Menu items={items} aria-label="Task actions" trigger={<IconButton icon={ICONS.more} label="More actions" />} />
-        </div>
-        <Caption>Last action: {last}</Caption>
-      </div>
-    );
-  },
+const FromInverseSurfaceDemo: React.FC = () => {
+  const [last, setLast] = useState('—');
+  const items = useTaskActions(setLast);
+
+  return (
+    <Surface tone="inverse" style={{ ...row, padding: cssVar('sp-5'), borderRadius: cssVar('radius-md') }}>
+      <Menu items={items} trigger={<Button variant="ghost">Actions ▾</Button>} />
+      <Caption>Last action: {last}</Caption>
+    </Surface>
+  );
 };
 
 /** Opened from a dark surface: only the trigger recolors; the menu is always light. */
 export const FromInverseSurface: Story = {
-  render: () => {
-    const [last, setLast] = useState('—');
-    const items = useTaskActions(setLast);
-
-    return (
-      <Surface tone="inverse" style={{ ...row, padding: cssVar('sp-5'), borderRadius: cssVar('radius-md') }}>
-        <Menu items={items} trigger={<Button variant="ghost">Actions ▾</Button>} />
-        <Caption>Last action: {last}</Caption>
-      </Surface>
-    );
-  },
+  render: () => <FromInverseSurfaceDemo />,
 };
 
 /** Without icons at all there is no slot: the texts start at the edge. */
@@ -194,6 +198,25 @@ const card: CSSProperties = {
   background: cssVar('bg-raised'),
 };
 
+const OnCardsDemo: React.FC = () => {
+  const [last, setLast] = useState('—');
+  const items = useTaskActions(setLast);
+
+  return (
+    <div style={{ display: 'grid', gap: cssVar('sp-3'), justifyItems: 'start' }}>
+      {['TM-241 · Hotkey registry', 'TM-244 · Token layer', 'TM-248 · AppShell'].map((title) => (
+        <ContextMenu key={title} items={items}>
+          <div tabIndex={0} style={card}>
+            {title}
+            <Caption>Right click or Shift+F10</Caption>
+          </div>
+        </ContextMenu>
+      ))}
+      <Caption>Last action: {last}</Caption>
+    </div>
+  );
+};
+
 /**
  * Right click on a card — the menu at the pointer. Tab to a card and press
  * Shift+F10 (or the menu key) — the menu at its bottom-left corner; Esc brings
@@ -201,22 +224,5 @@ const card: CSSProperties = {
  * until a card is asked for its menu.
  */
 export const OnCards: Story = {
-  render: () => {
-    const [last, setLast] = useState('—');
-    const items = useTaskActions(setLast);
-
-    return (
-      <div style={{ display: 'grid', gap: cssVar('sp-3'), justifyItems: 'start' }}>
-        {['TM-241 · Hotkey registry', 'TM-244 · Token layer', 'TM-248 · AppShell'].map((title) => (
-          <ContextMenu key={title} items={items}>
-            <div tabIndex={0} style={card}>
-              {title}
-              <Caption>Right click or Shift+F10</Caption>
-            </div>
-          </ContextMenu>
-        ))}
-        <Caption>Last action: {last}</Caption>
-      </div>
-    );
-  },
+  render: () => <OnCardsDemo />,
 };

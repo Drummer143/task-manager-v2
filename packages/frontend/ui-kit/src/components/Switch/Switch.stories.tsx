@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ComponentProps, CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
+import React, { ComponentProps, CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
 import { Switch } from './Switch';
 import { Surface } from '../Surface';
 import { cssVar } from '../../tokens';
@@ -67,63 +67,65 @@ export const Gallery: Story = {
   ),
 };
 
+const SettingsRowsDemo: React.FC = () => {
+  const [completed, setCompleted] = useState(true);
+  const [email, setEmail] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string>();
+  const [failNext, setFailNext] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const saveEmail = (next: boolean) => {
+    const fail = failNext;
+    setFailNext(false);
+    setError(undefined);
+    // Optimistic: the thumb is already there; only the dot says it is in flight.
+    setEmail(next);
+    setPending(true);
+    timer.current = setTimeout(() => {
+      setPending(false);
+
+      if (fail) {
+        setEmail(!next);
+        setError('Not saved: offline');
+      }
+    }, 600);
+  };
+
+  return (
+    <div style={{ display: 'grid', width: cssVar('panel-width') }}>
+      <Switch
+        label="Show completed"
+        description="The “Done” column on the board"
+        checked={completed}
+        onCheckedChange={setCompleted}
+      />
+      <Switch
+        label="Email notifications"
+        checked={email}
+        pending={pending}
+        error={error}
+        onRetry={() => saveEmail(!email)}
+        onCheckedChange={saveEmail}
+      />
+      <Switch label="Unavailable" checked={false} onCheckedChange={() => undefined} disabled disabledReason="Set by the workspace owner" />
+      <label style={{ display: 'flex', gap: cssVar('sp-3'), marginTop: cssVar('sp-4'), fontSize: cssVar('type-meta'), color: cssVar('text-secondary') }}>
+        <input type="checkbox" checked={failNext} onChange={(event) => setFailNext(event.target.checked)} />
+        Fail the next save
+      </label>
+    </div>
+  );
+};
+
 /**
  * A settings list: label on the left, switch at the right edge. The second row
  * "waits for the server" 600 ms — the dot shows it; "Fail the next save" makes
  * the next toggle fail: the thumb goes back, the line offers Retry.
  */
 export const SettingsRows: Story = {
-  render: () => {
-    const [completed, setCompleted] = useState(true);
-    const [email, setEmail] = useState(false);
-    const [pending, setPending] = useState(false);
-    const [error, setError] = useState<string>();
-    const [failNext, setFailNext] = useState(false);
-    const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-    useEffect(() => () => clearTimeout(timer.current), []);
-
-    const saveEmail = (next: boolean) => {
-      const fail = failNext;
-      setFailNext(false);
-      setError(undefined);
-      // Optimistic: the thumb is already there; only the dot says it is in flight.
-      setEmail(next);
-      setPending(true);
-      timer.current = setTimeout(() => {
-        setPending(false);
-
-        if (fail) {
-          setEmail(!next);
-          setError('Not saved: offline');
-        }
-      }, 600);
-    };
-
-    return (
-      <div style={{ display: 'grid', width: cssVar('panel-width') }}>
-        <Switch
-          label="Show completed"
-          description="The “Done” column on the board"
-          checked={completed}
-          onCheckedChange={setCompleted}
-        />
-        <Switch
-          label="Email notifications"
-          checked={email}
-          pending={pending}
-          error={error}
-          onRetry={() => saveEmail(!email)}
-          onCheckedChange={saveEmail}
-        />
-        <Switch label="Unavailable" checked={false} onCheckedChange={() => undefined} disabled disabledReason="Set by the workspace owner" />
-        <label style={{ display: 'flex', gap: cssVar('sp-3'), marginTop: cssVar('sp-4'), fontSize: cssVar('type-meta'), color: cssVar('text-secondary') }}>
-          <input type="checkbox" checked={failNext} onChange={(event) => setFailNext(event.target.checked)} />
-          Fail the next save
-        </label>
-      </div>
-    );
-  },
+  render: () => <SettingsRowsDemo />,
 };
 
 /** In a toolbar the switch goes first. */

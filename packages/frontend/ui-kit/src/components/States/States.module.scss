@@ -7,7 +7,7 @@
   color: var(--text-primary);
   font-family: var(--font-ui);
 
-  &[data-tone='danger'] {
+  &[data-state-tone='danger'] {
     background-color: var(--bg-danger-soft);
   }
 }
@@ -15,8 +15,7 @@
 .title {
   margin: 0;
 
-  [data-tone='danger'] > &,
-  [data-tone='danger'] > .line > & {
+  &[data-tone='danger'] {
     color: var(--text-danger);
   }
 }
@@ -87,7 +86,7 @@
   font-size: var(--type-body);
   line-height: var(--lh-body);
 
-  &[data-tone='neutral'] {
+  &[data-state-tone='neutral'] {
     background-color: var(--bg-sunken);
   }
 }
@@ -99,7 +98,7 @@
   line-height: var(--lh-meta);
 
   // An empty place, not a missing one: a dashed outline, muted words.
-  &[data-tone='neutral'] {
+  &[data-state-tone='neutral'] {
     border: var(--border-width) dashed var(--border-hairline);
     color: var(--text-muted);
 
@@ -112,7 +111,7 @@
 .dot {
   color: var(--text-muted);
 
-  [data-tone='danger'] > & {
+  [data-state-tone='danger'] > & {
     color: var(--text-danger);
   }
 }
@@ -131,7 +130,7 @@
   text-underline-offset: var(--sp-1);
   cursor: pointer;
 
-  [data-tone='danger'] > & {
+  [data-state-tone='danger'] > & {
     color: var(--text-danger);
   }
 

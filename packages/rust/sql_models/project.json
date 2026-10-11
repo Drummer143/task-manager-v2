@@ -11,7 +11,7 @@
 			"outputs": [],
 			"options": {
 				"cwd": ".",
-				"command": "cargo check -p sql"
+				"command": "cargo check -p sql_models"
 			}
 		},
 		"test": {
@@ -20,11 +20,12 @@
 			"outputs": [],
 			"options": {
 				"cwd": ".",
-				"command": "cargo test -p sql"
+				"command": "cargo test -p sql_models",
+				"forwardAllArgs": false
 			},
 			"configurations": {
 				"production": {
-					"command": "cargo test -p sql --release"
+					"command": "cargo test -p sql_models --release"
 				}
 			}
 		},
@@ -33,7 +34,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": ".",
-				"command": "cargo clippy -p sql -- -D warnings"
+				"command": "cargo clippy -p sql_models -- -D warnings"
 			}
 		}
 	}

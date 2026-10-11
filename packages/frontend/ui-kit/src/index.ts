@@ -3,10 +3,19 @@ export * from './hooks';
 
 export * from './interaction/cursor';
 export * from './interaction/escape';
+// The app's side of the hotkey registry; the listener runs in KitRoot
+export {
+  useRegisterHotkey,
+  type HotkeyConfig,
+  type HotkeyHandlerConfig,
+  type HotkeyCallback,
+} from './interaction/hotkeys';
 export * from './interaction/layers';
 export * from './interaction/undo';
 export * from './router';
 export * from './messages';
+
+export { cx } from './utils';
 
 export * from './components/AppShell';
 export * from './components/Resizer';
@@ -48,7 +57,10 @@ export type { TooltipInfo, TooltipPlacement } from './components/Tooltip';
 
 export { KitRoot, type KitRootProps } from './components/KitRoot';
 
-
 export * from './components/Tree';
 
 export * from './components/Toast';
+
+export * from './components/VirtualList';
+
+export * from './components/Link';

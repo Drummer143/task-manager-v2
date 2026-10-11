@@ -49,12 +49,12 @@ services:
         depends_on:
             - task-manager
             - main-service
-            - socket-server
+            - socket-service
             - storage-service
             - authentik_server
 
     postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         restart: unless-stopped
         container_name: postgres
         healthcheck:
@@ -74,7 +74,9 @@ services:
         ports:
             - "127.0.0.1:5432:5432"
         volumes:
-            - pgdata:/var/lib/postgresql/data
+            # Postgres 18 keeps its data in /var/lib/postgresql/18/docker and refuses a volume
+            # mounted at the old /var/lib/postgresql/data; a 16 volume cannot be reused anyway
+            - pgdata:/var/lib/postgresql
         networks:
             - net
 
@@ -82,7 +84,7 @@ services:
     # Values come from the environment ($$ = resolved inside the container), so the
     # password never ends up in the container command line.
     postgres-init:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         container_name: postgres-init
         restart: "no"
         depends_on:
@@ -121,6 +123,9 @@ services:
         image: rabbitmq:management-alpine
         restart: unless-stopped
         container_name: rmq
+        # Loopback only, like postgres and redis: reachable through scripts/tunnel.ps1, not from outside
+        ports:
+            - "127.0.0.1:5672:5672"
         # A port probe, not `rabbitmq-diagnostics`: the CLI boots its own Erlang VM, which takes over
         # 10 s within the CPU limit below and so kept failing the timeout. The AMQP listener opens only
         # once the broker has finished booting, so an open port means it is ready.
@@ -257,7 +262,9 @@ services:
             MAIN_SERVICE_HOST: 0.0.0.0
             MAIN_SERVICE_PORT: 8080
             # The frontend (https://DOMAIN) calls api.DOMAIN cross-origin
-            CORS_ORIGINS: https://${DOMAIN:?DOMAIN is required}
+            CORS_ORIGINS: https://${DOMAIN:?DOMAIN is required},https://localhost:1346
+            AMQP_URL: ${AMQP_URL:?AMQP_URL is required}
+            DEBUG_NOTIFICATIONS: true
         deploy:
             resources:
                 limits:
@@ -307,7 +314,7 @@ services:
             # Links point at the public address of caddy. The frontend (https://DOMAIN) calls
             # storage cross-origin, so its origin must be allowed by CORS
             STORAGE_PUBLIC_URL: https://storage.${DOMAIN:?DOMAIN is required}
-            CORS_ORIGINS: https://${DOMAIN}
+            CORS_ORIGINS: https://${DOMAIN},https://localhost:1346
         volumes:
             - storage_data:/static
         deploy:
@@ -320,20 +327,25 @@ services:
 
     # Served by caddy on socket.{$DOMAIN}. The frontend connects from https://DOMAIN, another
     # origin, so it is allowed explicitly through PHX_CHECK_ORIGIN
-    socket-server:
+    socket-service:
         restart: unless-stopped
-        container_name: socket-server
-        image: ghcr.io/drummer143/task-manager-v2/socket-server:${IMAGE_TAG:-latest}
+        container_name: socket-service
+        image: ghcr.io/drummer143/task-manager-v2/socket-service:${IMAGE_TAG:-latest}
         build:
             context: ..
             dockerfile: docker/Dockerfile.elixir
             args:
-                APP_NAME: socket_server
+                APP_NAME: socket_service
         environment:
             SECRET_KEY_BASE: ${SECRET_KEY_BASE:?SECRET_KEY_BASE is required}
             PHX_HOST: socket.${DOMAIN}
-            PHX_CHECK_ORIGIN: https://${DOMAIN}
-            SOCKET_SERVER_PORT: 4000
+            PHX_CHECK_ORIGIN: https://${DOMAIN},https://localhost:1346
+            # Caddy proxies socket.{$DOMAIN} to socket-service:8079
+            SOCKET_SERVICE_PORT: 8079
+            AMQP_URL: ${AMQP_URL:?AMQP_URL is required}
+            AUTHENTIK_JWKS_URL: ${AUTHENTIK_JWKS_URL:?AUTHENTIK_JWKS_URL is required}
+            AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER:?AUTHENTIK_ISSUER is required}
+            AUTHENTIK_AUDIENCE: ${AUTHENTIK_AUDIENCE:?AUTHENTIK_AUDIENCE is required}
         deploy:
             resources:
                 limits:

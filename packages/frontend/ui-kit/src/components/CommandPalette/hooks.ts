@@ -29,10 +29,11 @@ export const usePaletteCreate = (create: PaletteCreate) => {
   });
 
   useEffect(() => {
-    usePaletteStore.getState().setCreate(entry.current);
+    const registered = entry.current;
+    usePaletteStore.getState().setCreate(registered);
 
     return () => {
-      if (usePaletteStore.getState().create === entry.current) {
+      if (usePaletteStore.getState().create === registered) {
         usePaletteStore.getState().setCreate(null);
       }
     };
@@ -47,9 +48,10 @@ const isPaletteOpen = () => {
 
 /** Open, close, toggle — the palette is the app's single layer while open (a second layer replaces it). */
 export const palette = {
-  open: () => {
+  /** `initialQuery`: the key that opened it from a field-like button, so it is not lost. */
+  open: (initialQuery?: string) => {
     if (!isPaletteOpen()) {
-      useLayerStore.getState().openLayer(createElement(CommandPalette));
+      useLayerStore.getState().openLayer(createElement(CommandPalette, { initialQuery }));
     }
   },
   close: () => {

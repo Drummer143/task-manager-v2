@@ -1,7 +1,7 @@
 import React, { memo, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDownIcon, ChevronRightIcon, MoreHorizontalIcon, PlusIcon } from '../../icons';
-import type { KitMessages } from '../../messages';
-import { useLinkClick, useLinkHref } from '../../router';
+import { useMessages } from '../../messages';
+import { LinkBase } from '../Link';
 import { skeletonWidth, Skeleton } from '../States';
 import { tooltipProps } from '../Tooltip';
 import { isExpandable, type TreeRow as Row } from './model';
@@ -13,7 +13,6 @@ type NodeRow = Extract<Row, { kind: 'node' }>;
 
 /** What a row may ask of the tree. One object for all rows, read at call time: rows re-render only for their own state. */
 export interface RowControls {
-  messages: KitMessages;
   /** Anything on the row except its buttons and link: the cursor, and opening the node. */
   click(node: TreeNode, event: React.MouseEvent<HTMLElement>): void;
   toggle(id: string): void;
@@ -125,16 +124,11 @@ const RenameField: React.FC<{
 };
 
 /** The text part of the row: a real link when the node has a page, so middle and mod clicks open a tab. */
-const NodeLink: React.FC<{ node: TreeNode; children: React.ReactNode }> = ({ node, children }) => {
-  const href = useLinkHref(node.href as string);
-  const onClick = useLinkClick({ href: node.href });
-
-  return (
-    <a href={href} className={styles.main} tabIndex={-1} draggable={false} onClick={onClick}>
-      {children}
-    </a>
-  );
-};
+const NodeLink: React.FC<{ node: TreeNode; children: React.ReactNode }> = ({ node, children }) => (
+  <LinkBase href={node.href as string} className={styles.main} tabIndex={-1} draggable={false}>
+    {children}
+  </LinkBase>
+);
 
 /**
  * One node (spec: Tree · 01): the chevron (an empty place of the same width
@@ -146,7 +140,7 @@ export const TreeRow: React.FC<TreeRowProps> = memo(
     const { node, depth, expanded } = row;
     const expandable = isExpandable(node);
     const locked = node.disabledReason !== undefined;
-    const messages = controls.current.messages;
+    const messages = useMessages();
     const meta = locked ? messages.treeNoAccess : node.meta;
     const showActions = (canAdd || hasActions) && !renaming;
 
@@ -173,6 +167,9 @@ export const TreeRow: React.FC<TreeRowProps> = memo(
     return (
       <div
         id={domId}
+        // The open page is `aria-current="page"` (spec Tree); there is no selection to report.
+        // ARIA 1.2 does not require aria-selected on a treeitem, the rule follows ARIA 1.1
+        // eslint-disable-next-line jsx-a11y/role-has-required-aria-props
         role="treeitem"
         aria-level={depth + 1}
         aria-posinset={row.index + 1}
@@ -259,7 +256,7 @@ export const TreeNote: React.FC<{
   row: Exclude<Row, { kind: 'node' }>;
   controls: React.RefObject<RowControls>;
 }> = ({ row, controls }) => {
-  const { messages } = controls.current;
+  const messages = useMessages();
   const style = { '--_depth': row.depth } as DepthStyle;
 
   if (row.kind === 'loading') {

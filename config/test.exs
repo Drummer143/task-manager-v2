@@ -2,7 +2,7 @@ import Config
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :socket_server, SocketServerWeb.Endpoint,
+config :socket_service, SocketServiceWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "4N/e8LObjaLCgnbAmIF+DKJALhDM51tF8PlG+HpSi7OWVsoT/vTO1QY6JAgdfrBI",
   server: false
@@ -16,3 +16,6 @@ config :phoenix, :plug_init_mode, :runtime
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# No RabbitMQ consumer and no JWKS fetcher in tests: they reach external services
+config :socket_service, :external_services, false

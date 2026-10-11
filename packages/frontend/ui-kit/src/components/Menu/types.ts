@@ -44,6 +44,11 @@ export interface MenuRadioOption {
   /** A sign of its own (a status dot, an avatar): the choice then moves to a check at the right. */
   icon?: ReactNode;
   disabledReason?: string;
+  /**
+   * "Something new here": a dot at the right, this text in its tooltip and in
+   * the option's name for readers ('3 unread' → "Side project, 3 unread").
+   */
+  dot?: string;
 }
 
 export interface MenuRadioGroupItem {
@@ -54,6 +59,12 @@ export interface MenuRadioGroupItem {
   value: string | null;
   onValueChange(value: string): void;
   options: MenuRadioOption[];
+  /**
+   * A long choice (workspaces): past --menu-filter-after options a filter
+   * field stands above them and they scroll inside the menu. Typing anywhere
+   * in the menu goes into the field.
+   */
+  filterable?: boolean;
 }
 
 export interface MenuSubmenuItem {
@@ -73,6 +84,12 @@ export interface MenuSeparatorItem {
 export interface MenuLabelItem {
   type: 'label';
   label: string;
+  /**
+   * Drawn instead of the plain label, still naming the group below it: who is
+   * signed in (avatar, name, email) above Profile and Sign out. Not an item:
+   * not focusable, not chosen.
+   */
+  content?: ReactNode;
 }
 
 export type MenuItem =

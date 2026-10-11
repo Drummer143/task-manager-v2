@@ -20,7 +20,8 @@
 			"outputs": [],
 			"options": {
 				"cwd": ".",
-				"command": "cargo test -p utils"
+				"command": "cargo test -p utils",
+				"forwardAllArgs": false
 			},
 			"configurations": {
 				"production": {

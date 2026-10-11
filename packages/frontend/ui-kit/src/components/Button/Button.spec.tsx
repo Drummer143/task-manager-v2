@@ -425,7 +425,7 @@ describe('Button · router', () => {
 
     fireEvent.click(link);
 
-    expect(router.navigate).toHaveBeenCalledWith('/w/acme/board');
+    expect(router.navigate).toHaveBeenCalledWith('/w/acme/board', { replace: undefined });
     expect(prevented).toBe(true);
   });
 

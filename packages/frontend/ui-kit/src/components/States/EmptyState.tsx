@@ -1,5 +1,10 @@
 import React from 'react';
-import { RowButton, StateLayout, type StateAction, type StateScale } from './StateLayout';
+import {
+  RowButton,
+  StateLayout,
+  type StateAction,
+  type StateScale,
+} from './StateLayout';
 
 export interface EmptyStateProps {
   /** Default `area`. */
@@ -7,7 +12,7 @@ export interface EmptyStateProps {
   /** Why it is empty: 'This board has no tasks yet', 'No tasks match “Assignee: me”'. */
   title: string;
   /** One sentence more — how many the filter hides, a hotkey for a newcomer. */
-  description?: string;
+  description?: React.ReactNode;
   /** The next step, the main one; with its hotkey. */
   action?: StateAction;
   secondary?: StateAction;
@@ -22,7 +27,14 @@ export interface EmptyStateProps {
  * never reads like a true one. Inside columns, cells and lists it is a
  * line (`scale="row"`), and a row with one action is itself the button.
  */
-export const EmptyState: React.FC<EmptyStateProps> = ({ scale = 'area', title, description, action, secondary, className }) => {
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  scale = 'area',
+  title,
+  description,
+  action,
+  secondary,
+  className,
+}) => {
   if (scale === 'row' && action && !secondary && !description) {
     return <RowButton title={title} action={action} className={className} />;
   }

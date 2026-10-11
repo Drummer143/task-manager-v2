@@ -36,6 +36,13 @@ export interface TreeHandle {
   /** Starts renaming a node — as soon as it is rendered (right after `onAdd` created it). */
   rename(id: string): void;
   focus(): void;
+  /**
+   * Brings a node to the user (G S, spec: Sidebar · 09): its ancestors are
+   * expanded, the cursor is put on it, it is scrolled into view and the tree
+   * takes focus. Default: the open page (`activeId`). A node not loaded yet is
+   * ignored — the app reveals it once its branch is in `nodes`.
+   */
+  reveal(id?: string): void;
 }
 
 export interface TreeProps {

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { CSSProperties, ReactNode, useRef, useState } from 'react';
+import React, { CSSProperties, ReactNode, useRef, useState } from 'react';
 import { Tree } from './Tree';
 import type { TreeHandle, TreeMoveTarget, TreeNode } from './types';
 import type { MenuItem } from '../Menu';
@@ -278,27 +278,29 @@ export const DeepNesting: Story = {
   },
 };
 
+const FailuresDemo: React.FC = () => {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(['broken']));
+
+  return (
+    <div style={{ padding: cssVar('sp-6'), width: cssVar('sidebar-width'), boxSizing: 'content-box' }}>
+      <Tree
+        aria-label="Pages"
+        nodes={[
+          { id: 'retro', label: 'Q3 retro', icon: ICONS.doc, hasChildren: false, error: 'Not moved: no connection.' },
+          { id: 'broken', label: 'Infrastructure', icon: ICONS.board, hasChildren: true },
+        ]}
+        expanded={expanded}
+        onExpandedChange={setExpanded}
+        loadChildren={() => Promise.reject(new Error('offline'))}
+        onRetry={() => undefined}
+      />
+    </div>
+  );
+};
+
 /** A failed rename or move: the stripe, the error in the tooltip, Retry. Children that did not load. */
 export const Failures: Story = {
-  render: () => {
-    const [expanded, setExpanded] = useState<Set<string>>(new Set(['broken']));
-
-    return (
-      <div style={{ padding: cssVar('sp-6'), width: cssVar('sidebar-width'), boxSizing: 'content-box' }}>
-        <Tree
-          aria-label="Pages"
-          nodes={[
-            { id: 'retro', label: 'Q3 retro', icon: ICONS.doc, hasChildren: false, error: 'Not moved: no connection.' },
-            { id: 'broken', label: 'Infrastructure', icon: ICONS.board, hasChildren: true },
-          ]}
-          expanded={expanded}
-          onExpandedChange={setExpanded}
-          loadChildren={() => Promise.reject(new Error('offline'))}
-          onRetry={() => undefined}
-        />
-      </div>
-    );
-  },
+  render: () => <FailuresDemo />,
 };
 
 /** Density changes the row, never the chevron, the icon or the text. */

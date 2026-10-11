@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
+import React, { CSSProperties, ReactNode, useEffect, useRef, useState, type ComponentProps } from 'react';
 import { Button } from './Button';
 import type { ButtonSize, ButtonVariant } from './types';
 import { Surface } from '../Surface';
@@ -152,60 +152,62 @@ export const OnInverseSurface: Story = {
   ),
 };
 
+const BusyDemo: React.FC<ComponentProps<typeof Button>> = (args) => {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [presses, setPresses] = useState(0);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const run = (name: string, ms: number) => {
+    setPresses((count) => count + 1);
+    setBusy(name);
+    timer.current = setTimeout(() => setBusy(null), ms);
+  };
+
+  return (
+    <div
+      style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start' }}
+    >
+      <div style={row}>
+        <Button
+          {...args}
+          icon={<PlusIcon />}
+          loading={busy === 'fast'}
+          onClick={() => run('fast', 120)}
+        >
+          Fast · 120 ms
+        </Button>
+        <Button
+          {...args}
+          icon={<PlusIcon />}
+          loading={busy === 'slow'}
+          onClick={() => run('slow', 1500)}
+        >
+          Slow · 1.5 s
+        </Button>
+        <Button
+          {...args}
+          loading={busy === 'plain'}
+          onClick={() => run('plain', 1500)}
+        >
+          No icon · 1.5 s
+        </Button>
+      </div>
+      <Caption>
+        Presses that reached the handler: {presses}. Click a busy button again
+        — the count does not change.
+      </Caption>
+    </div>
+  );
+};
+
 /**
  * Busy with real timings: the press is ignored at once, the spinner appears only
  * after 200 ms and stays at least 400 ms. Fast never shows a spinner at all.
  */
 export const Busy: Story = {
-  render: (args) => {
-    const [busy, setBusy] = useState<string | null>(null);
-    const [presses, setPresses] = useState(0);
-    const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-    useEffect(() => () => clearTimeout(timer.current), []);
-
-    const run = (name: string, ms: number) => {
-      setPresses((count) => count + 1);
-      setBusy(name);
-      timer.current = setTimeout(() => setBusy(null), ms);
-    };
-
-    return (
-      <div
-        style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start' }}
-      >
-        <div style={row}>
-          <Button
-            {...args}
-            icon={<PlusIcon />}
-            loading={busy === 'fast'}
-            onClick={() => run('fast', 120)}
-          >
-            Fast · 120 ms
-          </Button>
-          <Button
-            {...args}
-            icon={<PlusIcon />}
-            loading={busy === 'slow'}
-            onClick={() => run('slow', 1500)}
-          >
-            Slow · 1.5 s
-          </Button>
-          <Button
-            {...args}
-            loading={busy === 'plain'}
-            onClick={() => run('plain', 1500)}
-          >
-            No icon · 1.5 s
-          </Button>
-        </div>
-        <Caption>
-          Presses that reached the handler: {presses}. Click a busy button again
-          — the count does not change.
-        </Caption>
-      </div>
-    );
-  },
+  render: (args) => <BusyDemo {...args} />,
   args: { keys: undefined },
 };
 
@@ -263,35 +265,37 @@ export const AsLink: Story = {
   args: { keys: undefined },
 };
 
+const MenuTriggerDemo: React.FC = () => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div
+      style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start' }}
+    >
+      <div style={row}>
+        {VARIANTS.map((variant) => (
+          <Button
+            key={variant}
+            variant={variant}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+          >
+            Actions ▾
+          </Button>
+        ))}
+      </div>
+      <Caption>
+        Menu {open ? 'open — every trigger holds the pressed look' : 'closed'}
+        . Click any trigger to toggle.
+      </Caption>
+    </div>
+  );
+};
+
 /** A menu trigger keeps the pressed look while its menu is open (aria-expanded="true"). */
 export const MenuTrigger: Story = {
-  render: () => {
-    const [open, setOpen] = useState(false);
-
-    return (
-      <div
-        style={{ display: 'grid', gap: cssVar('sp-4'), justifyItems: 'start' }}
-      >
-        <div style={row}>
-          {VARIANTS.map((variant) => (
-            <Button
-              key={variant}
-              variant={variant}
-              aria-haspopup="menu"
-              aria-expanded={open}
-              onClick={() => setOpen((value) => !value)}
-            >
-              Actions ▾
-            </Button>
-          ))}
-        </div>
-        <Caption>
-          Menu {open ? 'open — every trigger holds the pressed look' : 'closed'}
-          . Click any trigger to toggle.
-        </Caption>
-      </div>
-    );
-  },
+  render: () => <MenuTriggerDemo />,
 };
 
 /** Keyboard: the ring shows on Tab only, never on a mouse click (spec). */

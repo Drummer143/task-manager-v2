@@ -260,10 +260,10 @@ mod tests {
     }
 
     async fn blob_with(content: &[u8], mime: &str) -> (Blob, std::path::PathBuf) {
-        let path = std::env::temp_dir().join(format!("storage-serve-{}", Uuid::new_v4()));
+        let path = std::env::temp_dir().join(format!("storage-serve-{}", Uuid::now_v7()));
         tokio::fs::write(&path, content).await.unwrap();
         let blob = Blob {
-            id: Uuid::new_v4(),
+            id: Uuid::now_v7(),
             hash: "hash".into(),
             size: content.len() as i64,
             path: path.to_string_lossy().into_owned(),

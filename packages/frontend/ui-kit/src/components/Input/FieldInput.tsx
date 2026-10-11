@@ -20,8 +20,8 @@ export interface FieldInputProps extends NativeInputProps {
   icon?: React.ReactNode;
   /** Hotkey hint at the right edge, e.g. `'/'`. The app binds the hotkey itself. */
   keys?: string;
-  /** Shown under the field — on blur, not mid-typing (see useFieldError). */
-  error?: string;
+  /** Shown under the field — on blur, not mid-typing (see useFieldError). A Link inside takes its red. */
+  error?: React.ReactNode;
   /** Select the whole value on focus: a filter, an id. */
   selectOnFocus?: boolean;
   /** Why the field is disabled: shown in a tooltip, readable from the keyboard. */
@@ -80,7 +80,7 @@ export const FieldInput: React.FC<FieldInputProps> = ({
           readOnly={readOnly || disabled}
           aria-disabled={disabled || undefined}
           aria-invalid={shownError ? true : undefined}
-          aria-describedby={cx(props['aria-describedby'], shownError && errorId) || undefined}
+          aria-describedby={cx(props['aria-describedby'], shownError ? errorId : undefined) || undefined}
           onChange={(event) => {
             onChange?.(event);
 
@@ -118,7 +118,7 @@ export const FieldInput: React.FC<FieldInputProps> = ({
       </div>
 
       {shownError && (
-        <div id={errorId} className={styles.error}>
+        <div id={errorId} className={styles.error} data-tone="danger">
           {shownError}
         </div>
       )}

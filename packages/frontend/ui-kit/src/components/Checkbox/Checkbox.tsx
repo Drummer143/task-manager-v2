@@ -57,6 +57,8 @@ export const Checkbox: React.FC<CheckboxProps> = ({
   const errorId = useId();
   const mixed = checked === 'mixed';
   const reason = disabled && disabledReason ? disabledReason : undefined;
+  // Its `|| undefined` stays apart: React Compiler 1.0 cannot lower `cx(a && b) || c`
+  const describedBy = cx(props['aria-describedby'], description !== undefined && descriptionId, error && errorId);
 
   // `indeterminate` exists only as a DOM property; it is what readers hear as "mixed".
   useLayoutEffect(() => {
@@ -83,9 +85,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({
           // Disabled the kit way (spec 10): focusable for its reason, but inert.
           aria-disabled={disabled || undefined}
           aria-invalid={error ? true : undefined}
-          aria-describedby={
-            cx(props['aria-describedby'], description !== undefined && descriptionId, error && errorId) || undefined
-          }
+          aria-describedby={describedBy || undefined}
           onClick={(event) => {
             onClick?.(event);
 

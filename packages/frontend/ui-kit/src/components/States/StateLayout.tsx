@@ -39,11 +39,16 @@ const LinkAction: React.FC<{ action: StateAction }> = ({ action }) => (
 /** The layout EmptyState and ErrorState share: the same three scales, a tone apart. */
 export const StateLayout: React.FC<StateLayoutProps> = ({ scale, tone, title, description, actions, className, ...rest }) => {
   const steps = actions.filter((action): action is StateAction => action !== undefined);
+  // `data-tone="danger"` marks red text itself (a link inside takes its colour, spec: Link · 02);
+  // the grey description of an error keeps accent links
+  const titleTone = tone === 'danger' ? 'danger' : undefined;
 
   if (scale === 'area') {
     return (
-      <div {...rest} className={cx(styles.state, styles.area, className)} data-tone={tone}>
-        <p className={styles.title}>{title}</p>
+      <div {...rest} className={cx(styles.state, styles.area, className)} data-state-tone={tone}>
+        <p className={styles.title} data-tone={titleTone}>
+          {title}
+        </p>
         {description != null && <p className={styles.description}>{description}</p>}
         {steps.length > 0 && (
           <div className={styles.actions}>
@@ -59,9 +64,11 @@ export const StateLayout: React.FC<StateLayoutProps> = ({ scale, tone, title, de
   }
 
   return (
-    <div {...rest} className={cx(styles.state, styles[scale], className)} data-tone={tone}>
+    <div {...rest} className={cx(styles.state, styles[scale], className)} data-state-tone={tone}>
       <span className={styles.line}>
-        <span className={styles.title}>{title}</span>
+        <span className={styles.title} data-tone={titleTone}>
+          {title}
+        </span>
         {description != null && <span className={styles.description}>{description}</span>}
       </span>
       {steps.map((action) => (
@@ -82,7 +89,7 @@ export const RowButton: React.FC<{ title: React.ReactNode; action: StateAction; 
   action,
   className,
 }) => (
-  <button type="button" className={cx(styles.state, styles.row, styles.rowButton, className)} data-tone="neutral" onClick={action.onAction}>
+  <button type="button" className={cx(styles.state, styles.row, styles.rowButton, className)} data-state-tone="neutral" onClick={action.onAction}>
     <span className={styles.title}>{title}</span>
     <span className={styles.dot} aria-hidden="true">
       ·

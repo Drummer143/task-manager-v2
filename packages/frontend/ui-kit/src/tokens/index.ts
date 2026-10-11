@@ -10,6 +10,8 @@
  *   style={{ color: cssVar('text-primary') }}          // same, with name checking
  *   setTimeout(fn, raw['spinner-delay']);              // 200 (ms, number)
  */
+import { token, type TokenName } from './tokens.generated';
+
 export {
   TOKENS,
   PRIMITIVE_TOKENS,
@@ -20,8 +22,6 @@ export {
   type PrimitiveToken,
   type RawTokenName,
 } from './tokens.generated';
-
-import { token, type TokenName } from './tokens.generated';
 
 /** Type-safe CSS variable reference: cssVar('bg-canvas') → 'var(--bg-canvas)'. */
 export function cssVar(name: TokenName): string {

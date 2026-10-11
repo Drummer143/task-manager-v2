@@ -14,13 +14,13 @@ import { AuthErrorView } from './AuthErrorView';
 import { AuthFrame, AuthStatus, AuthText, Wordmark } from './AuthScreen';
 import { fetchMe } from './me';
 import {
-  CALLBACK_PATH,
   pendingReturnTo,
   returnPathOf,
   startSignIn,
   switchAccount,
   userManager,
 } from './user-manager';
+import { ROUTES } from '../../shared/constants/routes';
 
 /** Timeline of the wait (design: Callback §01). The spinner appears after --spinner-delay. */
 export const HINT_AFTER_MS = 1_000;
@@ -89,14 +89,15 @@ export interface CallbackScreenProps {
 
 export const CallbackScreen: React.FC<CallbackScreenProps> = ({ deps: overrides }) => {
   const deps = useMemo(() => ({ ...defaultDeps, ...overrides }), [overrides]);
-  const requestId = useMemo(newRequestId, []);
+  const [requestId] = useState(newRequestId);
   const [stage, setStage] = useState<Stage>('blank');
   const [error, setError] = useState<AuthError | null>(null);
 
   const started = useRef(false);
   /** Bumped by "Start over": results of an abandoned attempt are ignored. */
   const attempt = useRef(0);
-  const loadedAt = useRef(Date.now());
+  /** When the callback page loaded: set by the first effect, as render must not read the clock. */
+  const loadedAt = useRef(0);
   const spinnerShownAt = useRef<number | null>(null);
   const returnTo = useRef(pendingReturnTo());
   const signedIn = useRef<User | null>(null);
@@ -107,8 +108,6 @@ export const CallbackScreen: React.FC<CallbackScreenProps> = ({ deps: overrides 
   useEffect(() => {
     if (error) return;
     document.title = 'Signing in… · Verso';
-    setStage('blank');
-    spinnerShownAt.current = null;
     const timers = [
       setTimeout(() => {
         spinnerShownAt.current = Date.now();
@@ -117,7 +116,12 @@ export const CallbackScreen: React.FC<CallbackScreenProps> = ({ deps: overrides 
       setTimeout(() => setStage('hint'), HINT_AFTER_MS),
       setTimeout(() => setStage('slow'), SLOW_AFTER_MS),
     ];
-    return () => timers.forEach(clearTimeout);
+    // Back to the start when the wait ends, so the next wait begins blank again
+    return () => {
+      timers.forEach(clearTimeout);
+      spinnerShownAt.current = null;
+      setStage('blank');
+    };
   }, [error]);
 
   /** Goes on to the app, keeping a spinner that did appear for its minimum time (no flash). */
@@ -173,44 +177,49 @@ export const CallbackScreen: React.FC<CallbackScreenProps> = ({ deps: overrides 
 
   const complete = useCallback(
     async (url: string) => {
-      const current = ++attempt.current;
+      // Another try with the same code after the network comes back
+      for (;;) {
+        const current = ++attempt.current;
 
-      if (!deps.isOnline()) {
-        setError({ code: 'auth.offline' });
-        await waitOnline();
-        // The code may have expired meanwhile
-        if (Date.now() - loadedAt.current > CODE_LIFETIME_MS) return restart();
-        setError(null);
-      }
-
-      let user: User;
-      try {
-        if (!hasAuthParams(url)) throw new Error('No matching state found in storage');
-        user = await withDeadline(deps.completeSignIn(url), TIMEOUT_MS);
-      } catch (cause) {
-        if (current !== attempt.current) return;
-        const failure = callbackError(cause, deps.isOnline());
-
-        if (failure.code === 'auth.state_mismatch') {
-          // An old callback (Back, a second tab) while the session is alive: just go on
-          const existing = await deps.getUser();
-          if (existing && !existing.expired) return leave(returnTo.current);
-        }
-        if (failure.silentRetry && takeSilentRetry()) return restart();
-        if (failure.code === 'auth.offline') {
-          setError(failure);
+        if (!deps.isOnline()) {
+          setError({ code: 'auth.offline' });
           await waitOnline();
+          // The code may have expired meanwhile
+          if (Date.now() - loadedAt.current > CODE_LIFETIME_MS) return restart();
           setError(null);
-          return Date.now() - loadedAt.current > CODE_LIFETIME_MS ? restart() : void complete(url);
         }
-        setError(failure);
+
+        let user: User;
+        try {
+          if (!hasAuthParams(url)) throw new Error('No matching state found in storage');
+          user = await withDeadline(deps.completeSignIn(url), TIMEOUT_MS);
+        } catch (cause) {
+          if (current !== attempt.current) return;
+          const failure = callbackError(cause, deps.isOnline());
+
+          if (failure.code === 'auth.state_mismatch') {
+            // An old callback (Back, a second tab) while the session is alive: just go on
+            const existing = await deps.getUser();
+            if (existing && !existing.expired) return leave(returnTo.current);
+          }
+          if (failure.silentRetry && takeSilentRetry()) return restart();
+          if (failure.code === 'auth.offline') {
+            setError(failure);
+            await waitOnline();
+            setError(null);
+            if (Date.now() - loadedAt.current > CODE_LIFETIME_MS) return restart();
+            continue;
+          }
+          setError(failure);
+          return;
+        }
+
+        if (current !== attempt.current) return;
+        returnTo.current = returnPathOf(user.state);
+        signedIn.current = user;
+        await loadMe(user, current);
         return;
       }
-
-      if (current !== attempt.current) return;
-      returnTo.current = returnPathOf(user.state);
-      signedIn.current = user;
-      await loadMe(user, current);
     },
     [deps, leave, loadMe, restart],
   );
@@ -219,9 +228,10 @@ export const CallbackScreen: React.FC<CallbackScreenProps> = ({ deps: overrides 
     // Effects run twice in StrictMode; a code can be exchanged only once
     if (started.current) return;
     started.current = true;
+    loadedAt.current = Date.now();
     const url = window.location.href;
     // Out of the address bar before anything else: not in history, logs or copied links
-    window.history.replaceState(null, '', CALLBACK_PATH);
+    window.history.replaceState(null, '', ROUTES.CALLBACK);
     void complete(url);
   }, [complete]);
 

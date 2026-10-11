@@ -57,6 +57,16 @@
         "command": "cargo fmt -p main_service",
         "cwd": "{workspaceRoot}"
       }
+    },
+    "export-openapi": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["rust"],
+      "outputs": ["{workspaceRoot}/packages/frontend/api/specs/openapi-main.json"],
+      "options": {
+        "command": "cargo run --bin export-openapi-main -- packages/frontend/api/specs/openapi-main.json",
+        "cwd": "{workspaceRoot}"
+      }
     }
   }
 }

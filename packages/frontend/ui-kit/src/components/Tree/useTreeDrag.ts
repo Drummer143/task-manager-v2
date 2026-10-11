@@ -85,7 +85,10 @@ export const useTreeDrag = (options: DragOptions) => {
   const session = useRef<Session | null>(null);
   const latest = useRef(options);
 
-  latest.current = options;
+  // Read by the pointer handlers, never during render
+  useLayoutEffect(() => {
+    latest.current = options;
+  });
 
   const placeGhost = () => {
     const current = session.current;

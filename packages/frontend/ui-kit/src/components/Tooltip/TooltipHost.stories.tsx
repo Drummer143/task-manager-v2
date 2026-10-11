@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { CSSProperties, ReactNode, useCallback, useEffect, useState } from 'react';
+import React, { CSSProperties, ReactNode, useCallback, useEffect, useState } from 'react';
 import TooltipHost from './TooltipHost';
 import { tooltipProps } from './tooltipProps';
 import { Surface } from '../Surface';
@@ -261,116 +261,122 @@ export const Scroll: Story = {
   ),
 };
 
-export const EscapeLadder: Story = {
-  render: () => {
-    const [panelOpen, setPanelOpen] = useState(true);
-    const closePanel = useCallback(() => {
-      setPanelOpen(false);
-      return true;
-    }, []);
+const EscapeLadderDemo: React.FC = () => {
+  const [panelOpen, setPanelOpen] = useState(true);
+  const closePanel = useCallback(() => {
+    setPanelOpen(false);
+    return true;
+  }, []);
 
-    useEscapeStack(closePanel, panelOpen);
+  useEscapeStack(closePanel, panelOpen);
 
-    return (
-      <div style={page}>
-        <Check>
-          Show a tooltip (hover or Tab), press Esc once: the tooltip hides AND the panel closes with the same press.
-          If the panel needs a second Esc, the tooltip is swallowing the key.
-        </Check>
-        <TaskToolbar />
-        <div style={row}>
-          <span>Panel: {panelOpen ? 'open' : 'closed'}</span>
-          <button type="button" style={textButton} onClick={() => setPanelOpen(true)}>
-            Reopen panel
-          </button>
-        </div>
+  return (
+    <div style={page}>
+      <Check>
+        Show a tooltip (hover or Tab), press Esc once: the tooltip hides AND the panel closes with the same press.
+        If the panel needs a second Esc, the tooltip is swallowing the key.
+      </Check>
+      <TaskToolbar />
+      <div style={row}>
+        <span>Panel: {panelOpen ? 'open' : 'closed'}</span>
+        <button type="button" style={textButton} onClick={() => setPanelOpen(true)}>
+          Reopen panel
+        </button>
       </div>
-    );
-  },
+    </div>
+  );
+};
+
+export const EscapeLadder: Story = {
+  render: () => <EscapeLadderDemo />,
+};
+
+const OpenMenuDemo: React.FC = () => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div style={page}>
+      <Check>
+        Hover the trigger: tooltip. Click it to "open the menu" (aria-expanded turns true): hovering it again shows
+        nothing until the menu is closed.
+      </Check>
+      <div style={{ position: 'relative', justifySelf: 'start' }}>
+        <button
+          type="button"
+          style={textButton}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((prev) => !prev)}
+          {...tooltipProps({ text: 'Task actions', keys: 'mod+k' })}
+        >
+          Actions ▾
+        </button>
+        {open && (
+          <div
+            role="menu"
+            style={{
+              position: 'absolute',
+              top: `calc(100% + ${cssVar('sp-2')})`,
+              left: 0,
+              width: cssVar('column-width'),
+              padding: cssVar('sp-2'),
+              border: `${cssVar('border-width')} solid ${cssVar('border-hairline')}`,
+              borderRadius: cssVar('radius-sm'),
+              background: cssVar('bg-raised'),
+              boxShadow: cssVar('shadow-overlay'),
+            }}
+          >
+            <div role="menuitem" style={{ height: cssVar('control-height'), display: 'flex', alignItems: 'center', padding: `0 ${cssVar('sp-3')}` }}>
+              Duplicate
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 /** No trigger tooltips over an open menu: the trigger with aria-expanded="true" stays silent. */
 export const OpenMenu: Story = {
-  render: () => {
-    const [open, setOpen] = useState(false);
+  render: () => <OpenMenuDemo />,
+};
 
-    return (
-      <div style={page}>
-        <Check>
-          Hover the trigger: tooltip. Click it to "open the menu" (aria-expanded turns true): hovering it again shows
-          nothing until the menu is closed.
-        </Check>
-        <div style={{ position: 'relative', justifySelf: 'start' }}>
+const TriggerRemovedDemo: React.FC = () => {
+  const [present, setPresent] = useState(true);
+
+  useEffect(() => {
+    if (present) return;
+    const timer = setTimeout(() => setPresent(true), 3000);
+    return () => clearTimeout(timer);
+  }, [present]);
+
+  return (
+    <div style={page}>
+      <Check>
+        Hover the button and keep the pointer still: after the tooltip shows, the button removes itself 1 s later.
+        The tooltip must disappear with it. The button comes back after 3 s.
+      </Check>
+      <div style={{ ...row, minHeight: cssVar('control-height') }}>
+        {present ? (
           <button
             type="button"
             style={textButton}
-            aria-haspopup="menu"
-            aria-expanded={open}
-            onClick={() => setOpen((prev) => !prev)}
-            {...tooltipProps({ text: 'Task actions', keys: 'mod+k' })}
+            onPointerEnter={() => setTimeout(() => setPresent(false), raw['tooltip-delay'] + 1000)}
+            {...tooltipProps({ text: 'This row will be deleted' })}
           >
-            Actions ▾
+            Hover me
           </button>
-          {open && (
-            <div
-              role="menu"
-              style={{
-                position: 'absolute',
-                top: `calc(100% + ${cssVar('sp-2')})`,
-                left: 0,
-                width: cssVar('column-width'),
-                padding: cssVar('sp-2'),
-                border: `${cssVar('border-width')} solid ${cssVar('border-hairline')}`,
-                borderRadius: cssVar('radius-sm'),
-                background: cssVar('bg-raised'),
-                boxShadow: cssVar('shadow-overlay'),
-              }}
-            >
-              <div role="menuitem" style={{ height: cssVar('control-height'), display: 'flex', alignItems: 'center', padding: `0 ${cssVar('sp-3')}` }}>
-                Duplicate
-              </div>
-            </div>
-          )}
-        </div>
+        ) : (
+          <span style={{ color: cssVar('text-muted') }}>Removed…</span>
+        )}
       </div>
-    );
-  },
+    </div>
+  );
 };
 
 /** The trigger disappears while its tooltip is shown (a row got deleted): the tooltip must not hang in the air. */
 export const TriggerRemoved: Story = {
-  render: () => {
-    const [present, setPresent] = useState(true);
-
-    useEffect(() => {
-      if (present) return;
-      const timer = setTimeout(() => setPresent(true), 3000);
-      return () => clearTimeout(timer);
-    }, [present]);
-
-    return (
-      <div style={page}>
-        <Check>
-          Hover the button and keep the pointer still: after the tooltip shows, the button removes itself 1 s later.
-          The tooltip must disappear with it. The button comes back after 3 s.
-        </Check>
-        <div style={{ ...row, minHeight: cssVar('control-height') }}>
-          {present ? (
-            <button
-              type="button"
-              style={textButton}
-              onPointerEnter={() => setTimeout(() => setPresent(false), raw['tooltip-delay'] + 1000)}
-              {...tooltipProps({ text: 'This row will be deleted' })}
-            >
-              Hover me
-            </button>
-          ) : (
-            <span style={{ color: cssVar('text-muted') }}>Removed…</span>
-          )}
-        </div>
-      </div>
-    );
-  },
+  render: () => <TriggerRemovedDemo />,
 };
 
 /** Touch never shows tooltips. Check with DevTools device mode (Ctrl+Shift+M) and tap the buttons. */
