@@ -12,6 +12,7 @@ import {
   type NotificationAction,
 } from '../../../shared/ui/NotificationRow';
 import { inboxRowId } from './InboxList';
+import { useRemoteFlashStore } from '../utils/remoteFlash';
 
 export interface InboxRowHandlers {
   markAsRead(notification: Notification): void;
@@ -46,6 +47,8 @@ const contentOf = (item: Notification) => {
 export const InboxRow: React.FC<InboxRowProps> = memo(
   ({ item, index, handlers }) => {
     const cursor = useCursorStore((state) => state.cursor === item.id);
+    // This row only: an arrival elsewhere re-renders nothing here
+    const remoteFlash = useRemoteFlashStore((state) => state.keys[item.id]);
     const { title, context, avatar } = contentOf(item);
 
     const actions = useMemo<NotificationAction[]>(
@@ -90,6 +93,7 @@ export const InboxRow: React.FC<InboxRowProps> = memo(
         avatar={avatar}
         time={new Date(item.updatedAt)}
         cursor={cursor}
+        remoteFlash={remoteFlash}
         actions={actions}
       />
     );

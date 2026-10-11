@@ -1,7 +1,7 @@
 import type { User } from 'oidc-client-ts';
 
 import { userManager } from '../auth/user-manager';
-import { startRealtime, subscribe } from './socket';
+import { startRealtime, subscribeToChannel } from './socket';
 import { useSocketStore } from './store';
 
 // A stand-in for phoenix.js: records what the module asks of it and lets a test play the server
@@ -141,7 +141,16 @@ const start = async (stored: User | null) => {
 
 const onMessage = () => vi.fn<(message: unknown) => void>();
 
+const unsubscribes: Array<() => void> = [];
+
+const subscribe: typeof subscribeToChannel = (options) => {
+  const unsubscribe = subscribeToChannel(options);
+  unsubscribes.push(unsubscribe);
+  return unsubscribe;
+};
+
 afterEach(() => {
+  unsubscribes.splice(0).forEach((unsubscribe) => unsubscribe());
   stop?.();
   stop = undefined;
   FakeSocket.instances = [];
@@ -281,19 +290,42 @@ describe('status', () => {
 });
 
 describe('subscribe', () => {
-  it('throws before the socket exists', async () => {
+  it('waits for the socket: subscribed before sign-in, the channel opens once it connects', async () => {
     await start(null);
+    const message = onMessage();
 
-    expect(() => subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage() })).toThrow(
-      'Socket is not initialized',
-    );
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: message });
+    expect(FakeSocket.instances).toHaveLength(0);
+
+    await userManager.events.load(user('signed-in'));
+
+    const [channel] = lastSocket().channels;
+    expect(channel.topic).toBe('notifications');
+    expect(channel.join).toHaveBeenCalledTimes(1);
+    channel.emit('inbox.updated', { id: 'n1' });
+    expect(message).toHaveBeenCalledExactlyOnceWith({ id: 'n1' });
+  });
+
+  it('keeps a subscriber across sign-out and sign-in: its channel opens on the new socket', async () => {
+    await start(user('first'));
+    const message = onMessage();
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: message });
+
+    await userManager.events.unload();
+    await userManager.events.load(user('second'));
+
+    const [channel] = lastSocket().channels;
+    expect(FakeSocket.instances).toHaveLength(2);
+    expect(channel.join).toHaveBeenCalledTimes(1);
+    channel.emit('inbox.updated', { id: 'n1' });
+    expect(message).toHaveBeenCalledExactlyOnceWith({ id: 'n1' });
   });
 
   it('shares one channel per topic and joins it once', async () => {
     await start(user('stored'));
 
-    subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage() });
-    subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage() });
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: onMessage() });
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: onMessage() });
 
     const channels = lastSocket().channels;
     expect(channels).toHaveLength(1);
@@ -306,17 +338,17 @@ describe('subscribe', () => {
     const first = onMessage();
     const second = onMessage();
 
-    const unsubscribeFirst = subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: first });
-    subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: second });
+    const unsubscribeFirst = subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: first });
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: second });
     const [channel] = lastSocket().channels;
 
-    channel.emit('new_notification', { id: 'n1' });
+    channel.emit('inbox.updated', { id: 'n1' });
     channel.emit('some_other_event', { id: 'n2' });
     expect(first).toHaveBeenCalledExactlyOnceWith({ id: 'n1' });
     expect(second).toHaveBeenCalledExactlyOnceWith({ id: 'n1' });
 
     unsubscribeFirst();
-    channel.emit('new_notification', { id: 'n3' });
+    channel.emit('inbox.updated', { id: 'n3' });
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenLastCalledWith({ id: 'n3' });
     expect(channel.leave).not.toHaveBeenCalled();
@@ -328,8 +360,8 @@ describe('subscribe', () => {
     const whileJoining = vi.fn();
     const late = vi.fn();
 
-    subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage(), onJoin: early });
-    subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage(), onJoin: whileJoining });
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: onMessage(), onJoin: early });
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: onMessage(), onJoin: whileJoining });
     const [channel] = lastSocket().channels;
     expect(early).not.toHaveBeenCalled();
     expect(whileJoining).not.toHaveBeenCalled();
@@ -338,7 +370,7 @@ describe('subscribe', () => {
     expect(early).toHaveBeenCalledTimes(1);
     expect(whileJoining).toHaveBeenCalledTimes(1);
 
-    subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage(), onJoin: late });
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: onMessage(), onJoin: late });
     expect(late).toHaveBeenCalledTimes(1);
 
     // Phoenix rejoins after a dropped connection: the moment to refetch what was missed
@@ -351,10 +383,10 @@ describe('subscribe', () => {
     const stays = vi.fn();
     const leaves = vi.fn();
 
-    subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage(), onError: stays });
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: onMessage(), onError: stays });
     const unsubscribe = subscribe({
       channelId: 'notifications',
-      type: 'new_notification',
+      type: 'inbox.updated',
       onMessage: onMessage(),
       onError: leaves,
     });
@@ -373,10 +405,10 @@ describe('subscribe', () => {
   it('leaves the channel with its last subscriber; the next one opens a new channel', async () => {
     await start(user('stored'));
 
-    const unsubscribeFirst = subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage() });
+    const unsubscribeFirst = subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: onMessage() });
     const unsubscribeSecond = subscribe({
       channelId: 'notifications',
-      type: 'new_notification',
+      type: 'inbox.updated',
       onMessage: onMessage(),
     });
     const [channel] = lastSocket().channels;
@@ -386,18 +418,18 @@ describe('subscribe', () => {
     unsubscribeSecond();
     expect(channel.leave).toHaveBeenCalledTimes(1);
 
-    subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage() });
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: onMessage() });
     expect(lastSocket().channels).toHaveLength(2);
     expect(lastSocket().channels[1].join).toHaveBeenCalledTimes(1);
   });
 
   it('opens channels on the new socket after signing in again', async () => {
     await start(user('first'));
-    subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage() });
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: onMessage() });
 
     await userManager.events.unload();
     await userManager.events.load(user('second'));
-    subscribe({ channelId: 'notifications', type: 'new_notification', onMessage: onMessage() });
+    subscribe({ channelId: 'notifications', type: 'inbox.updated', onMessage: onMessage() });
 
     expect(FakeSocket.instances).toHaveLength(2);
     expect(lastSocket().channels).toHaveLength(1);

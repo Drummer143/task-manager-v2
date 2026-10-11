@@ -5,6 +5,7 @@ import {
   useQuery,
 } from '@tanstack/react-query';
 import {
+  InboxUpdated,
   ListNotificationsView,
   Notification,
   NotificationPage,
@@ -30,6 +31,7 @@ import {
 import { queryClient } from '../../../app/queryClient';
 import { toast } from '@task-manager-v2/ui-kit';
 import { useCallback } from 'react';
+import { useRemoteFlashStore } from '../utils/remoteFlash';
 
 type InboxData = InfiniteData<NotificationPage, string | undefined>;
 /** The pinned Account group of one tab. */
@@ -123,6 +125,33 @@ const refreshSummary = () => {
  * read in the All tab leaves the group for its place in the All lists (spec: Inbox · 01); in the
  * Unread tab it stays until the tab changes, like any row read there.
  */
+/**
+ * Notifications whose own change is on its way, by count. A socket event about one of them
+ * describes an older state than the page shows; it is skipped, and the server's answer wins
+ * (backend spec, notifications §4.5).
+ */
+const inFlight = new Map<string, number>();
+
+/** A server summary was skipped while changes were in flight: fetch it once they settle. */
+let summaryBehind = false;
+
+const hold = (ids: readonly string[]) =>
+  ids.forEach((id) => inFlight.set(id, (inFlight.get(id) ?? 0) + 1));
+
+const release = (ids: readonly string[]) => {
+  ids.forEach((id) => {
+    const left = (inFlight.get(id) ?? 1) - 1;
+
+    if (left > 0) inFlight.set(id, left);
+    else inFlight.delete(id);
+  });
+
+  if (inFlight.size === 0 && summaryBehind) {
+    summaryBehind = false;
+    refreshSummary();
+  }
+};
+
 const patchReadNotification = (
   ids: string[],
   patch: Partial<Pick<Notification, 'readAt'>>,
@@ -336,6 +365,143 @@ const patchArchiveNotification = (
   };
 };
 
+/**
+ * Puts a notification into the pinned groups if it belongs there (account-level and unread), newest
+ * first, and takes it out of them otherwise.
+ */
+const placeInPinned = (notification: Notification) => {
+  const pinned = notification.workspaceId === null && isUnread(notification);
+
+  queryClient.setQueriesData<PinnedData>(
+    { queryKey: QUERY_KEYS.inboxPinned },
+    (data) => {
+      if (!data) return data;
+
+      const rest = data.filter((n) => n.id !== notification.id);
+
+      if (!pinned) return rest;
+
+      return [notification, ...rest].sort(
+        (a, b) =>
+          Date.parse(b.updatedAt) - Date.parse(a.updatedAt) ||
+          (a.id < b.id ? 1 : -1),
+      );
+    },
+  );
+};
+
+/** Replaces the cached copies of notifications where they are, moving nothing. */
+const replaceInPlace = (changed: readonly Notification[]) => {
+  const byId = new Map(changed.map((n) => [n.id, n]));
+  const swap = (n: Notification) => byId.get(n.id) ?? n;
+
+  queryClient.setQueriesData<InboxData>(
+    { queryKey: QUERY_KEYS.inboxLists },
+    (data) =>
+      data && {
+        ...data,
+        pages: data.pages.map((page) => ({
+          ...page,
+          data: page.data.map(swap),
+        })),
+      },
+  );
+  queryClient.setQueriesData<PinnedData>(
+    { queryKey: QUERY_KEYS.inboxPinned },
+    (data) => data?.map(swap),
+  );
+};
+
+/** The read-all of another tab: the same rule as `patchReadAll`, applied in place. */
+const readAllInPlace = ({
+  workspace,
+  before,
+  readAt,
+}: NonNullable<InboxUpdated['readAll']>) => {
+  const limit = Date.parse(before);
+
+  const read = (n: Notification) =>
+    (n.workspaceId === workspace || n.workspaceId === null) &&
+    n.readAt === null &&
+    n.archivedAt === null &&
+    Date.parse(n.updatedAt) <= limit &&
+    !inFlight.has(n.id)
+      ? { ...n, readAt }
+      : n;
+
+  queryClient.setQueriesData<InboxData>(
+    { queryKey: QUERY_KEYS.inboxLists },
+    (data) =>
+      data && {
+        ...data,
+        pages: data.pages.map((page) => ({
+          ...page,
+          data: page.data.map(read),
+        })),
+      },
+  );
+  queryClient.setQueriesData<PinnedData>(
+    { queryKey: QUERY_KEYS.inboxPinned },
+    (data) => data?.map(read),
+  );
+};
+
+/**
+ * `inbox.updated` from the socket: what a change did, here or in another tab (spec: Inbox · 10).
+ * Applied to the cache, nothing refetched, so the cursor and the scroll stay:
+ * - new: at its place by time in its list, or pinned; tinted for --highlight-remote;
+ * - moved to another tab (archived, unarchived): taken there;
+ * - read or unread: changed where it is (a row read in Unread stays until the tab changes);
+ * - a read-all: its rule, in place;
+ * - the counts: set as the server sent them.
+ * Within the loaded pages only: past them it comes with the next page.
+ */
+export const receiveInboxUpdate = ({
+  upserted = [],
+  readAll,
+  summary,
+}: InboxUpdated) => {
+  const arrived: string[] = [];
+  const inPlace: Notification[] = [];
+
+  for (const notification of upserted) {
+    if (inFlight.has(notification.id)) {
+      summaryBehind = true;
+      continue;
+    }
+
+    const known = cachedNotification(notification.id);
+
+    if (known && known.archivedAt === notification.archivedAt) {
+      inPlace.push(notification);
+      continue;
+    }
+
+    placeInPinned(notification);
+    placeInLists(notification);
+
+    if (!known) arrived.push(notification.id);
+  }
+
+  replaceInPlace(inPlace);
+
+  if (readAll) readAllInPlace(readAll);
+
+  if (inFlight.size > 0) {
+    // It counts without the changes still on their way; their settling fetches it
+    summaryBehind = true;
+  } else {
+    void queryClient.cancelQueries({ queryKey: QUERY_KEYS.inboxSummary });
+    queryClient.setQueryData(QUERY_KEYS.inboxSummary, summary);
+  }
+
+  if (arrived.length > 0) useRemoteFlashStore.getState().flash(arrived);
+};
+
+/** After the socket was away: what came meanwhile is unknown, so everything is fetched again. */
+export const refetchInbox = () =>
+  queryClient.invalidateQueries({ queryKey: QUERY_KEYS.inbox });
+
 export const useNotificationQueries = (
   workspace: string,
   view: ListNotificationsView | null,
@@ -381,14 +547,20 @@ export const useNotificationQueries = (
   // handled in onError (rollback, toast), not rejected into an unhandled promise
   const { mutate: markAsRead } = useMutation({
     mutationFn: (data: ReadNotificationRequest) => readNotification(data),
-    onMutate: ({ ids }) => ({
-      uncounted: !ids.every(cachedNotification),
-      rollback: patchReadNotification(ids, {
-        readAt: new Date().toISOString(),
-      }),
-    }),
-    onSettled: (data, error, variables, context) =>
-      context?.uncounted && refreshSummary(),
+    onMutate: ({ ids }) => {
+      hold(ids);
+
+      return {
+        uncounted: !ids.every(cachedNotification),
+        rollback: patchReadNotification(ids, {
+          readAt: new Date().toISOString(),
+        }),
+      };
+    },
+    onSettled: (data, error, { ids }, context) => {
+      release(ids);
+      if (context?.uncounted) refreshSummary();
+    },
     onError: (error, data, context) => {
       context?.rollback();
 
@@ -403,8 +575,13 @@ export const useNotificationQueries = (
   const { mutate: readAllBefore, isPending: isReadingAll } = useMutation({
     mutationFn: ({ before }: { before: string }) =>
       readAllNotifications({ workspace, before }),
-    onMutate: ({ before }) =>
-      patchReadAll(workspace, before, new Date().toISOString()),
+    onMutate: ({ before }) => {
+      const patched = patchReadAll(workspace, before, new Date().toISOString());
+
+      hold(patched.ids);
+
+      return patched;
+    },
     onSuccess: (data, variables, context) => {
       // What the cache read but the server did not (an event that came in the meantime) is
       // unread again; what the server read beyond the loaded pages is not in the cache anyway
@@ -421,7 +598,10 @@ export const useNotificationQueries = (
       });
     },
     // The server read beyond the loaded pages too
-    onSettled: () => refreshSummary(),
+    onSettled: (data, error, variables, context) => {
+      release(context?.ids ?? []);
+      refreshSummary();
+    },
     onError: (error, variables, context) => {
       context?.rollback();
 
@@ -436,13 +616,19 @@ export const useNotificationQueries = (
 
   const { mutate: markAsUnread } = useMutation({
     mutationFn: (data: UnreadNotificationRequest) => unreadNotification(data),
-    onMutate: ({ ids }) => ({
-      uncounted: !ids.every(cachedNotification),
-      rollback: patchReadNotification(ids, { readAt: null }),
-    }),
+    onMutate: ({ ids }) => {
+      hold(ids);
+
+      return {
+        uncounted: !ids.every(cachedNotification),
+        rollback: patchReadNotification(ids, { readAt: null }),
+      };
+    },
     // Undo of read-all: most of its ids are past the loaded pages
-    onSettled: (data, error, variables, context) =>
-      context?.uncounted && refreshSummary(),
+    onSettled: (data, error, { ids }, context) => {
+      release(ids);
+      if (context?.uncounted) refreshSummary();
+    },
     onError: (error, data, context) => {
       context?.rollback();
 
@@ -455,12 +641,17 @@ export const useNotificationQueries = (
 
   const { mutate: archive } = useMutation({
     mutationFn: ({ id }: Notification) => archiveNotification({ id }),
-    onMutate: (notification) => ({
-      rollback: patchArchiveNotification(
-        notification,
-        new Date().toISOString(),
-      ),
-    }),
+    onMutate: (notification) => {
+      hold([notification.id]);
+
+      return {
+        rollback: patchArchiveNotification(
+          notification,
+          new Date().toISOString(),
+        ),
+      };
+    },
+    onSettled: (data, error, { id }) => release([id]),
     onError: (error, data, context) => {
       context?.rollback();
 
@@ -473,9 +664,12 @@ export const useNotificationQueries = (
 
   const { mutate: unarchive } = useMutation({
     mutationFn: ({ id }: Notification) => unarchiveNotification({ id }),
-    onMutate: (notification) => ({
-      rollback: patchArchiveNotification(notification, null),
-    }),
+    onMutate: (notification) => {
+      hold([notification.id]);
+
+      return { rollback: patchArchiveNotification(notification, null) };
+    },
+    onSettled: (data, error, { id }) => release([id]),
     onError: (error, data, context) => {
       context?.rollback();
 

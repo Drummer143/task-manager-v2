@@ -15,6 +15,27 @@
   position: relative;
 }
 
+/* Came from elsewhere (spec: Inbox · 10): a tint under the content that fades out. Reduced motion
+   swaps the easing for a step (tokens), so it shows and goes without a fade. */
+.remoteFlash {
+  position: absolute;
+  inset: 0;
+  background-color: var(--bg-accent-soft);
+  opacity: 0;
+  pointer-events: none;
+  animation: remote-fade var(--highlight-remote) var(--highlight-remote-easing);
+}
+
+@keyframes remote-fade {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
 /* The whole row is the link: a click anywhere but on a button opens it. */
 .link {
   display: flex;
@@ -76,7 +97,9 @@
   flex: none;
   align-self: flex-start;
   // The avatar sits on the first line
-  margin-block-start: calc((var(--lh-body) * var(--type-body) - var(--avatar-sm)) / 2);
+  margin-block-start: calc(
+    (var(--lh-body) * var(--type-body) - var(--avatar-sm)) / 2
+  );
 }
 
 .text {
@@ -139,7 +162,10 @@
   align-self: flex-start;
   min-height: calc(var(--lh-body) * var(--type-body));
   // At least as wide as the actions that take its place: the text never runs under them
-  min-width: calc(var(--_actions, 0) * var(--control-height-sm) + max(var(--_actions, 0) - 1, 0) * var(--sp-1));
+  min-width: calc(
+    var(--_actions, 0) * var(--control-height-sm) +
+      max(var(--_actions, 0) - 1, 0) * var(--sp-1)
+  );
 }
 
 .count {
@@ -220,4 +246,3 @@
 .row[data-skeleton] {
   pointer-events: none;
 }
-

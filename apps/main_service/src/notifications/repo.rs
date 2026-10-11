@@ -149,23 +149,43 @@ impl NotificationsRepository {
     /// Reads everything one workspace's Inbox shows, up to `before`: its notifications and the
     /// account-level ones, which every Inbox shows and counts (decided 2026-10-10: otherwise "Mark
     /// all read" leaves the sidebar count above zero). The other workspaces keep their unread.
+    /// `read_at` is the read time written: the caller sends the same to the other tabs.
     pub async fn mark_as_read_all(
         pool: &sqlx::PgPool,
         user_id: Uuid,
         workspace_id: Uuid,
         before: DateTime<Utc>,
+        read_at: DateTime<Utc>,
     ) -> Result<Vec<Uuid>, sqlx::Error> {
         sqlx::query_scalar::<_, Uuid>(
             "UPDATE notifications
-         SET read_at = NOW()
+         SET read_at = $4
          WHERE user_id = $1 AND (workspace_id = $3 OR workspace_id IS NULL) AND read_at IS NULL AND archived_at IS NULL AND updated_at <= $2
          RETURNING id",
         )
         .bind(user_id)
         .bind(before)
         .bind(workspace_id)
+        .bind(read_at)
         .fetch_all(pool)
         .await
+    }
+
+    /// The user's notifications with these ids, as they are now: someone else's or a missing id is
+    /// left out. What a change sends to the other tabs (`inbox.updated`).
+    pub async fn get_many(
+        pool: &sqlx::PgPool,
+        user_id: Uuid,
+        ids: &[Uuid],
+    ) -> Result<Vec<Notification>, sqlx::Error> {
+        let sql =
+            format!("SELECT {COLUMNS} FROM notifications WHERE user_id = $1 AND id = ANY($2)");
+
+        sqlx::query_as::<_, Notification>(AssertSqlSafe(sql))
+            .bind(user_id)
+            .bind(ids)
+            .fetch_all(pool)
+            .await
     }
 
     pub async fn mark_as_unread(
@@ -606,9 +626,10 @@ mod tests {
             .unwrap();
         let first_read = get(&pool, already_read.id).await.read_at;
 
-        let mut ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
-            .await
-            .unwrap();
+        let mut ids =
+            NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10), Utc::now())
+                .await
+                .unwrap();
 
         ids.sort();
         let mut expected = vec![first.id, second.id];
@@ -627,9 +648,10 @@ mod tests {
         arrived_minutes_ago(&pool, seen.id, 30).await;
         notify(&pool, me, "arrived later").await;
 
-        let ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
-            .await
-            .unwrap();
+        let ids =
+            NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10), Utc::now())
+                .await
+                .unwrap();
 
         assert_eq!(ids, [seen.id]);
         assert_eq!(
@@ -648,9 +670,10 @@ mod tests {
         arrived_minutes_ago(&pool, n.id, 30).await;
         happened_minutes_ago(&pool, n.id, 5).await;
 
-        let ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
-            .await
-            .unwrap();
+        let ids =
+            NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10), Utc::now())
+                .await
+                .unwrap();
 
         assert!(ids.is_empty());
         assert_eq!(get(&pool, n.id).await.read_at, None);
@@ -664,9 +687,10 @@ mod tests {
         let theirs = notify(&pool, someone, "theirs").await;
         arrived_minutes_ago(&pool, theirs.id, 30).await;
 
-        let ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
-            .await
-            .unwrap();
+        let ids =
+            NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10), Utc::now())
+                .await
+                .unwrap();
 
         assert!(ids.is_empty());
         assert_eq!(get(&pool, theirs.id).await.read_at, None);
@@ -685,9 +709,10 @@ mod tests {
             .await
             .unwrap();
 
-        let ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
-            .await
-            .unwrap();
+        let ids =
+            NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10), Utc::now())
+                .await
+                .unwrap();
         NotificationsRepository::mark_as_unread(&pool, me, ids)
             .await
             .unwrap();
@@ -916,9 +941,10 @@ mod tests {
             arrived_minutes_ago(&pool, n.id, 20).await;
         }
 
-        let mut ids = NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10))
-            .await
-            .unwrap();
+        let mut ids =
+            NotificationsRepository::mark_as_read_all(&pool, me, WS, minutes_ago(10), Utc::now())
+                .await
+                .unwrap();
         ids.sort();
         let mut expected = vec![here.id, invite.id];
         expected.sort();
@@ -952,6 +978,27 @@ mod tests {
             .unwrap();
         assert_eq!(members.by_workspace, [(WS, 2)]);
         assert_eq!(members.account, 1);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn get_many_gives_the_users_own_as_they_are_now_and_skips_the_rest(pool: PgPool) {
+        let me = user(&pool).await;
+        let someone = user(&pool).await;
+        let mine = notify(&pool, me, "mine").await;
+        let theirs = notify(&pool, someone, "theirs").await;
+        NotificationsRepository::mark_as_read(&pool, me, vec![mine.id])
+            .await
+            .unwrap();
+
+        let got =
+            NotificationsRepository::get_many(&pool, me, &[mine.id, theirs.id, Uuid::now_v7()])
+                .await
+                .unwrap();
+
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].id, mine.id);
+        assert!(got[0].read_at.is_some());
     }
 
     #[sqlx::test(migrations = "./migrations")]

@@ -1,5 +1,6 @@
 import { HOTKEY_KEY_SEPARATOR, HOTKEY_SEQUENCE_SEPARATOR } from './constants';
 import { HotkeyHandlerConfig, HotkeyConfig } from './types';
+import { latinKey } from '../../utils/latinKey';
 
 const applyLayerKeys = (
   keys: string[],
@@ -70,7 +71,8 @@ const stepToString = (config: HotkeyConfig) => {
 
 export const parseEventToHotkey = (event: KeyboardEvent) => {
   const step = normalizeStep({
-    key: event.key,
+    // A non-Latin layout's letter reads as the Latin one on its key: E is E in Russian too
+    key: latinKey(event),
     ctrl: event.ctrlKey,
     shift: event.shiftKey,
     alt: event.altKey,

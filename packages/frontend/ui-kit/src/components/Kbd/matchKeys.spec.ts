@@ -18,6 +18,11 @@ describe('matchKeys', () => {
     expect(matchKeys('s', press('a'))).toBe(false);
   });
 
+  it('in a non-Latin layout reads a letter by its physical key: Russian «я» on Z is ⌘Z', () => {
+    expect(matchKeys('mod+z', { ...press('я', { metaKey: true }), code: 'KeyZ' }, 'mac')).toBe(true);
+    expect(matchKeys('mod+shift+z', { ...press('Я', { metaKey: true, shiftKey: true }), code: 'KeyZ' }, 'mac')).toBe(true);
+  });
+
   it('reads mod as ⌘ on a Mac and Ctrl elsewhere', () => {
     expect(matchKeys('mod+backspace', press('Backspace', { metaKey: true }), 'mac')).toBe(true);
     expect(matchKeys('mod+backspace', press('Backspace', { ctrlKey: true }), 'mac')).toBe(false);

@@ -11,7 +11,7 @@ use crate::workspaces;
 
 /// Unread counts (spec: Inbox · 09): the sidebar's Inbox shows `byWorkspace[current] +
 /// accountUnread`, the workspace menu a dot where that sum is above zero.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Default, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SummaryResponse {
     /// Unread in each workspace the user is a member of; a workspace with none is absent.
@@ -35,12 +35,20 @@ pub async fn get_summary(
     State(pool): State<sqlx::PgPool>,
     Extension(user_id): Extension<Uuid>,
 ) -> Result<Json<SummaryResponse>, ApiError> {
-    // A workspace the user has left is not counted (backend spec, notifications §8.2)
-    let members = workspaces::member_workspace_ids(&pool, user_id).await?;
-    let counts = NotificationsRepository::count_unread(&pool, user_id, members.as_deref()).await?;
+    Ok(Json(load_summary(&pool, user_id).await?))
+}
 
-    Ok(Json(SummaryResponse {
+/// The counts as `GET /notifications/summary` gives them; `inbox.updated` carries the same.
+pub async fn load_summary(
+    pool: &sqlx::PgPool,
+    user_id: Uuid,
+) -> Result<SummaryResponse, sqlx::Error> {
+    // A workspace the user has left is not counted (backend spec, notifications §8.2)
+    let members = workspaces::member_workspace_ids(pool, user_id).await?;
+    let counts = NotificationsRepository::count_unread(pool, user_id, members.as_deref()).await?;
+
+    Ok(SummaryResponse {
         by_workspace: counts.by_workspace.into_iter().collect(),
         account_unread: counts.account,
-    }))
+    })
 }

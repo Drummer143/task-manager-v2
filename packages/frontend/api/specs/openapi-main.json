@@ -1013,6 +1013,37 @@
         ],
         "description": "Error attached to a single request field."
       },
+      "InboxUpdated": {
+        "type": "object",
+        "description": "What changed, and the counts after it.",
+        "required": [
+          "summary"
+        ],
+        "properties": {
+          "readAll": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ReadAllUpdate",
+                "description": "A read-all: the client applies the same rule to what it has loaded."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SummaryResponse",
+            "description": "The unread counts after the change, to set as they are."
+          },
+          "upserted": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Notification"
+            },
+            "description": "Notifications as they are now: new, folded, or read / unread / archived / unarchived."
+          }
+        }
+      },
       "MeResponse": {
         "type": "object",
         "required": [
@@ -1338,6 +1369,32 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "ReadAllUpdate": {
+        "type": "object",
+        "description": "A read-all, as `mark_as_read_all` applied it.",
+        "required": [
+          "workspace",
+          "before",
+          "readAt"
+        ],
+        "properties": {
+          "before": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Those whose last event is not after this."
+          },
+          "readAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The read time it wrote."
+          },
+          "workspace": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Its notifications and the account-level ones were read."
           }
         }
       },

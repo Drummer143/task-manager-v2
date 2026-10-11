@@ -33,10 +33,13 @@ import { firstDayOfWeek, groupEntries } from './utils/grouping';
 import { NotificationRowSkeleton } from '../../shared/ui/NotificationRow/NotificationRowSkeleton';
 
 export const Inbox: React.FC = () => {
+  const [now] = useState(() => new Date());
+  const [weekStart] = useState(() => firstDayOfWeek());
+
   const [view, setView] = useSearchParam('view', viewValidation);
-  // No `?view=` (the sidebar's link) is the All tab
+
   const currentView = view ?? 'all';
-  // The route is `/:workspace/inbox`; the default only stands in outside it (a story, a test)
+
   const { workspace = defaultWorkspaceId() } = useParams();
 
   const {
@@ -112,15 +115,12 @@ export const Inbox: React.FC = () => {
     [onMarkAsRead, onMarkAsUnread, archive, unarchive],
   );
 
+  useEffect(() => () => useCursorStore.getState().clearCursor(), [view]);
+
   const renderItem = (item: Notification, index: number) => (
     <InboxRow item={item} index={index} handlers={handlers} />
   );
 
-  useEffect(() => () => useCursorStore.getState().clearCursor(), [view]);
-
-  // Read once per visit: past midnight the groups keep their names until the page opens again
-  const [now] = useState(() => new Date());
-  const [weekStart] = useState(() => firstDayOfWeek());
   const entries = groupEntries(
     feed,
     currentView,
@@ -129,7 +129,7 @@ export const Inbox: React.FC = () => {
     pinned,
     isPinnedError,
   );
-  // The list failed with nothing loaded; a failed next page or background refetch keeps it
+
   const listFailed = isNotificationsError && notifications.length === 0;
 
   const listError = (
@@ -145,10 +145,8 @@ export const Inbox: React.FC = () => {
   if (isFirstLoadingNotifications || isLoadingPinned) {
     content = <NotificationRowSkeleton rows={6} />;
   } else if (listFailed && pinned.length === 0) {
-    // Nothing to show at all (the pinned group failed too, or is empty): one banner
     content = listError;
   } else if (listFailed) {
-    // The pinned group stays on top; the banner takes the list's place under it
     content = (
       <InboxList
         entries={entries}

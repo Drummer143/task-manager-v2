@@ -2,19 +2,14 @@ import type { User } from 'oidc-client-ts';
 import { Channel, Socket } from 'phoenix';
 import { useSocketStore } from './store';
 import { userManager } from '../auth/user-manager';
+import type { InboxUpdated } from '@task-manager-v2/api/main/schemas';
 
 export type ChannelId = 'notifications';
 
-interface ChannelData {
-  connections: number;
-  channel: Channel;
-  joinHandlers: Array<() => void>;
-  errorHandlers: Array<() => void>;
-}
-
 interface SocketEventsMap {
   notifications: {
-    new_notification: unknown;
+    /** What a change did to the user's Inbox (main-service `notifications/updates.rs`). */
+    'inbox.updated': InboxUpdated;
   };
 }
 
@@ -32,7 +27,54 @@ interface SubscribeOptions<
   onError?: () => void;
 }
 
-const channelsMap = new Map<ChannelId, ChannelData>();
+/** One subscriber: what it listens to, and its binding on the live channel, if there is one. */
+interface Subscription {
+  type: string;
+  onMessage: (message: never) => void;
+  onJoin?: () => void;
+  onError?: () => void;
+  ref?: number;
+}
+
+/**
+ * Who wants each channel. It outlives the socket: a subscriber that came before the socket (the
+ * session is still being read) waits here, and one mounted across a sign-out and a sign-in gets
+ * its channel back on the new socket.
+ */
+const subscriptions = new Map<ChannelId, Set<Subscription>>();
+
+/** The live channels: on the current socket only, gone with it. */
+const channels = new Map<ChannelId, Channel>();
+
+const bind = (channel: Channel, subscription: Subscription) => {
+  subscription.ref = channel.on(
+    subscription.type,
+    subscription.onMessage as (message: unknown) => void,
+  );
+};
+
+/** Opens the channel for its subscribers, once there is a socket and while anyone wants it. */
+const open = (id: ChannelId) => {
+  const wanted = subscriptions.get(id);
+
+  if (!socket || channels.has(id) || !wanted?.size) {
+    return;
+  }
+
+  const channel = socket.channel(id);
+
+  channels.set(id, channel);
+  wanted.forEach((subscription) => bind(channel, subscription));
+
+  // The current subscribers at the time of each join: Phoenix rejoins after a dropped connection
+  channel.join().receive('ok', () => {
+    subscriptions.get(id)?.forEach((subscription) => subscription.onJoin?.());
+  });
+
+  channel.onError(() => {
+    subscriptions.get(id)?.forEach((subscription) => subscription.onError?.());
+  });
+};
 
 let socket: Socket | null = null;
 
@@ -73,90 +115,75 @@ const init = () => {
   });
 
   socket = s;
+
+  subscriptions.forEach((_, id) => open(id));
 };
 
 export const disconnect = () => {
   if (socket) {
     socket.disconnect();
-    channelsMap.clear();
+    // The channels die with the socket; their subscribers stay for the next one
+    channels.clear();
     socket = null;
     useSocketStore.setState({ status: 'disconnected' });
   }
 };
 
-export const subscribe = <
+/**
+ * Listens to `type` on a channel until the returned function is called. Works before the socket
+ * exists: the subscription waits and the channel opens once the session is read and the socket
+ * connects. Subscribers of one channel share it; the last one to leave closes it.
+ */
+export const subscribeToChannel = <
   Id extends ChannelId,
   Type extends keyof SocketEventsMap[Id] & string,
 >(
   options: SubscribeOptions<Id, Type>,
 ) => {
-  if (!socket) {
-    throw new Error('Socket is not initialized');
-  }
+  const subscription: Subscription = {
+    type: options.type,
+    onMessage: options.onMessage as (message: never) => void,
+    onJoin: options.onJoin,
+    onError: options.onError,
+  };
 
-  const channelData = channelsMap.get(options.channelId);
+  const wanted = subscriptions.get(options.channelId) ?? new Set();
 
-  let channel: Channel;
+  wanted.add(subscription);
+  subscriptions.set(options.channelId, wanted);
 
-  if (!channelData) {
-    const c = socket.channel(options.channelId);
+  const channel = channels.get(options.channelId);
 
-    const data: ChannelData = {
-      channel: c,
-      connections: 1,
-      joinHandlers: options.onJoin ? [options.onJoin] : [],
-      errorHandlers: options.onError ? [options.onError] : [],
-    };
+  if (channel) {
+    bind(channel, subscription);
 
-    channelsMap.set(options.channelId, data);
-
-    channel = c;
-
-    channel.join().receive('ok', () => {
-      data.joinHandlers.forEach((handler) => handler());
-    });
-
-    channel.onError(() => {
-      data.errorHandlers.forEach((handler) => handler());
-    });
+    // It joined before this subscriber came: tell it at once, as the earlier ones were told
+    if (channel.state === 'joined') {
+      options.onJoin?.();
+    }
   } else {
-    channel = channelData.channel;
-    channelData.connections++;
-
-    if (options.onJoin) {
-      if (channel.state === 'joined') {
-        options.onJoin();
-      }
-
-      channelData.joinHandlers.push(options.onJoin);
-    }
-
-    if (options.onError) {
-      channelData.errorHandlers.push(options.onError);
-    }
+    open(options.channelId);
   }
-
-  const ref = channel.on(options.type, options.onMessage);
 
   return () => {
-    const channelData = channelsMap.get(options.channelId);
+    wanted.delete(subscription);
 
-    if (!channelData) return;
+    const live = channels.get(options.channelId);
 
-    if (channelData.connections > 1) {
-      channelData.connections--;
-      channelData.channel.off(options.type, ref);
-      channelData.joinHandlers = channelData.joinHandlers.filter(
-        (handler) => handler !== options.onJoin,
-      );
-      channelData.errorHandlers = channelData.errorHandlers.filter(
-        (handler) => handler !== options.onError,
-      );
+    if (live && subscription.ref !== undefined) {
+      live.off(subscription.type, subscription.ref);
+    }
+
+    if (wanted.size > 0) {
       return;
     }
 
-    channelData.channel.leave();
-    channelsMap.delete(options.channelId);
+    subscriptions.delete(options.channelId);
+
+    if (live) {
+      live.leave();
+      channels.delete(options.channelId);
+    }
   };
 };
 

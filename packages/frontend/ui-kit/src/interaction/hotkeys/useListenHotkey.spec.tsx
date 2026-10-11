@@ -22,6 +22,21 @@ it('fires a combo hotkey', () => {
   expect(callback).toHaveBeenCalledOnce();
 });
 
+it('fires in a non-Latin layout by the physical key: Russian «у» on the E key is E', () => {
+  const archive = vi.fn();
+  const goToBoard = vi.fn();
+  register({ key: 'e', description: 'archive', callback: archive });
+  register({ key: 'b', chord: { key: 'g' }, description: 'go to board', callback: goToBoard });
+  renderHook(() => useListenHotkey());
+
+  keydown({ key: 'у', code: 'KeyE' });
+  keydown({ key: 'п', code: 'KeyG' });
+  keydown({ key: 'и', code: 'KeyB' });
+
+  expect(archive).toHaveBeenCalledOnce();
+  expect(goToBoard).toHaveBeenCalledOnce();
+});
+
 it('fires a chord (G then B) and waits after the prefix', () => {
   const callback = vi.fn();
   register({ key: 'b', chord: { key: 'g' }, description: 'go to board', callback });

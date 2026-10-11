@@ -4,7 +4,8 @@ use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::notifications::repo::NotificationsRepository;
+use crate::notifications::{repo::NotificationsRepository, updates};
+use crate::signals::Signals;
 
 #[derive(Deserialize, ToSchema)]
 pub struct ReadNotificationRequest {
@@ -27,9 +28,11 @@ pub struct ReadNotificationRequest {
 )]
 pub async fn read_notification(
     State(pool): State<sqlx::PgPool>,
+    State(signals): State<Signals>,
     Extension(user_id): Extension<Uuid>,
     Json(body): Json<ReadNotificationRequest>,
 ) -> Result<(), ApiError> {
-    NotificationsRepository::mark_as_read(&pool, user_id, body.ids).await?;
+    NotificationsRepository::mark_as_read(&pool, user_id, body.ids.clone()).await?;
+    updates::publish_changed(&pool, &signals, user_id, &body.ids).await;
     Ok(())
 }

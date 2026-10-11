@@ -3,6 +3,7 @@ use error_handlers::{ApiError, ErrorCode, FieldError};
 use sql_models::notification::model::Notification;
 
 use crate::notifications::repo::{CreateNotificationDto, NotificationsRepository};
+use crate::notifications::updates;
 use crate::signals::Signals;
 
 #[utoipa::path(
@@ -36,9 +37,7 @@ pub async fn create(
                 _ => ApiError::from(err),
             })?;
 
-    signals
-        .publish(notification.user_id, "new_notification", &notification)
-        .await;
+    updates::publish_changed(&pool, &signals, notification.user_id, &[notification.id]).await;
 
     Ok(Json(notification))
 }

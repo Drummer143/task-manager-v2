@@ -22,6 +22,7 @@ use crate::notifications::controllers;
         error_handlers::ErrorBody,
         error_handlers::ErrorCode,
         error_handlers::FieldError,
+        crate::notifications::updates::InboxUpdated,
     )),
     security(
         ("bearer_auth" = [])

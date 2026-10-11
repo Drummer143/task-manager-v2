@@ -53,6 +53,11 @@ export interface NotificationRowProps {
   opened?: boolean;
   /** A change of it is on its way; it dims only if that takes a while. */
   pending?: boolean;
+  /**
+   * It came from elsewhere (another tab, another person): a tint that fades over
+   * --highlight-remote. A new value starts it again.
+   */
+  remoteFlash?: number;
 }
 
 /** The whole row as a link, or the same box without one when there is nothing to open. */
@@ -92,6 +97,7 @@ export const NotificationRow: React.FC<NotificationRowProps> = ({
   pending = false,
   gone,
   actions,
+  remoteFlash,
 }) => {
   const now = useMinuteClock();
   const when = formatNotificationTime(time, now);
@@ -121,6 +127,15 @@ export const NotificationRow: React.FC<NotificationRowProps> = ({
 
       onMouseDown={(event) => event.preventDefault()}
     >
+      {remoteFlash !== undefined && (
+        // Remounted by its key: every arrival restarts the fade
+        <span
+          key={remoteFlash}
+          className={styles.remoteFlash}
+          aria-hidden="true"
+        />
+      )}
+
       <div role="gridcell" className={styles.cell}>
         <RowBody href={href}>
           <span className={styles.dot} aria-hidden="true" />

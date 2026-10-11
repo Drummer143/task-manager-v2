@@ -4,7 +4,8 @@ use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::notifications::repo::NotificationsRepository;
+use crate::notifications::{repo::NotificationsRepository, updates};
+use crate::signals::Signals;
 
 #[derive(Deserialize, ToSchema)]
 pub struct UnreadNotificationRequest {
@@ -27,9 +28,11 @@ pub struct UnreadNotificationRequest {
 )]
 pub async fn unread_notification(
     State(pool): State<sqlx::PgPool>,
+    State(signals): State<Signals>,
     Extension(user_id): Extension<Uuid>,
     Json(body): Json<UnreadNotificationRequest>,
 ) -> Result<(), ApiError> {
-    NotificationsRepository::mark_as_unread(&pool, user_id, body.ids).await?;
+    NotificationsRepository::mark_as_unread(&pool, user_id, body.ids.clone()).await?;
+    updates::publish_changed(&pool, &signals, user_id, &body.ids).await;
     Ok(())
 }

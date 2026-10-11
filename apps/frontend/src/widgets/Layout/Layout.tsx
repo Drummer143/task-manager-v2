@@ -10,6 +10,7 @@ import { Sidebar, useSidebarHotkeys } from './Sidebar';
 import { useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '../../shared/constants/queryKeys';
 import { getNotificationSummary } from '@task-manager-v2/api/main';
+import { useInboxRealtime } from '../../pages/Inbox/hooks/useInboxRealtime';
 
 export const Layout: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +25,8 @@ export const Layout: React.FC = () => {
   });
 
   useSidebarHotkeys(() => navigate(inbox));
+  // For the whole app, not only the Inbox page: the sidebar count stays right everywhere
+  useInboxRealtime();
 
   return (
     <AppShell
