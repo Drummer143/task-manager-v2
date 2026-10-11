@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { subscribeToChannel } from '../../../app/socket';
-import { receiveInboxUpdate, refetchInbox } from './useNotificationQueries';
+import { subscribeToChannel } from '../../app/socket';
+import { receiveInboxUpdate, refetchInbox } from './cache';
 
 /**
  * Inbox over the socket, for the whole app: the sidebar count stays right on every page, and the

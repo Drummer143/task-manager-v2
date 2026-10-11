@@ -25,7 +25,8 @@
 			"outputs": [],
 			"options": {
 				"cwd": ".",
-				"command": "cargo test -p storage"
+				"command": "cargo test -p storage",
+				"forwardAllArgs": false
 			},
 			"configurations": {
 				"production": {

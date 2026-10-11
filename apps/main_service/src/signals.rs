@@ -85,7 +85,7 @@ mod tests {
 
         let envelope = serde_json::to_value(Envelope {
             user_id,
-            event: "new_notification",
+            event: "inbox.updated",
             payload: &payload,
         })
         .unwrap();
@@ -94,7 +94,7 @@ mod tests {
             envelope,
             json!({
                 "user_id": "00000000-0000-0000-0000-000000000000",
-                "event": "new_notification",
+                "event": "inbox.updated",
                 "payload": { "kind": "debug", "facts": { "message": "hello" } },
             })
         );

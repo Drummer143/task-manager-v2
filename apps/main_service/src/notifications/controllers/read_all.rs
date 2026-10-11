@@ -53,15 +53,16 @@ pub async fn read_all_notifications(
     )
     .await?;
 
-    // The rule, not the rows: the other tabs read what they have loaded the same way
     if !affected.is_empty() {
-        let read_all = updates::ReadAllUpdate {
-            workspace: request.workspace,
-            before: request.before,
+        updates::publish_read_all(
+            &pool,
+            &signals,
+            user_id,
+            request.workspace,
+            request.before,
             read_at,
-        };
-
-        updates::publish(&pool, &signals, user_id, Vec::new(), Some(read_all)).await;
+        )
+        .await;
     }
 
     Ok(Json(ReadAllNotificationsResponse { affected }))

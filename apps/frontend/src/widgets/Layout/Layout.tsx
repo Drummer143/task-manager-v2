@@ -10,7 +10,7 @@ import { Sidebar, useSidebarHotkeys } from './Sidebar';
 import { useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '../../shared/constants/queryKeys';
 import { getNotificationSummary } from '@task-manager-v2/api/main';
-import { useInboxRealtime } from '../../pages/Inbox/hooks/useInboxRealtime';
+import { useInboxRealtime } from '../../shared/inbox/useInboxRealtime';
 
 export const Layout: React.FC = () => {
   const navigate = useNavigate();

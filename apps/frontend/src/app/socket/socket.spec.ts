@@ -149,6 +149,11 @@ const subscribe: typeof subscribeToChannel = (options) => {
   return unsubscribe;
 };
 
+// The service's address comes from the environment; CI has no .env, so the tests set their own
+beforeEach(() => {
+  vi.stubEnv('VITE_SOCKET_URL', 'https://socket.test');
+});
+
 afterEach(() => {
   unsubscribes.splice(0).forEach((unsubscribe) => unsubscribe());
   stop?.();

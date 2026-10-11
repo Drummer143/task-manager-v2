@@ -8,8 +8,8 @@ use sql_models::notification::model::Notification;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::notifications::controllers::summary::{SummaryResponse, load_summary};
 use crate::notifications::repo::NotificationsRepository;
+use crate::notifications::summary::{SummaryResponse, load_summary};
 use crate::signals::Signals;
 
 /// The socket event's name.
@@ -81,6 +81,25 @@ pub async fn publish_changed(pool: &sqlx::PgPool, signals: &Signals, user_id: Uu
             tracing::warn!(%user_id, %error, "inbox.updated dropped: the changed rows failed")
         }
     }
+}
+
+/// Sends a read-all as its rule, not its rows: the other tabs read what they have loaded the same
+/// way (`mark_as_read_all`).
+pub async fn publish_read_all(
+    pool: &sqlx::PgPool,
+    signals: &Signals,
+    user_id: Uuid,
+    workspace: Uuid,
+    before: DateTime<Utc>,
+    read_at: DateTime<Utc>,
+) {
+    let read_all = ReadAllUpdate {
+        workspace,
+        before,
+        read_at,
+    };
+
+    publish(pool, signals, user_id, Vec::new(), Some(read_all)).await;
 }
 
 #[cfg(test)]

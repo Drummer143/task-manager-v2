@@ -12,7 +12,7 @@ import {
   type NotificationAction,
 } from '../../../shared/ui/NotificationRow';
 import { inboxRowId } from './InboxList';
-import { useRemoteFlashStore } from '../utils/remoteFlash';
+import { useRemoteFlashStore } from '../../../shared/inbox/remoteFlash';
 
 export interface InboxRowHandlers {
   markAsRead(notification: Notification): void;

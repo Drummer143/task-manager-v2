@@ -42,7 +42,8 @@
 			"outputs": [],
 			"options": {
 				"cwd": ".",
-				"command": "cargo test -p blake3_wasm"
+				"command": "cargo test -p blake3_wasm",
+				"forwardAllArgs": false
 			}
 		},
 		"lint": {

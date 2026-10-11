@@ -7,13 +7,20 @@ import * as path from 'path';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
 
+/**
+ * A coverage run measures the code as written. React Compiler adds a cache check per memoized
+ * value; instrumented, those count as branches no test aims at (branch coverage of the kit falls
+ * from 89% to 83% with it). Every other run — dev, build, plain tests, e2e — is compiled.
+ */
+const coverageRun = process.argv.some((arg) => arg.startsWith('--coverage'));
+
 export default defineConfig(() => ({
   root: import.meta.dirname,
   cacheDir: '../../../node_modules/.vite/packages/frontend/ui-kit',
   plugins: [
     react(),
     // React Compiler, as in the app: tests and stories run the code the app ships
-    babel({ presets: [reactCompilerPreset()] }),
+    ...(coverageRun ? [] : [babel({ presets: [reactCompilerPreset()] })]),
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md']),
     dts({
