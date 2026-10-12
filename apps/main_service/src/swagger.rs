@@ -2,11 +2,14 @@ use utils::swagger::SecurityAddon;
 
 use crate::notifications::controllers;
 
-/// The API the frontend calls. Webhooks are left out: authentik calls them, not the browser.
+/// The API the frontend calls. Webhooks and `/internal/*` are left out: authentik and the other
+/// services call them, not the browser.
 #[derive(utoipa::OpenApi)]
 #[openapi(
     paths(
         crate::me::me,
+
+        crate::assets::controllers::create::create_asset,
 
         controllers::get_list::get_list,
         controllers::get_account_list::get_account_list,

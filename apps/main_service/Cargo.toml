@@ -23,13 +23,14 @@ anyhow.workspace = true
 axum = { workspace = true, features = ["macros"] }
 chrono.workspace = true
 error_handlers = { workspace = true, features = ["sqlx", "openapi"] }
+jsonwebtoken.workspace = true
 lapin.workspace = true
 mimalloc.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sql_models.workspace = true
 sqlx = { workspace = true, features = ["chrono", "uuid"] }
-tokio = { workspace = true, features = ["sync"] }
+tokio = { workspace = true, features = ["sync", "time"] }
 tower-http = { workspace = true, features = ["cors"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true

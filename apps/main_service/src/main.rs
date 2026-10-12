@@ -15,7 +15,8 @@ use utils::{
 };
 
 use main_app::{
-    app_state::AppState, config::Config, me, notifications, signals, swagger::ApiDoc, webhooks,
+    app_state::AppState, assets, assets::upload_token::UploadTokenKey, config::Config, me,
+    notifications, signals, swagger::ApiDoc, webhooks,
 };
 use utoipa::OpenApi;
 
@@ -91,16 +92,27 @@ async fn main() -> anyhow::Result<()> {
         authentik_issuer: config.authentik_issuer.clone().map(Arc::new),
     };
 
+    if config.run_background_workers {
+        assets::cleanup::spawn(pool.clone());
+    } else {
+        tracing::warn!("RUN_BACKGROUND_WORKERS=false: abandoned uploads are not cleaned up");
+    }
+
     let state = AppState {
         pool,
         amqp_conn: Arc::new(amqp_conn),
         signals,
+        upload_tokens: UploadTokenKey::new(config.upload_token_secret.as_str()),
     };
 
     let app = Router::new()
         .merge(notifications::router::router(
             auth.clone(),
             config.debug_notifications,
+        ))
+        .merge(assets::router::router(
+            auth.clone(),
+            ServiceAuthState::new(config.internal_service_token.clone()),
         ))
         .merge(me::router(auth))
         .merge(webhooks::authentik::router(ServiceAuthState::new(

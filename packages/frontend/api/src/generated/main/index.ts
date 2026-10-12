@@ -6,6 +6,8 @@
  */
 import type {
   ArchiveNotificationRequest,
+  CreateAssetRequest,
+  CreateAssetResponse,
   CreateNotificationDto,
   ListNotificationsParams,
   MeResponse,
@@ -26,7 +28,22 @@ import { mainFetcher } from '../../fetcher';
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
-  export const getMe = (
+  /**
+ * @summary Allows uploading a file for an owner (for now a workspace's icon). The asset waits for its
+file; storage completes it once the upload is done. Unfinished ones are removed after a day.
+ */
+export const createAsset = (
+    createAssetRequest: CreateAssetRequest,
+ options?: SecondParameter<typeof mainFetcher<CreateAssetResponse>>,) => {
+      return mainFetcher<CreateAssetResponse>(
+      {url: `/assets`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createAssetRequest
+    },
+      options);
+    }
+
+export const getMe = (
 
  options?: SecondParameter<typeof mainFetcher<MeResponse>>,) => {
       return mainFetcher<MeResponse>(
@@ -139,6 +156,7 @@ export const unreadNotification = (
       options);
     }
 
+export type CreateAssetResult = NonNullable<Awaited<ReturnType<typeof createAsset>>>
 export type GetMeResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
 export type ListNotificationsResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
 export type CreateNotificationResult = NonNullable<Awaited<ReturnType<typeof createNotification>>>

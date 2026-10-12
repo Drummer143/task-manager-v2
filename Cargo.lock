@@ -2144,6 +2144,7 @@ dependencies = [
  "axum",
  "chrono",
  "error_handlers",
+ "jsonwebtoken",
  "lapin",
  "mimalloc",
  "serde",

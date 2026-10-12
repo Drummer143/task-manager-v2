@@ -299,7 +299,7 @@ impl ActionsService {
     ) -> Result<AssetResponse, ApiError> {
         let resp = state
             .main
-            .post("/assets")
+            .post("/internal/assets/complete")
             .json(&serde_json::json!({
                 "blob": blob,
                 "token": token,

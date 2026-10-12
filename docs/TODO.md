@@ -17,6 +17,10 @@ with stubs in their place.
       notifications §8.2: no access, not served)
 - [ ] `notifications.workspace_id` → `REFERENCES workspaces` (it stays nullable: NULL is an
       account-level notification)
+- [ ] `ensure_can_change_settings` in `workspaces.rs` (`TODO(workspaces)`): the permission to
+      attach a workspace icon (`POST /assets`); `workspace.settings` once roles exist
+- [ ] `assets.workspace_id` → `REFERENCES workspaces ON DELETE CASCADE`, and
+      `workspaces.icon_asset_id` → `REFERENCES assets ON DELETE SET NULL`
 - [ ] `defaultWorkspaceId()` in `apps/frontend/src/shared/constants/routes.ts` returns the nil uuid:
       the active workspace from localStorage, else the first from `/me`
 

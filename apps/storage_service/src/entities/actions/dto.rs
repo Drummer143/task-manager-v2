@@ -68,17 +68,17 @@ pub enum UploadStatusResponse {
     Complete,
 }
 
+/// Issued by main with a pending asset (`main_app::assets::upload_token::UploadClaims`); handed
+/// back to main when the upload is done, so it knows which asset the blob is for.
 #[derive(Deserialize)]
 pub struct UploadToken {
+    /// The asset the file is for. Main reads it; storage only passes the token on.
     #[allow(dead_code)]
     pub sub: Uuid,
     #[allow(dead_code)]
     pub exp: usize,
     pub name: String,
     pub user_id: Uuid,
-    // `entity_id` and `entity_type` claims are also in the token but unused here; serde ignores them.
-    #[allow(dead_code)]
-    pub entity_id: Uuid,
 }
 
 #[derive(Serialize, Deserialize, utoipa::ToSchema)]

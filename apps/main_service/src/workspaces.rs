@@ -28,3 +28,15 @@ pub async fn member_workspace_ids(
     // TODO(workspaces): return `Some(ids)` of the user's memberships
     Ok(None)
 }
+
+/// Fails unless `user_id` may change `workspace_id`'s settings: its name, icon, address
+/// (`workspace.settings`, access spec §2.3). 404 when they are not a member, like [`ensure_member`].
+pub async fn ensure_can_change_settings(
+    pool: &sqlx::PgPool,
+    user_id: Uuid,
+    workspace_id: Uuid,
+) -> Result<(), ApiError> {
+    ensure_member(pool, user_id, workspace_id).await?;
+    // TODO(workspaces): `authorize(actor, Permission::WorkspaceSettings, …)`; 403 without it
+    Ok(())
+}

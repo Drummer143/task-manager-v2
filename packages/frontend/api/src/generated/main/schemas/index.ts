@@ -6,6 +6,10 @@
  */
 
 export * from './archiveNotificationRequest';
+export * from './assetOwnerRequest';
+export * from './assetOwnerType';
+export * from './createAssetRequest';
+export * from './createAssetResponse';
 export * from './createNotificationDto';
 export * from './errorBody';
 export * from './errorCode';
