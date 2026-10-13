@@ -12,7 +12,7 @@ pub mod repos;
 pub mod signals;
 pub mod swagger;
 pub mod webhooks;
-pub mod workspaces;
+pub mod workspaces_mocks;
 
 pub fn openapi_json() -> String {
     serde_json::to_string_pretty(&swagger::ApiDoc::openapi()).unwrap()

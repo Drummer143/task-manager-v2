@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::notifications::{repo::NotificationsRepository, updates};
 use crate::signals::Signals;
-use crate::workspaces;
+use crate::workspaces_mocks;
 
 #[derive(Deserialize, ToSchema)]
 pub struct ReadAllNotificationsRequest {
@@ -42,7 +42,7 @@ pub async fn read_all_notifications(
     Extension(user_id): Extension<Uuid>,
     ApiJson(request): ApiJson<ReadAllNotificationsRequest>,
 ) -> Result<Json<ReadAllNotificationsResponse>, ApiError> {
-    workspaces::ensure_member(&pool, user_id, request.workspace).await?;
+    workspaces_mocks::ensure_member(&pool, user_id, request.workspace).await?;
 
     let read_at = chrono::Utc::now();
     let affected = NotificationsRepository::mark_as_read_all(

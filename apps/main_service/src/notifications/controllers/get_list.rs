@@ -9,7 +9,7 @@ use crate::notifications::{
     cursor::Cursor,
     repo::{InboxView, NotificationsRepository},
 };
-use crate::workspaces;
+use crate::workspaces_mocks;
 
 const DEFAULT_LIMIT: i64 = 50;
 const MAX_LIMIT: i64 = 100;
@@ -70,7 +70,7 @@ pub async fn get_list(
     ApiQuery(query): ApiQuery<GetListQuery>,
     Extension(user_id): Extension<Uuid>,
 ) -> Result<Json<NotificationPage>, ApiError> {
-    workspaces::ensure_member(&pool, user_id, query.workspace).await?;
+    workspaces_mocks::ensure_member(&pool, user_id, query.workspace).await?;
 
     let limit = query.limit();
 
