@@ -1,4 +1,5 @@
 use axum::{Json, extract::State};
+use error_handlers::extract::ApiJson;
 use error_handlers::{ApiError, ErrorCode, FieldError};
 use sql_models::notification::model::Notification;
 
@@ -23,7 +24,7 @@ use crate::signals::Signals;
 pub async fn create(
     State(pool): State<sqlx::PgPool>,
     State(signals): State<Signals>,
-    Json(body): Json<CreateNotificationDto>,
+    ApiJson(body): ApiJson<CreateNotificationDto>,
 ) -> Result<Json<Notification>, ApiError> {
     let notification =
         NotificationsRepository::create(&pool, body)

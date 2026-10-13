@@ -1,5 +1,6 @@
-use axum::{Extension, Json, extract::State};
+use axum::{Extension, extract::State};
 use error_handlers::ApiError;
+use error_handlers::extract::ApiJson;
 use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -30,7 +31,7 @@ pub async fn unarchive_notification(
     State(pool): State<sqlx::PgPool>,
     State(signals): State<Signals>,
     Extension(user_id): Extension<Uuid>,
-    Json(body): Json<UnarchiveNotificationRequest>,
+    ApiJson(body): ApiJson<UnarchiveNotificationRequest>,
 ) -> Result<(), ApiError> {
     NotificationsRepository::unarchive(&pool, user_id, body.id).await?;
     updates::publish_changed(&pool, &signals, user_id, &[body.id]).await;

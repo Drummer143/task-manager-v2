@@ -11,6 +11,7 @@ use axum::{
     http::{HeaderMap, StatusCode, header},
     routing::post,
 };
+use error_handlers::extract::ApiJson;
 use tokio::net::TcpListener;
 use utils::types::asset_access::{
     AssetAccess, AssetAccessRequest, AssetAccessResponse, AssetVisibility,
@@ -30,7 +31,7 @@ struct Mock {
 async fn access(
     State(mock): State<Mock>,
     headers: HeaderMap,
-    Json(request): Json<AssetAccessRequest>,
+    ApiJson(request): ApiJson<AssetAccessRequest>,
 ) -> Result<Json<AssetAccessResponse>, StatusCode> {
     mock.hits.fetch_add(1, Ordering::SeqCst);
 

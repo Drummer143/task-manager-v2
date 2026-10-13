@@ -1,5 +1,6 @@
 use axum::{Extension, Json, extract::State};
 use error_handlers::ApiError;
+use error_handlers::extract::ApiJson;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -39,7 +40,7 @@ pub async fn read_all_notifications(
     State(pool): State<sqlx::PgPool>,
     State(signals): State<Signals>,
     Extension(user_id): Extension<Uuid>,
-    Json(request): Json<ReadAllNotificationsRequest>,
+    ApiJson(request): ApiJson<ReadAllNotificationsRequest>,
 ) -> Result<Json<ReadAllNotificationsResponse>, ApiError> {
     workspaces::ensure_member(&pool, user_id, request.workspace).await?;
 
