@@ -1,7 +1,5 @@
 use utils::swagger::SecurityAddon;
 
-use crate::notifications::controllers;
-
 /// The API the frontend calls. Webhooks and `/internal/*` are left out: authentik and the other
 /// services call them, not the browser.
 #[derive(utoipa::OpenApi)]
@@ -11,15 +9,17 @@ use crate::notifications::controllers;
 
         crate::assets::controllers::create::create_asset,
 
-        controllers::get_list::get_list,
-        controllers::get_account_list::get_account_list,
-        controllers::summary::get_summary,
-        controllers::create::create,
-        controllers::read::read_notification,
-        controllers::read_all::read_all_notifications,
-        controllers::unread::unread_notification,
-        controllers::archive::archive_notification,
-        controllers::unarchive::unarchive_notification,
+        crate::notifications::controllers::get_list::get_list,
+        crate::notifications::controllers::get_account_list::get_account_list,
+        crate::notifications::controllers::summary::get_summary,
+        crate::notifications::controllers::create::create,
+        crate::notifications::controllers::read::read_notification,
+        crate::notifications::controllers::read_all::read_all_notifications,
+        crate::notifications::controllers::unread::unread_notification,
+        crate::notifications::controllers::archive::archive_notification,
+        crate::notifications::controllers::unarchive::unarchive_notification,
+
+        crate::workspaces::controllers::create::create_workspace
     ),
     components(schemas(
         error_handlers::ErrorBody,

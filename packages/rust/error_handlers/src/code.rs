@@ -84,6 +84,19 @@ pub enum ErrorCode {
     },
     /// A service this one depends on did not answer or answered with something unusable.
     UpstreamUnavailable,
+    /// A field is longer than allowed. Used in per-field errors.
+    ValueTooLong {
+        /// Maximum length, in characters.
+        max: u64,
+    },
+    /// A field is shorter than allowed. Used in per-field errors.
+    ValueTooShort {
+        /// Minimum length, in characters.
+        min: u64,
+    },
+    /// The value must be unique and is already used, e.g. a workspace slug. Used in per-field
+    /// errors.
+    Taken,
 }
 
 impl ErrorCode {
@@ -127,6 +140,9 @@ impl ErrorCode {
             Self::FileLinkExpired,
             Self::TooManyItems { max_items: 200 },
             Self::UpstreamUnavailable,
+            Self::ValueTooLong { max: 100 },
+            Self::ValueTooShort { min: 3 },
+            Self::Taken,
         ]
     }
 
@@ -142,7 +158,10 @@ impl ErrorCode {
             | Self::VerificationFailed
             | Self::TooManyItems { .. } => 422,
             Self::NotFound => 404,
-            Self::Conflict | Self::UploadWrongStep { .. } | Self::UploadIncomplete => 409,
+            Self::Conflict
+            | Self::UploadWrongStep { .. }
+            | Self::UploadIncomplete
+            | Self::Taken => 409,
             Self::Unauthorized => 401,
             Self::Forbidden
             | Self::UploadTokenInvalid
@@ -157,6 +176,7 @@ impl ErrorCode {
             Self::InsufficientStorage => 507,
             Self::UpstreamUnavailable => 502,
             Self::PayloadTooLarge | Self::FileTooLarge { .. } => 413,
+            Self::ValueTooLong { .. } | Self::ValueTooShort { .. } => 422,
         }
     }
 
@@ -190,6 +210,9 @@ impl ErrorCode {
             Self::FileLinkExpired => "FILE_LINK_EXPIRED",
             Self::TooManyItems { .. } => "TOO_MANY_ITEMS",
             Self::UpstreamUnavailable => "UPSTREAM_UNAVAILABLE",
+            Self::ValueTooLong { .. } => "VALUE_TOO_LONG",
+            Self::ValueTooShort { .. } => "VALUE_TOO_SHORT",
+            Self::Taken => "TAKEN",
         }
     }
 

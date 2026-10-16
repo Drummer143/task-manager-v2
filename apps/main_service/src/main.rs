@@ -15,8 +15,12 @@ use utils::{
 };
 
 use main_app::{
-    app_state::AppState, assets, assets::upload_token::UploadTokenKey, config::Config, me,
-    notifications, signals, swagger::ApiDoc, webhooks,
+    app_state::AppState,
+    assets::{self, upload_token::UploadTokenKey},
+    config::Config,
+    me, notifications, signals,
+    swagger::ApiDoc,
+    webhooks, workspaces,
 };
 use utoipa::OpenApi;
 
@@ -114,6 +118,7 @@ async fn main() -> anyhow::Result<()> {
             auth.clone(),
             ServiceAuthState::new(config.internal_service_token.clone()),
         ))
+        .merge(workspaces::router::router(auth.clone()))
         .merge(me::router(auth))
         .merge(webhooks::authentik::router(ServiceAuthState::new(
             config.user_sync_webhook_token.clone(),

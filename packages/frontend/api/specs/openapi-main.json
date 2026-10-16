@@ -440,6 +440,62 @@
           }
         }
       }
+    },
+    "/workspaces": {
+      "post": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Creates a workspace with its built-in roles; the creator becomes its owner with Admins.\nSending the same request again (same `id`, same creator) returns the workspace with `200`.",
+        "operationId": "createWorkspace",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Workspace already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Workspace created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "409": {
+            "description": "The slug is taken, or the id belongs to another workspace"
+          },
+          "422": {
+            "description": "Invalid name, slug or task prefix"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -556,6 +612,34 @@
             }
           }
         ]
+      },
+      "CreateWorkspaceRequest": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "taskPrefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
       },
       "ErrorBody": {
         "allOf": [
@@ -1112,6 +1196,83 @@
                 ]
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "A field is longer than allowed. Used in per-field errors.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALUE_TOO_LONG"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "A field is longer than allowed. Used in per-field errors.",
+                "required": [
+                  "max"
+                ],
+                "properties": {
+                  "max": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum length, in characters.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A field is shorter than allowed. Used in per-field errors.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALUE_TOO_SHORT"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "A field is shorter than allowed. Used in per-field errors.",
+                "required": [
+                  "min"
+                ],
+                "properties": {
+                  "min": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Minimum length, in characters.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The value must be unique and is already used, e.g. a workspace slug. Used in per-field\nerrors.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "TAKEN"
+                ]
+              }
+            }
           }
         ],
         "description": "Every error the API can return.\n\nSerialized as `{\"code\": \"FILE_TOO_LARGE\", \"params\": {...}}`; variants without data have no\n`params`. Codes are a public contract: never rename one, only add or deprecate."
@@ -1639,6 +1800,60 @@
           },
           "username": {
             "type": "string"
+          }
+        }
+      },
+      "WorkspaceResponse": {
+        "type": "object",
+        "description": "A workspace as its members see it.",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "taskPrefix",
+          "version",
+          "createdAt"
+        ],
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set only for the owner, while the workspace can still be restored (30 days)."
+          },
+          "iconAssetId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The icon; `None` draws the first letter of the name. Public, so the frontend builds its\nlink itself: `{storage}/public/files/{iconAssetId}`."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string",
+            "description": "In URLs: `/{slug}/inbox`."
+          },
+          "taskPrefix": {
+            "type": "string",
+            "description": "In task keys: `TM` in `TM-248`."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "`baseVersion` for `PATCH`."
           }
         }
       }

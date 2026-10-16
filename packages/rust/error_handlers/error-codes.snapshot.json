@@ -362,5 +362,51 @@
       "status": 502,
       "type": "urn:task-manager:error:upstream-unavailable"
     }
+  },
+  {
+    "code": "VALUE_TOO_LONG",
+    "status": 422,
+    "type": "urn:task-manager:error:value-too-long",
+    "description": "A field is longer than allowed. Used in per-field errors.",
+    "params": [
+      "max"
+    ],
+    "example": {
+      "code": "VALUE_TOO_LONG",
+      "params": {
+        "max": 100
+      },
+      "status": 422,
+      "type": "urn:task-manager:error:value-too-long"
+    }
+  },
+  {
+    "code": "VALUE_TOO_SHORT",
+    "status": 422,
+    "type": "urn:task-manager:error:value-too-short",
+    "description": "A field is shorter than allowed. Used in per-field errors.",
+    "params": [
+      "min"
+    ],
+    "example": {
+      "code": "VALUE_TOO_SHORT",
+      "params": {
+        "min": 3
+      },
+      "status": 422,
+      "type": "urn:task-manager:error:value-too-short"
+    }
+  },
+  {
+    "code": "TAKEN",
+    "status": 409,
+    "type": "urn:task-manager:error:taken",
+    "description": "The value must be unique and is already used, e.g. a workspace slug. Used in per-field\nerrors.",
+    "params": [],
+    "example": {
+      "code": "TAKEN",
+      "status": 409,
+      "type": "urn:task-manager:error:taken"
+    }
   }
 ]

@@ -14,7 +14,7 @@ CREATE TABLE blobs (
 CREATE TABLE assets (
   -- UUIDv7 from the client, like every entity it creates
   id            UUID PRIMARY KEY,
-  -- NULL: an account-level asset. TODO(workspaces): REFERENCES workspaces ON DELETE CASCADE
+  -- NULL: an account-level asset. Its FK to workspaces comes with the workspaces migration
   workspace_id  UUID NULL,
   -- What the asset belongs to; reading it is reading the owner. Polymorphic, so no FK on owner_id.
   -- A new owner type comes with its entity

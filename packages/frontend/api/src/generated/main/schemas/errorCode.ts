@@ -120,4 +120,26 @@ export type ErrorCode = {
 };
 } | {
   code: 'UPSTREAM_UNAVAILABLE';
+} | {
+  code: 'VALUE_TOO_LONG';
+  /** A field is longer than allowed. Used in per-field errors. */
+  params: {
+  /**
+     * Maximum length, in characters.
+     * @minimum 0
+     */
+  max: number;
+};
+} | {
+  code: 'VALUE_TOO_SHORT';
+  /** A field is shorter than allowed. Used in per-field errors. */
+  params: {
+  /**
+     * Minimum length, in characters.
+     * @minimum 0
+     */
+  min: number;
+};
+} | {
+  code: 'TAKEN';
 };

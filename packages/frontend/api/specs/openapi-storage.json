@@ -2818,6 +2818,83 @@
                 ]
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "A field is longer than allowed. Used in per-field errors.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALUE_TOO_LONG"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "A field is longer than allowed. Used in per-field errors.",
+                "required": [
+                  "max"
+                ],
+                "properties": {
+                  "max": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum length, in characters.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A field is shorter than allowed. Used in per-field errors.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALUE_TOO_SHORT"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "A field is shorter than allowed. Used in per-field errors.",
+                "required": [
+                  "min"
+                ],
+                "properties": {
+                  "min": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Minimum length, in characters.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The value must be unique and is already used, e.g. a workspace slug. Used in per-field\nerrors.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "TAKEN"
+                ]
+              }
+            }
           }
         ],
         "description": "Every error the API can return.\n\nSerialized as `{\"code\": \"FILE_TOO_LARGE\", \"params\": {...}}`; variants without data have no\n`params`. Codes are a public contract: never rename one, only add or deprecate."

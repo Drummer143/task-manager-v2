@@ -11,7 +11,10 @@ pub mod notifications;
 pub mod repos;
 pub mod signals;
 pub mod swagger;
+#[cfg(test)]
+pub mod test_support;
 pub mod webhooks;
+pub mod workspaces;
 pub mod workspaces_mocks;
 
 pub fn openapi_json() -> String {
