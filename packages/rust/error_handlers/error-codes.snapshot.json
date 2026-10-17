@@ -408,5 +408,22 @@
       "status": 409,
       "type": "urn:task-manager:error:taken"
     }
+  },
+  {
+    "code": "ACCESS_DENIED",
+    "status": 403,
+    "type": "urn:task-manager:error:access-denied",
+    "description": "The user does not have the required capability to perform the action.",
+    "params": [
+      "capability"
+    ],
+    "example": {
+      "code": "ACCESS_DENIED",
+      "params": {
+        "capability": "workspace.settings"
+      },
+      "status": 403,
+      "type": "urn:task-manager:error:access-denied"
+    }
   }
 ]

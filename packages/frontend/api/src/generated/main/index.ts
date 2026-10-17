@@ -183,6 +183,15 @@ export const createWorkspace = (
       options);
     }
 
+export const getWorkspaceById = (
+    workspaceId: string,
+ options?: SecondParameter<typeof mainFetcher<WorkspaceResponse>>,) => {
+      return mainFetcher<WorkspaceResponse>(
+      {url: `/workspaces/${workspaceId}`, method: 'GET'
+    },
+      options);
+    }
+
 export type CreateAssetResult = NonNullable<Awaited<ReturnType<typeof createAsset>>>
 export type GetMeResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
 export type ListNotificationsResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
@@ -196,3 +205,4 @@ export type UnarchiveNotificationResult = NonNullable<Awaited<ReturnType<typeof 
 export type UnreadNotificationResult = NonNullable<Awaited<ReturnType<typeof unreadNotification>>>
 export type GetUserWorkspacesResult = NonNullable<Awaited<ReturnType<typeof getUserWorkspaces>>>
 export type CreateWorkspaceResult = NonNullable<Awaited<ReturnType<typeof createWorkspace>>>
+export type GetWorkspaceByIdResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceById>>>

@@ -523,6 +523,47 @@
           }
         }
       }
+    },
+    "/workspaces/{workspace_id}": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "getWorkspaceById",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1298,6 +1339,35 @@
                 "enum": [
                   "TAKEN"
                 ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The user does not have the required capability to perform the action.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "ACCESS_DENIED"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "The user does not have the required capability to perform the action.",
+                "required": [
+                  "capability"
+                ],
+                "properties": {
+                  "capability": {
+                    "type": "string",
+                    "description": "The missing capability, e.g. `workspace.settings`."
+                  }
+                }
               }
             }
           }

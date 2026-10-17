@@ -4,6 +4,7 @@
 
 pub mod controllers;
 pub mod dto;
+pub mod middleware;
 pub mod repo;
 pub mod router;
 pub mod service;

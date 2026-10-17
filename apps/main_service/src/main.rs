@@ -118,7 +118,7 @@ async fn main() -> anyhow::Result<()> {
             auth.clone(),
             ServiceAuthState::new(config.internal_service_token.clone()),
         ))
-        .merge(workspaces::router::router(auth.clone()))
+        .merge(workspaces::router::router(auth.clone(), state.clone()))
         .merge(me::router(auth))
         .merge(webhooks::authentik::router(ServiceAuthState::new(
             config.user_sync_webhook_token.clone(),

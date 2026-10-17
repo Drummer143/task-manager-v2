@@ -97,6 +97,11 @@ pub enum ErrorCode {
     /// The value must be unique and is already used, e.g. a workspace slug. Used in per-field
     /// errors.
     Taken,
+    /// The user does not have the required capability to perform the action.
+    AccessDenied {
+        /// The missing capability, e.g. `workspace.settings`.
+        capability: String,
+    },
 }
 
 impl ErrorCode {
@@ -143,6 +148,9 @@ impl ErrorCode {
             Self::ValueTooLong { max: 100 },
             Self::ValueTooShort { min: 3 },
             Self::Taken,
+            Self::AccessDenied {
+                capability: "workspace.settings".to_string(),
+            },
         ]
     }
 
@@ -166,7 +174,8 @@ impl ErrorCode {
             Self::Forbidden
             | Self::UploadTokenInvalid
             | Self::FileLinkInvalid
-            | Self::FileLinkExpired => 403,
+            | Self::FileLinkExpired
+            | Self::AccessDenied { .. } => 403,
             Self::Internal => 500,
             Self::MalformedRequest => 400,
             Self::UnsupportedMediaType => 415,
@@ -213,6 +222,7 @@ impl ErrorCode {
             Self::ValueTooLong { .. } => "VALUE_TOO_LONG",
             Self::ValueTooShort { .. } => "VALUE_TOO_SHORT",
             Self::Taken => "TAKEN",
+            Self::AccessDenied { .. } => "ACCESS_DENIED",
         }
     }
 

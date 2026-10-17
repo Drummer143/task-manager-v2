@@ -142,4 +142,11 @@ export type ErrorCode = {
 };
 } | {
   code: 'TAKEN';
+} | {
+  code: 'ACCESS_DENIED';
+  /** The user does not have the required capability to perform the action. */
+  params: {
+  /** The missing capability, e.g. `workspace.settings`. */
+  capability: string;
+};
 };

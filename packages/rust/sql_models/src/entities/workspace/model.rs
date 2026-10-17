@@ -11,7 +11,7 @@ use sqlx::{
 };
 use uuid::Uuid;
 
-#[derive(FromRow)]
+#[derive(FromRow, Clone)]
 pub struct Workspace {
     pub id: Uuid,
     pub name: String,
@@ -46,7 +46,7 @@ pub struct WorkspacePrefix {
     pub used_until: Option<DateTime<Utc>>,
 }
 
-#[derive(FromRow)]
+#[derive(FromRow, Clone)]
 pub struct Member {
     pub workspace_id: Uuid,
     pub user_id: Uuid,
