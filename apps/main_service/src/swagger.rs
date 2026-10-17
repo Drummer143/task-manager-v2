@@ -19,7 +19,8 @@ use utils::swagger::SecurityAddon;
         crate::notifications::controllers::archive::archive_notification,
         crate::notifications::controllers::unarchive::unarchive_notification,
 
-        crate::workspaces::controllers::create::create_workspace
+        crate::workspaces::controllers::create::create_workspace,
+        crate::workspaces::controllers::get_user_workspaces::get_user_workspaces
     ),
     components(schemas(
         error_handlers::ErrorBody,

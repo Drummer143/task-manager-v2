@@ -1,4 +1,4 @@
-use sql_models::workspace::model::{Capability, Member, Workspace};
+use sql_models::workspace::model::{Capability, Member, Role, Workspace};
 use sqlx::Executor;
 use uuid::Uuid;
 
@@ -120,18 +120,76 @@ pub async fn init_workspace<'a>(
     }
 }
 
+/// A workspace of the user, with whether they own it.
+#[derive(sqlx::FromRow)]
+pub struct UserWorkspace {
+    #[sqlx(flatten)]
+    pub workspace: Workspace,
+    pub is_owner: bool,
+}
+
+pub async fn get_user_workspaces<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    user_id: Uuid,
+) -> Result<Vec<UserWorkspace>, sqlx::Error> {
+    sqlx::query_as::<_, UserWorkspace>(
+        "SELECT w.*, m.is_owner
+        FROM workspaces w
+        JOIN members m
+        ON m.workspace_id = w.id
+        WHERE m.user_id = $1
+            AND m.deactivated_at IS NULL
+            AND (
+                w.deleted_at IS NULL
+                OR (
+                    m.is_owner = TRUE
+                    AND w.deleted_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+                )
+            )
+        ORDER BY lower(w.name)
+        ",
+    )
+    .bind(user_id)
+    .fetch_all(executor)
+    .await
+}
+
+// ROLES
+
+pub async fn get_roles_by_workspace_ids<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    user_id: Uuid,
+    workspace_ids: Vec<Uuid>,
+) -> Result<Vec<Role>, sqlx::Error> {
+    sqlx::query_as::<_, Role>(
+        "SELECT r.*
+        FROM roles r
+        JOIN member_roles mr ON mr.role_id = r.id
+        WHERE mr.user_id = $1
+        AND r.workspace_id = ANY($2)
+        AND r.deleted_at IS NULL
+        ORDER BY r.workspace_id, r.position
+        ",
+    )
+    .bind(user_id)
+    .bind(workspace_ids)
+    .fetch_all(executor)
+    .await
+}
+
+// MEMBERS
+
 pub async fn get_member_in_workspace<'a>(
     executor: impl Executor<'a, Database = sqlx::Postgres>,
     user_id: Uuid,
     workspace_id: Uuid,
 ) -> Result<Member, sqlx::Error> {
     sqlx::query_as::<_, Member>(
-        r#"
-        SELECT *
+        "SELECT *
         FROM members
         WHERE user_id = $1
-          AND workspace_id = $2
-        "#,
+            AND workspace_id = $2
+        ",
     )
     .bind(user_id)
     .bind(workspace_id)
@@ -146,17 +204,16 @@ pub async fn find_similar_slugs<'a>(
     slug: &str,
 ) -> Result<Vec<String>, sqlx::Error> {
     sqlx::query_scalar::<_, String>(
-        r#"
-        SELECT slug
+        "SELECT slug
         FROM workspaces
         WHERE slug = $1
-           OR slug ~ ('^' || $1 || '-[0-9]+$')
+            OR slug ~ ('^' || $1 || '-[0-9]+$')
         UNION ALL
         SELECT slug
         FROM workspace_slug_aliases
         WHERE slug = $1
-           OR slug ~ ('^' || $1 || '-[0-9]+$')
-        "#,
+            OR slug ~ ('^' || $1 || '-[0-9]+$')
+        ",
     )
     .bind(slug)
     .fetch_all(executor)
@@ -335,5 +392,205 @@ mod tests {
         similar.sort();
 
         assert_eq!(similar, ["verso", "verso-2"]);
+    }
+
+    /// Joins `user` to the workspace, not as its owner, with these roles.
+    async fn join(pool: &PgPool, workspace_id: Uuid, user_id: Uuid, role_ids: &[Uuid]) {
+        sqlx::query("INSERT INTO members (workspace_id, user_id) VALUES ($1, $2)")
+            .bind(workspace_id)
+            .bind(user_id)
+            .execute(pool)
+            .await
+            .unwrap();
+        for role_id in role_ids {
+            sqlx::query(
+                "INSERT INTO member_roles (workspace_id, user_id, role_id) VALUES ($1, $2, $3)",
+            )
+            .bind(workspace_id)
+            .bind(user_id)
+            .bind(role_id)
+            .execute(pool)
+            .await
+            .unwrap();
+        }
+    }
+
+    async fn custom_role(pool: &PgPool, workspace_id: Uuid, slug: &str, position: i32) -> Uuid {
+        sqlx::query_scalar(
+            "INSERT INTO roles (workspace_id, name, slug, color, position)
+             VALUES ($1, $2, $2, 3, $3) RETURNING id",
+        )
+        .bind(workspace_id)
+        .bind(slug)
+        .bind(position)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    }
+
+    async fn rename(pool: &PgPool, workspace_id: Uuid, name: &str) {
+        sqlx::query("UPDATE workspaces SET name = $2 WHERE id = $1")
+            .bind(workspace_id)
+            .bind(name)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
+    async fn deleted_days_ago(pool: &PgPool, workspace_id: Uuid, days: i32) {
+        sqlx::query(
+            "UPDATE workspaces SET deleted_at = CURRENT_TIMESTAMP - make_interval(days => $2)
+             WHERE id = $1",
+        )
+        .bind(workspace_id)
+        .bind(days)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    /// `(name, is_owner)` of the user's list, in its order.
+    async fn listed(pool: &PgPool, user_id: Uuid) -> Vec<(String, bool)> {
+        get_user_workspaces(pool, user_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|w| (w.workspace.name, w.is_owner))
+            .collect()
+    }
+
+    async fn role_slugs(pool: &PgPool, user_id: Uuid, workspace_ids: Vec<Uuid>) -> Vec<String> {
+        get_roles_by_workspace_ids(pool, user_id, workspace_ids)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|r| r.slug)
+            .collect()
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn lists_the_users_own_workspaces_by_name_with_the_owner_flag(pool: PgPool) {
+        let (me, other) = (user(&pool).await, user(&pool).await);
+        let beta = create(&pool, me, "beta").await;
+        let alpha = create(&pool, me, "alpha").await;
+        let gamma = create(&pool, other, "gamma").await;
+        let foreign = create(&pool, other, "foreign").await;
+        rename(&pool, beta.id, "Beta").await;
+        rename(&pool, alpha.id, "Alpha").await;
+        rename(&pool, gamma.id, "Gamma").await;
+        rename(&pool, foreign.id, "Foreign").await;
+        join(&pool, gamma.id, me, &[]).await;
+
+        assert_eq!(
+            listed(&pool, me).await,
+            [
+                ("Alpha".to_string(), true),
+                ("Beta".to_string(), true),
+                ("Gamma".to_string(), false),
+            ]
+        );
+        assert_eq!(
+            listed(&pool, other).await,
+            [("Foreign".to_string(), true), ("Gamma".to_string(), true)]
+        );
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_deleted_workspace_stays_in_its_owners_list_for_30_days_only(pool: PgPool) {
+        let (owner, member) = (user(&pool).await, user(&pool).await);
+        let workspace = create(&pool, owner, "verso-team").await;
+        join(&pool, workspace.id, member, &[]).await;
+
+        deleted_days_ago(&pool, workspace.id, 10).await;
+
+        let owners = get_user_workspaces(&pool, owner).await.unwrap();
+        assert_eq!(owners.len(), 1);
+        assert!(owners[0].workspace.deleted_at.is_some());
+        assert!(listed(&pool, member).await.is_empty());
+
+        deleted_days_ago(&pool, workspace.id, 31).await;
+
+        assert!(listed(&pool, owner).await.is_empty());
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_deactivated_member_does_not_see_the_workspace(pool: PgPool) {
+        let (owner, member) = (user(&pool).await, user(&pool).await);
+        let workspace = create(&pool, owner, "verso-team").await;
+        join(&pool, workspace.id, member, &[]).await;
+        sqlx::query(
+            "UPDATE members SET deactivated_at = CURRENT_TIMESTAMP
+             WHERE workspace_id = $1 AND user_id = $2",
+        )
+        .bind(workspace.id)
+        .bind(member)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        assert!(listed(&pool, member).await.is_empty());
+        assert_eq!(listed(&pool, owner).await.len(), 1);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn roles_are_the_users_own_live_ones_by_position(pool: PgPool) {
+        let (owner, member, guest) = (user(&pool).await, user(&pool).await, user(&pool).await);
+        let workspace = create(&pool, owner, "verso-team").await;
+        let built_in = roles(&pool, workspace.id).await;
+        let member_role = built_in[1].id;
+        let support = custom_role(&pool, workspace.id, "support", 5).await;
+        let design = custom_role(&pool, workspace.id, "design", 3).await;
+        let gone = custom_role(&pool, workspace.id, "gone", 4).await;
+        sqlx::query("UPDATE roles SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1")
+            .bind(gone)
+            .execute(&pool)
+            .await
+            .unwrap();
+        join(
+            &pool,
+            workspace.id,
+            member,
+            &[support, member_role, design, gone],
+        )
+        .await;
+        join(&pool, workspace.id, guest, &[]).await;
+
+        assert_eq!(
+            role_slugs(&pool, owner, vec![workspace.id]).await,
+            ["admin"]
+        );
+        assert_eq!(
+            role_slugs(&pool, member, vec![workspace.id]).await,
+            ["member", "design", "support"]
+        );
+        assert!(
+            role_slugs(&pool, guest, vec![workspace.id])
+                .await
+                .is_empty()
+        );
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn roles_come_only_from_the_asked_workspaces(pool: PgPool) {
+        let me = user(&pool).await;
+        let first = create(&pool, me, "first").await;
+        let second = create(&pool, me, "second").await;
+
+        let roles = get_roles_by_workspace_ids(&pool, me, vec![first.id])
+            .await
+            .unwrap();
+
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles[0].workspace_id, first.id);
+        assert!(role_slugs(&pool, me, vec![]).await.is_empty());
+        assert_eq!(
+            role_slugs(&pool, me, vec![first.id, second.id]).await,
+            ["admin", "admin"]
+        );
     }
 }

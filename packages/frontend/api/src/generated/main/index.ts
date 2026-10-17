@@ -21,7 +21,8 @@ import type {
   SummaryResponse,
   UnarchiveNotificationRequest,
   UnreadNotificationRequest,
-  WorkspaceResponse
+  WorkspaceResponse,
+  WorkspaceWithRoles
 } from './schemas';
 
 import { mainFetcher } from '../../fetcher';
@@ -158,8 +159,17 @@ export const unreadNotification = (
       options);
     }
 
+export const getUserWorkspaces = (
+
+ options?: SecondParameter<typeof mainFetcher<WorkspaceWithRoles[]>>,) => {
+      return mainFetcher<WorkspaceWithRoles[]>(
+      {url: `/workspaces`, method: 'GET'
+    },
+      options);
+    }
+
 /**
- * @summary Creates a workspace with its built-in roles; the creator becomes its owner with Admins.
+ * @summary Creates a workspace with its built-in roles; the creator becomes its owner with Admin.
 Sending the same request again (same `id`, same creator) returns the workspace with `200`.
  */
 export const createWorkspace = (
@@ -184,4 +194,5 @@ export type ReadAllNotificationsResult = NonNullable<Awaited<ReturnType<typeof r
 export type GetNotificationSummaryResult = NonNullable<Awaited<ReturnType<typeof getNotificationSummary>>>
 export type UnarchiveNotificationResult = NonNullable<Awaited<ReturnType<typeof unarchiveNotification>>>
 export type UnreadNotificationResult = NonNullable<Awaited<ReturnType<typeof unreadNotification>>>
+export type GetUserWorkspacesResult = NonNullable<Awaited<ReturnType<typeof getUserWorkspaces>>>
 export type CreateWorkspaceResult = NonNullable<Awaited<ReturnType<typeof createWorkspace>>>

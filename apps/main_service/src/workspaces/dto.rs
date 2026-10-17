@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sql_models::workspace::model::Workspace;
+use sql_models::workspace::model::{Role, Workspace};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -37,6 +37,26 @@ impl From<Workspace> for WorkspaceResponse {
             version: value.version,
             created_at: value.created_at,
             deleted_at: None,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, ToSchema, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RoleShortResponse {
+    pub id: Uuid,
+    pub name: String,
+    pub slug: String,
+    pub color: i16,
+}
+
+impl From<Role> for RoleShortResponse {
+    fn from(role: Role) -> Self {
+        Self {
+            id: role.id,
+            name: role.name,
+            slug: role.slug,
+            color: role.color,
         }
     }
 }
