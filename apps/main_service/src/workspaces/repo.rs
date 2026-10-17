@@ -30,6 +30,43 @@ pub async fn is_slug_taken<'a>(
     .await
 }
 
+/// Whether `slug` is the current slug, or a live alias, of `workspace_id`, and `user_id` is an
+/// active member of it: the slug is that workspace's own address, not someone else's.
+pub async fn is_own_slug<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    user_id: Uuid,
+    workspace_id: Uuid,
+    slug: &str,
+) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (
+            SELECT 1
+            FROM workspaces w
+            JOIN members m
+                ON m.workspace_id = w.id
+                AND m.user_id = $2
+                AND m.deactivated_at IS NULL
+            WHERE w.id = $3
+                AND (
+                    w.slug = $1
+                    OR EXISTS (
+                        SELECT 1
+                        FROM workspace_slug_aliases a
+                        WHERE a.slug = $1
+                            AND a.workspace_id = w.id
+                            AND a.expires_at > CURRENT_TIMESTAMP
+                    )
+                )
+        )
+        ",
+    )
+    .bind(slug)
+    .bind(user_id)
+    .bind(workspace_id)
+    .fetch_one(executor)
+    .await
+}
+
 pub async fn get_workspace_by_id<'a>(
     executor: impl Executor<'a, Database = sqlx::Postgres>,
     id: &Uuid,
@@ -726,5 +763,62 @@ mod tests {
             Some((workspace.id, "verso-team".to_string()))
         );
         assert_eq!(resolve(&pool, member, "verso-team").await, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_workspaces_own_slug_and_live_aliases_are_its_own(pool: PgPool) {
+        let (owner, member) = (user(&pool).await, user(&pool).await);
+        let workspace = create(&pool, owner, "verso-labs").await;
+        join(&pool, workspace.id, member, &[]).await;
+        alias(&pool, workspace.id, "verso-team", true).await;
+        alias(&pool, workspace.id, "verso-old", false).await;
+
+        for user_id in [owner, member] {
+            assert!(
+                is_own_slug(&pool, user_id, workspace.id, "verso-labs")
+                    .await
+                    .unwrap()
+            );
+            assert!(
+                is_own_slug(&pool, user_id, workspace.id, "verso-team")
+                    .await
+                    .unwrap()
+            );
+            assert!(
+                !is_own_slug(&pool, user_id, workspace.id, "verso-old")
+                    .await
+                    .unwrap()
+            );
+        }
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn another_workspaces_slug_is_not_own(pool: PgPool) {
+        let owner = user(&pool).await;
+        let mine = create(&pool, owner, "mine").await;
+        let theirs = create(&pool, user(&pool).await, "theirs").await;
+        alias(&pool, theirs.id, "theirs-old", true).await;
+
+        assert!(!is_own_slug(&pool, owner, mine.id, "theirs").await.unwrap());
+        assert!(
+            !is_own_slug(&pool, owner, mine.id, "theirs-old")
+                .await
+                .unwrap()
+        );
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_stranger_learns_nothing_about_whose_slug_it_is(pool: PgPool) {
+        let stranger = user(&pool).await;
+        let workspace = create(&pool, user(&pool).await, "verso-team").await;
+
+        assert!(
+            !is_own_slug(&pool, stranger, workspace.id, "verso-team")
+                .await
+                .unwrap()
+        );
     }
 }

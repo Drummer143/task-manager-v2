@@ -4,6 +4,7 @@ use axum::routing::{get, post};
 use utils::auth_middleware::{InternalAuthState, auth_guard};
 
 use crate::app_state::AppState;
+use crate::workspaces::controllers::check_slug_available::check_slug_available;
 use crate::workspaces::controllers::create::create_workspace;
 use crate::workspaces::controllers::get_user_workspaces::get_user_workspaces;
 use crate::workspaces::controllers::get_workspace_by_id::get_workspace_by_id;
@@ -29,6 +30,7 @@ pub fn router(auth: InternalAuthState, state: AppState) -> Router<AppState> {
             post(create_workspace).get(get_user_workspaces),
         )
         .route("/workspaces/resolve", get(resolve_slug))
+        .route("/workspaces/slug-available", get(check_slug_available))
         .nest("/workspaces/{workspace_id}", workspace_id_router)
         .layer(from_fn_with_state(auth, auth_guard))
 }

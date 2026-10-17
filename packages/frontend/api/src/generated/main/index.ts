@@ -6,6 +6,7 @@
  */
 import type {
   ArchiveNotificationRequest,
+  CheckSlugAvailableParams,
   CreateAssetRequest,
   CreateAssetResponse,
   CreateNotificationDto,
@@ -19,6 +20,7 @@ import type {
   ReadAllNotificationsResponse,
   ReadNotificationRequest,
   ResolveSlugParams,
+  SlugAvailableResponse,
   SlugResponse,
   SummaryResponse,
   UnarchiveNotificationRequest,
@@ -195,6 +197,16 @@ export const resolveSlug = (
       options);
     }
 
+export const checkSlugAvailable = (
+    params: CheckSlugAvailableParams,
+ options?: SecondParameter<typeof mainFetcher<SlugAvailableResponse>>,) => {
+      return mainFetcher<SlugAvailableResponse>(
+      {url: `/workspaces/slug-available`, method: 'GET',
+        params
+    },
+      options);
+    }
+
 export const getWorkspaceById = (
     workspaceId: string,
  options?: SecondParameter<typeof mainFetcher<WorkspaceResponse>>,) => {
@@ -218,4 +230,5 @@ export type UnreadNotificationResult = NonNullable<Awaited<ReturnType<typeof unr
 export type GetUserWorkspacesResult = NonNullable<Awaited<ReturnType<typeof getUserWorkspaces>>>
 export type CreateWorkspaceResult = NonNullable<Awaited<ReturnType<typeof createWorkspace>>>
 export type ResolveSlugResult = NonNullable<Awaited<ReturnType<typeof resolveSlug>>>
+export type CheckSlugAvailableResult = NonNullable<Awaited<ReturnType<typeof checkSlugAvailable>>>
 export type GetWorkspaceByIdResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceById>>>

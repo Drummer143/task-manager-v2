@@ -8,6 +8,7 @@
 export * from './archiveNotificationRequest';
 export * from './assetOwnerRequest';
 export * from './assetOwnerType';
+export * from './checkSlugAvailableParams';
 export * from './createAssetRequest';
 export * from './createAssetResponse';
 export * from './createNotificationDto';
@@ -31,6 +32,8 @@ export * from './readAllUpdate';
 export * from './readNotificationRequest';
 export * from './resolveSlugParams';
 export * from './roleShortResponse';
+export * from './slugAvailability';
+export * from './slugAvailableResponse';
 export * from './slugResponse';
 export * from './summaryResponse';
 export * from './summaryResponseByWorkspace';
