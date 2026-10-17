@@ -21,7 +21,8 @@ use utils::swagger::SecurityAddon;
 
         crate::workspaces::controllers::create::create_workspace,
         crate::workspaces::controllers::get_user_workspaces::get_user_workspaces,
-        crate::workspaces::controllers::get_workspace_by_id::get_workspace_by_id
+        crate::workspaces::controllers::get_workspace_by_id::get_workspace_by_id,
+        crate::workspaces::controllers::resolve_slug::resolve_slug,
     ),
     components(schemas(
         error_handlers::ErrorBody,

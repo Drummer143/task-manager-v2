@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use axum::{Extension, Json, extract::State};
-use error_handlers::ApiError;
 use serde::Serialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -34,7 +33,7 @@ pub struct WorkspaceWithRoles {
 pub async fn get_user_workspaces(
     State(state): State<AppState>,
     Extension(user_id): Extension<Uuid>,
-) -> Result<Json<Vec<WorkspaceWithRoles>>, ApiError> {
+) -> error_handlers::Result<Json<Vec<WorkspaceWithRoles>>> {
     let workspaces = crate::workspaces::repo::get_user_workspaces(&state.pool, user_id).await?;
 
     let roles = crate::workspaces::repo::get_roles_by_workspace_ids(

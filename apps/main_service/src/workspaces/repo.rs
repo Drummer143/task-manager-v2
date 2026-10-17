@@ -120,6 +120,44 @@ pub async fn init_workspace<'a>(
     }
 }
 
+/// A workspace found by one of its slugs.
+#[derive(Debug, sqlx::FromRow)]
+pub struct ResolvedSlug {
+    pub id: Uuid,
+    /// The current slug, which differs from the asked one when that was an old alias.
+    pub slug: String,
+}
+
+/// The workspace `user_id` is a member of whose slug, or live alias, is `slug`. A non-member,
+/// a deactivated member, and anyone but the owner of a deleted workspace get `RowNotFound`.
+pub async fn get_workspace_by_slug<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    user_id: Uuid,
+    slug: &str,
+) -> Result<ResolvedSlug, sqlx::Error> {
+    sqlx::query_as::<_, ResolvedSlug>(
+        "SELECT w.id, w.slug
+        FROM workspaces w
+        JOIN members m
+            ON m.workspace_id = w.id
+            AND m.user_id = $2
+            AND m.deactivated_at IS NULL
+        WHERE (w.deleted_at IS NULL OR m.is_owner)
+            AND (
+                w.slug = $1
+                OR w.id = (
+                SELECT workspace_id FROM workspace_slug_aliases
+                WHERE slug = $1 AND expires_at > CURRENT_TIMESTAMP
+                )
+            )
+        ",
+    )
+    .bind(slug.to_ascii_lowercase())
+    .bind(user_id)
+    .fetch_one(executor)
+    .await
+}
+
 /// A workspace of the user, with whether they own it.
 #[derive(sqlx::FromRow)]
 pub struct UserWorkspace {
@@ -592,5 +630,101 @@ mod tests {
             role_slugs(&pool, me, vec![first.id, second.id]).await,
             ["admin", "admin"]
         );
+    }
+
+    async fn alias(pool: &PgPool, workspace_id: Uuid, slug: &str, live: bool) {
+        sqlx::query(
+            "INSERT INTO workspace_slug_aliases (slug, workspace_id, expires_at)
+             VALUES ($1, $2, CURRENT_TIMESTAMP + make_interval(days => $3))",
+        )
+        .bind(slug)
+        .bind(workspace_id)
+        .bind(if live { 1 } else { -1 })
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    /// `Some((id, current slug))`, or `None` for `RowNotFound` — what the endpoint turns into 404.
+    async fn resolve(pool: &PgPool, user_id: Uuid, slug: &str) -> Option<(Uuid, String)> {
+        match get_workspace_by_slug(pool, user_id, slug).await {
+            Ok(found) => Some((found.id, found.slug)),
+            Err(sqlx::Error::RowNotFound) => None,
+            Err(error) => panic!("{error}"),
+        }
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_member_resolves_the_slug_in_any_case(pool: PgPool) {
+        let (owner, member) = (user(&pool).await, user(&pool).await);
+        let workspace = create(&pool, owner, "verso-team").await;
+        join(&pool, workspace.id, member, &[]).await;
+        let found = Some((workspace.id, "verso-team".to_string()));
+
+        assert_eq!(resolve(&pool, owner, "verso-team").await, found);
+        assert_eq!(resolve(&pool, member, "verso-team").await, found);
+        assert_eq!(resolve(&pool, member, "Verso-Team").await, found);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn an_old_slug_resolves_to_the_current_one_while_its_alias_lives(pool: PgPool) {
+        let owner = user(&pool).await;
+        let workspace = create(&pool, owner, "verso-labs").await;
+        alias(&pool, workspace.id, "verso-team", true).await;
+        alias(&pool, workspace.id, "verso-old", false).await;
+
+        assert_eq!(
+            resolve(&pool, owner, "verso-team").await,
+            Some((workspace.id, "verso-labs".to_string()))
+        );
+        assert_eq!(resolve(&pool, owner, "verso-old").await, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_stranger_gets_the_same_nothing_as_for_an_unknown_slug(pool: PgPool) {
+        let (owner, stranger) = (user(&pool).await, user(&pool).await);
+        let workspace = create(&pool, owner, "verso-team").await;
+        alias(&pool, workspace.id, "verso-old", true).await;
+
+        assert_eq!(resolve(&pool, stranger, "verso-team").await, None);
+        assert_eq!(resolve(&pool, stranger, "verso-old").await, None);
+        assert_eq!(resolve(&pool, owner, "no-such-slug").await, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_deactivated_member_resolves_nothing(pool: PgPool) {
+        let (owner, member) = (user(&pool).await, user(&pool).await);
+        let workspace = create(&pool, owner, "verso-team").await;
+        join(&pool, workspace.id, member, &[]).await;
+        sqlx::query(
+            "UPDATE members SET deactivated_at = CURRENT_TIMESTAMP
+             WHERE workspace_id = $1 AND user_id = $2",
+        )
+        .bind(workspace.id)
+        .bind(member)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(resolve(&pool, member, "verso-team").await, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_deleted_workspace_resolves_only_for_its_owner(pool: PgPool) {
+        let (owner, member) = (user(&pool).await, user(&pool).await);
+        let workspace = create(&pool, owner, "verso-team").await;
+        join(&pool, workspace.id, member, &[]).await;
+        deleted_days_ago(&pool, workspace.id, 1).await;
+
+        assert_eq!(
+            resolve(&pool, owner, "verso-team").await,
+            Some((workspace.id, "verso-team".to_string()))
+        );
+        assert_eq!(resolve(&pool, member, "verso-team").await, None);
     }
 }

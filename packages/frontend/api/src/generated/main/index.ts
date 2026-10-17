@@ -18,6 +18,8 @@ import type {
   ReadAllNotificationsRequest,
   ReadAllNotificationsResponse,
   ReadNotificationRequest,
+  ResolveSlugParams,
+  SlugResponse,
   SummaryResponse,
   UnarchiveNotificationRequest,
   UnreadNotificationRequest,
@@ -183,6 +185,16 @@ export const createWorkspace = (
       options);
     }
 
+export const resolveSlug = (
+    params: ResolveSlugParams,
+ options?: SecondParameter<typeof mainFetcher<SlugResponse>>,) => {
+      return mainFetcher<SlugResponse>(
+      {url: `/workspaces/resolve`, method: 'GET',
+        params
+    },
+      options);
+    }
+
 export const getWorkspaceById = (
     workspaceId: string,
  options?: SecondParameter<typeof mainFetcher<WorkspaceResponse>>,) => {
@@ -205,4 +217,5 @@ export type UnarchiveNotificationResult = NonNullable<Awaited<ReturnType<typeof 
 export type UnreadNotificationResult = NonNullable<Awaited<ReturnType<typeof unreadNotification>>>
 export type GetUserWorkspacesResult = NonNullable<Awaited<ReturnType<typeof getUserWorkspaces>>>
 export type CreateWorkspaceResult = NonNullable<Awaited<ReturnType<typeof createWorkspace>>>
+export type ResolveSlugResult = NonNullable<Awaited<ReturnType<typeof resolveSlug>>>
 export type GetWorkspaceByIdResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceById>>>

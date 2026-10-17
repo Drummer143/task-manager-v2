@@ -7,6 +7,7 @@ use crate::app_state::AppState;
 use crate::workspaces::controllers::create::create_workspace;
 use crate::workspaces::controllers::get_user_workspaces::get_user_workspaces;
 use crate::workspaces::controllers::get_workspace_by_id::get_workspace_by_id;
+use crate::workspaces::controllers::resolve_slug::resolve_slug;
 use crate::workspaces::middleware::load_workspace_context_with_deleted;
 
 /// Workspaces, for signed-in users. Routes under `/workspaces/{workspace_id}` get the member's
@@ -27,6 +28,7 @@ pub fn router(auth: InternalAuthState, state: AppState) -> Router<AppState> {
             "/workspaces",
             post(create_workspace).get(get_user_workspaces),
         )
+        .route("/workspaces/resolve", get(resolve_slug))
         .nest("/workspaces/{workspace_id}", workspace_id_router)
         .layer(from_fn_with_state(auth, auth_guard))
 }

@@ -1,5 +1,4 @@
 use axum::{Extension, Json};
-use error_handlers::ApiError;
 
 use crate::workspaces::{dto::WorkspaceResponse, middleware::WorkspaceContext};
 
@@ -20,7 +19,7 @@ use crate::workspaces::{dto::WorkspaceResponse, middleware::WorkspaceContext};
 )]
 pub async fn get_workspace_by_id(
     Extension(workspace_context): Extension<WorkspaceContext>,
-) -> Result<Json<WorkspaceResponse>, ApiError> {
+) -> error_handlers::Result<Json<WorkspaceResponse>> {
     // Membership and deletion are checked by `load_workspace_context_with_deleted`: only the
     // owner gets here with a deleted workspace, and sees when it was deleted
     let deleted_at = workspace_context.workspace.deleted_at;

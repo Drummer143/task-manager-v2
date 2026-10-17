@@ -524,6 +524,46 @@
         }
       }
     },
+    "/workspaces/resolve": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "resolveSlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "query",
+            "description": "Target slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Slug found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlugResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Slug not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/workspaces/{workspace_id}": {
       "get": {
         "tags": [
@@ -1816,6 +1856,23 @@
           },
           "slug": {
             "type": "string"
+          }
+        }
+      },
+      "SlugResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "slug"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "description": "The current slug: when it differs from the asked one, the frontend replaces the address."
           }
         }
       },
