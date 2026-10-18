@@ -7,9 +7,11 @@ pub mod app_state;
 pub mod assets;
 pub mod changes;
 pub mod config;
+pub mod data_changed;
 pub mod me;
 pub mod notifications;
 pub mod repos;
+pub mod shared;
 pub mod signals;
 pub mod swagger;
 #[cfg(test)]

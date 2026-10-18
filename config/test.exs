@@ -19,3 +19,7 @@ config :phoenix,
 
 # No RabbitMQ consumer and no JWKS fetcher in tests: they reach external services
 config :socket_service, :external_services, false
+
+# Channel tests decide membership themselves (test/support/fake_workspaces.ex); the tests of
+# the real query are tagged :db and run only with DATABASE_URL (test_helper.exs)
+config :socket_service, :workspaces, SocketService.FakeWorkspaces

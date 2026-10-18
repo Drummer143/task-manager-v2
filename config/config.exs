@@ -12,7 +12,10 @@
 import Config
 
 config :socket_service,
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  # None for the ecto.* tasks: SocketService.Repo reads main's database, which only main
+  # creates and migrates
+  ecto_repos: []
 
 # Configure the endpoint
 config :socket_service, SocketServiceWeb.Endpoint,

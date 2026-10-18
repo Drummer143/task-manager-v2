@@ -3,6 +3,7 @@ defmodule SocketService.Socket do
   use Phoenix.Socket
 
   channel "notifications", SocketService.Channels.Notification
+  channel "workspace:*", SocketService.Channels.Workspace
 
   def connect(%{"token" => token}, socket, _connect_info) do
     case SocketService.AuthVerifier.Token.verify_and_validate(token) do

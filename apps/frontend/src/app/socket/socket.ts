@@ -4,23 +4,52 @@ import { useSocketStore } from './store';
 import { userManager } from '../auth/user-manager';
 import type { InboxUpdated } from '@task-manager-v2/api/main/schemas';
 
-export type ChannelId = 'notifications';
+/** A workspace's channel: what changed in its data, for its members. */
+export type WorkspaceChannelId = `workspace:${string}`;
+
+/** `notifications` is the signed-in user's own channel. */
+export type ChannelId = 'notifications' | WorkspaceChannelId;
+
+/**
+ * Some data is stale: the queries tagged with any of `tags` should be fetched again. A signal,
+ * not the data: every client fetches what it may see (backend spec "notifications and refresh"
+ * §2, §5.3).
+ */
+export interface DataChanged {
+  /** What happened, e.g. `workspace.updated`: for logs; the client acts on `tags`. */
+  type: string;
+  /** What is stale: the tags queries declare in `meta.tags`. */
+  tags: string[];
+  /** The `X-Client-Id` of the tab whose request made the change: that tab has the new data. */
+  origin?: string | null;
+}
 
 interface SocketEventsMap {
   notifications: {
     /** What a change did to the user's Inbox (main-service `notifications/updates.rs`). */
     'inbox.updated': InboxUpdated;
+    /** The user's own data is stale, e.g. their list of workspaces. */
+    'data.changed': DataChanged;
+  };
+  workspace: {
+    /** Data of the workspace is stale. */
+    'data.changed': DataChanged;
   };
 }
 
+/** The events of a channel: every workspace's channel has the same ones. */
+type EventsOf<Id extends ChannelId> = Id extends WorkspaceChannelId
+  ? SocketEventsMap['workspace']
+  : SocketEventsMap[Exclude<Id, WorkspaceChannelId>];
+
 interface SubscribeOptions<
   Id extends ChannelId,
-  Type extends keyof SocketEventsMap[Id] & string,
+  Type extends keyof EventsOf<Id> & string,
 > {
   channelId: Id;
   type: Type;
 
-  onMessage: (message: SocketEventsMap[Id][Type]) => void;
+  onMessage: (message: EventsOf<Id>[Type]) => void;
 
   onJoin?: () => void;
 
@@ -136,7 +165,7 @@ export const disconnect = () => {
  */
 export const subscribeToChannel = <
   Id extends ChannelId,
-  Type extends keyof SocketEventsMap[Id] & string,
+  Type extends keyof EventsOf<Id> & string,
 >(
   options: SubscribeOptions<Id, Type>,
 ) => {

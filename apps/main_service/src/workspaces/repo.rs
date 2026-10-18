@@ -396,6 +396,23 @@ pub async fn get_member_in_workspace<'a>(
     .await
 }
 
+/// The users who are members of the workspace now: whom its changes are sent to.
+pub async fn get_member_ids<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    workspace_id: Uuid,
+) -> Result<Vec<Uuid>, sqlx::Error> {
+    sqlx::query_scalar::<_, Uuid>(
+        "SELECT user_id
+        FROM members
+        WHERE workspace_id = $1
+            AND deactivated_at IS NULL
+        ",
+    )
+    .bind(workspace_id)
+    .fetch_all(executor)
+    .await
+}
+
 // SLUGS
 
 pub async fn find_similar_slugs<'a>(
@@ -962,5 +979,33 @@ mod tests {
                 .await
                 .unwrap()
         );
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn member_ids_are_the_active_members_of_that_workspace_only(pool: PgPool) {
+        let owner = user(&pool).await;
+        let workspace = create(&pool, owner, "verso-team").await;
+        create(&pool, user(&pool).await, "other-team").await;
+
+        let member = user(&pool).await;
+        let deactivated = user(&pool).await;
+        for (user_id, deactivated_at) in [(member, None), (deactivated, Some(chrono::Utc::now()))] {
+            sqlx::query(
+                "INSERT INTO members (workspace_id, user_id, deactivated_at) VALUES ($1, $2, $3)",
+            )
+            .bind(workspace.id)
+            .bind(user_id)
+            .bind(deactivated_at)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        let mut ids = get_member_ids(&pool, workspace.id).await.unwrap();
+        ids.sort();
+        let mut expected = vec![owner, member];
+        expected.sort();
+        assert_eq!(ids, expected);
     }
 }

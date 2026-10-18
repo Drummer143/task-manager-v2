@@ -8,4 +8,5 @@ pub mod middleware;
 pub mod repo;
 pub mod router;
 pub mod service;
+pub mod updates;
 pub mod utils;

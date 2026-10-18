@@ -4,11 +4,12 @@ use uuid::Uuid;
 
 use crate::{
     app_state::AppState,
+    shared::extractors::ClientId,
     workspaces::{
         dto::WorkspaceResponse,
         repo::{self, InitWorkspaceResponse},
         service::{self, CreateWorkspaceRequest},
-        utils,
+        updates, utils,
     },
 };
 
@@ -35,6 +36,7 @@ const SLUG_CONSTRAINT: &str = "workspaces_slug_key";
 )]
 pub async fn create_workspace(
     State(state): State<AppState>,
+    ClientId(origin): ClientId,
     Extension(user_id): Extension<Uuid>,
     ApiJson(body): ApiJson<CreateWorkspaceRequest>,
 ) -> error_handlers::Result<(StatusCode, Json<WorkspaceResponse>)> {
@@ -87,10 +89,14 @@ pub async fn create_workspace(
     })?;
 
     match created {
-        InitWorkspaceResponse::Created(workspace) => Ok((
-            StatusCode::CREATED,
-            Json(WorkspaceResponse::from(workspace)),
-        )),
+        InitWorkspaceResponse::Created(workspace) => {
+            updates::publish_created(&state.signals, user_id, origin).await;
+
+            Ok((
+                StatusCode::CREATED,
+                Json(WorkspaceResponse::from(workspace)),
+            ))
+        }
         InitWorkspaceResponse::Existed(workspace) => {
             let is_owner = repo::get_member_in_workspace(&state.pool, user_id, workspace.id)
                 .await

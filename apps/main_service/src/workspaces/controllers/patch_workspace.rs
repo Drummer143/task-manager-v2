@@ -16,10 +16,13 @@ use crate::{
         self,
         dto::{Entity, FieldChange, FieldConflict},
     },
+    shared::extractors::ClientId,
+    signals::Signals,
     workspaces::{
         dto::{ChangeSet, WorkspaceResponse, fields},
         middleware::WorkspaceContext,
         repo::{self, WorkspaceFields},
+        updates,
         utils::{validate_task_prefix, validate_workspace_name, validate_workspace_slug},
     },
 };
@@ -58,6 +61,8 @@ pub struct PatchWorkspaceRequest {
 )]
 pub async fn patch_workspace(
     State(pool): State<PgPool>,
+    State(signals): State<Signals>,
+    ClientId(origin): ClientId,
     Extension(workspace_ctx): Extension<WorkspaceContext>,
     ApiJson(body): ApiJson<PatchWorkspaceRequest>,
 ) -> error_handlers::Result<Json<WorkspaceResponse>> {
@@ -169,6 +174,8 @@ pub async fn patch_workspace(
     .await?;
 
     tx.commit().await?;
+
+    updates::publish_updated(&pool, &signals, workspace_id, origin).await;
 
     Ok(Json(WorkspaceResponse::from(updated)))
 }
@@ -330,14 +337,23 @@ mod tests {
         use tower::ServiceExt;
 
         use super::*;
-        use crate::workspaces::{
-            controllers::get_workspace_by_id::get_workspace_by_id,
-            middleware::{load_workspace_context, load_workspace_context_with_deleted},
+        use crate::{
+            signals::Sent,
+            workspaces::{
+                controllers::get_workspace_by_id::get_workspace_by_id,
+                middleware::{load_workspace_context, load_workspace_context_with_deleted},
+            },
         };
+
+        #[derive(Clone, axum::extract::FromRef)]
+        struct TestState {
+            pool: PgPool,
+            signals: Signals,
+        }
 
         /// Like the real router: `GET /` behind the owner-sees-deleted layer, `PATCH /` behind
         /// the default one, on the same path.
-        fn app(pool: &PgPool, user_id: Uuid) -> Router {
+        fn app(pool: &PgPool, signals: &Signals, user_id: Uuid) -> Router {
             let with_deleted = Router::new()
                 .route("/", get(get_workspace_by_id))
                 .route_layer(from_fn_with_state(
@@ -350,7 +366,10 @@ mod tests {
 
             Router::new()
                 .nest("/workspaces/{workspace_id}", with_deleted.merge(live))
-                .with_state(pool.clone())
+                .with_state(TestState {
+                    pool: pool.clone(),
+                    signals: signals.clone(),
+                })
                 .layer(Extension(user_id))
         }
 
@@ -361,17 +380,34 @@ mod tests {
             workspace_id: Uuid,
             body: Option<Value>,
         ) -> (StatusCode, Value) {
-            let request = Request::builder()
+            let signals = Signals::recorded();
+            send_from(pool, &signals, None, user_id, method, workspace_id, body).await
+        }
+
+        /// `send` from the tab `client_id`, keeping the signals in `signals`.
+        async fn send_from(
+            pool: &PgPool,
+            signals: &Signals,
+            client_id: Option<Uuid>,
+            user_id: Uuid,
+            method: &str,
+            workspace_id: Uuid,
+            body: Option<Value>,
+        ) -> (StatusCode, Value) {
+            let mut request = Request::builder()
                 .method(method)
                 .uri(format!("/workspaces/{workspace_id}"))
                 .header("content-type", "application/json");
+            if let Some(client_id) = client_id {
+                request = request.header("X-Client-Id", client_id.to_string());
+            }
             let request = match body {
                 Some(body) => request.body(Body::from(body.to_string())),
                 None => request.body(Body::empty()),
             }
             .unwrap();
 
-            let response = app(pool, user_id).oneshot(request).await.unwrap();
+            let response = app(pool, signals, user_id).oneshot(request).await.unwrap();
             let status = response.status();
             let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
 
@@ -390,6 +426,30 @@ mod tests {
         ) -> (StatusCode, Value) {
             let body = json!({ "baseVersion": base_version, "set": set });
             send(pool, user_id, "PATCH", workspace_id, Some(body)).await
+        }
+
+        /// `edit` from the tab `client_id`: its status and the signals it sent.
+        async fn edit_from(
+            pool: &PgPool,
+            client_id: Uuid,
+            user_id: Uuid,
+            workspace_id: Uuid,
+            base_version: i64,
+            set: Value,
+        ) -> (StatusCode, Vec<Sent>) {
+            let signals = Signals::recorded();
+            let body = json!({ "baseVersion": base_version, "set": set });
+            let (status, _) = send_from(
+                pool,
+                &signals,
+                Some(client_id),
+                user_id,
+                "PATCH",
+                workspace_id,
+                Some(body),
+            )
+            .await;
+            (status, signals.sent())
         }
 
         async fn user(pool: &PgPool) -> Uuid {
@@ -698,6 +758,76 @@ mod tests {
             let (status, _) = edit(&pool, owner, workspace, 1, json!({ "name": "X" })).await;
 
             assert_eq!(status, StatusCode::NOT_FOUND);
+        }
+
+        #[sqlx::test(migrations = "./migrations")]
+        #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+        async fn an_edit_signals_the_workspace_and_every_members_list(pool: PgPool) {
+            let owner = user(&pool).await;
+            let workspace = workspace_of(&pool, owner, "verso-team").await;
+            let member = member_of(&pool, workspace).await;
+            let tab = Uuid::now_v7();
+
+            let (status, sent) = edit_from(
+                &pool,
+                tab,
+                owner,
+                workspace,
+                1,
+                json!({ "name": "Verso Labs" }),
+            )
+            .await;
+
+            assert_eq!(status, StatusCode::OK);
+            let signal = |tags: Value| json!({ "type": "workspace.updated", "tags": tags, "origin": tab.to_string() });
+            assert_eq!(
+                sent[0],
+                Sent {
+                    topic: format!("workspace:{workspace}"),
+                    event: "data.changed".into(),
+                    payload: signal(json!([format!("workspace:{workspace}")])),
+                }
+            );
+            let mut to_members = sent[1..].to_vec();
+            to_members.sort_by(|a, b| a.topic.cmp(&b.topic));
+            let mut expected: Vec<_> = [owner, member]
+                .into_iter()
+                .map(|user_id| Sent {
+                    topic: format!("user:{user_id}"),
+                    event: "data.changed".into(),
+                    payload: signal(json!(["workspaces"])),
+                })
+                .collect();
+            expected.sort_by(|a, b| a.topic.cmp(&b.topic));
+            assert_eq!(to_members, expected);
+        }
+
+        #[sqlx::test(migrations = "./migrations")]
+        #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+        async fn nothing_is_signalled_when_nothing_changed(pool: PgPool) {
+            let owner = user(&pool).await;
+            let workspace = workspace_of(&pool, owner, "verso-team").await;
+            let member = member_of(&pool, workspace).await;
+            let tab = Uuid::now_v7();
+
+            // As it already is, refused, and in conflict
+            let (_, as_it_is) = edit_from(
+                &pool,
+                tab,
+                owner,
+                workspace,
+                1,
+                json!({ "name": "Verso team" }),
+            )
+            .await;
+            let (_, refused) =
+                edit_from(&pool, tab, member, workspace, 1, json!({ "name": "X" })).await;
+            edit(&pool, owner, workspace, 1, json!({ "name": "A" })).await;
+            let (status, conflict) =
+                edit_from(&pool, tab, owner, workspace, 1, json!({ "name": "B" })).await;
+
+            assert_eq!(status, StatusCode::CONFLICT);
+            assert!(as_it_is.is_empty() && refused.is_empty() && conflict.is_empty());
         }
     }
 }

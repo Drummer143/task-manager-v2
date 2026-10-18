@@ -1,7 +1,7 @@
 use anyhow::Context;
 use axum::{
     Router,
-    http::{Method, header},
+    http::{HeaderName, Method, header},
 };
 use mimalloc::MiMalloc;
 use sqlx::postgres::PgPoolOptions;
@@ -85,6 +85,8 @@ async fn main() -> anyhow::Result<()> {
             header::AUTHORIZATION,
             header::ACCEPT,
             error_handlers::trace::REQUEST_ID_HEADER,
+            // Each tab's id, returned in the signals its requests cause (`origin`)
+            HeaderName::from_static("x-client-id"),
         ])
         // The frontend shows it next to errors, so people can quote it
         .expose_headers([error_handlers::trace::REQUEST_ID_HEADER]);
