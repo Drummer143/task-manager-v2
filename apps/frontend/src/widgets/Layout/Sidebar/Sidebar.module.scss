@@ -5,14 +5,20 @@
   min-height: 0;
 }
 
+/* The switcher at the left, ⇤ at the right; on the rail the mark alone, centred. */
 .header {
   display: flex;
   flex: none;
   align-items: center;
-  justify-content: flex-end;
+  gap: var(--sp-2);
   height: var(--canvas-header-height);
-  padding-inline: var(--sp-3);
+  padding-inline: var(--sp-2) var(--sp-3);
   border-bottom: var(--border-width) solid var(--border-hairline);
+
+  .sidebar[data-rail] & {
+    justify-content: center;
+    padding-inline: 0;
+  }
 }
 
 .body {

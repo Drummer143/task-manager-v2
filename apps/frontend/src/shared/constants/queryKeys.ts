@@ -22,6 +22,13 @@ export const QUERY_KEYS = {
     'pinned',
     view,
   ],
+
+  /** The user's workspaces (`GET /workspaces`). */
+  workspaces: ['workspaces'],
+  /** A slug the list did not know, resolved. */
+  workspaceSlug: (slug: string) => ['workspaces', 'slug', slug],
+  /** The user in a workspace (`GET /workspaces/{id}/me`). */
+  workspaceMe: (workspaceId: string) => ['workspaces', workspaceId, 'me'],
 } as const;
 
 /** The tab of a pinned group's key (`inboxPinnedWithView`). */

@@ -6,9 +6,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { useParams } from 'react-router-dom';
 import { useSearchParam } from '../../shared/hooks/useSearchParam';
-import { defaultWorkspaceId } from '../../shared/constants/routes';
+import { useWorkspace } from '../../shared/workspaces';
 import {
   Button,
   EmptyState,
@@ -40,7 +39,7 @@ export const Inbox: React.FC = () => {
 
   const currentView = view ?? 'all';
 
-  const { workspace = defaultWorkspaceId() } = useParams();
+  const { id: workspace } = useWorkspace();
 
   const {
     onReadAll,

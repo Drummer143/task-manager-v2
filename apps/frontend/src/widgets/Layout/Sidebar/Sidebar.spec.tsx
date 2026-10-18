@@ -8,9 +8,21 @@ vi.hoisted(() => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 });
 });
 
+const verso = { id: 'w1', slug: 'verso', name: 'Verso team' };
+
+const switcher = {
+  workspace: verso,
+  workspaces: [verso],
+  user: { id: 'u1', name: 'Alex Kim' },
+  canWorkspaceSettings: false,
+  canInvite: false,
+  onWorkspaceChange: () => undefined,
+  onSignOut: () => undefined,
+};
+
 const Harness: React.FC<{ openInbox: () => void }> = ({ openInbox }) => {
   useSidebarHotkeys(openInbox);
-  return <Sidebar inbox={{ href: '/inbox', unread: 3 }} />;
+  return <Sidebar switcher={switcher} inbox={{ href: '/inbox', unread: 3 }} />;
 };
 
 // The shell's sidebar view, read from the DOM: a render must not write outside the component
@@ -67,6 +79,25 @@ describe('Sidebar', () => {
 
     expect(view()).toBe('expanded');
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Collapse sidebar' }));
+  });
+
+  it('the workspace in the header, and on the rail only its mark', () => {
+    setup();
+    const workspace = () => screen.getByRole('button', { name: 'Verso team, workspace menu' });
+    expect(workspace().textContent).toContain('Verso team');
+
+    act(() => toggleSidebar());
+
+    expect(workspace().textContent).toBe('V');
+  });
+
+  it('the workspace keeps focus across the switch, as a row does', () => {
+    setup();
+    act(() => screen.getByRole('button', { name: 'Verso team, workspace menu' }).focus());
+
+    act(() => toggleSidebar());
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Verso team, workspace menu' }));
   });
 
   it('a row that is in both views keeps focus across the switch', () => {

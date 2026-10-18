@@ -4,7 +4,8 @@ import { CallbackScreen, LoginScreen, RequireAuth } from './auth';
 import { Layout } from '../widgets/Layout';
 import { lazySuspense } from '../shared/utils/lazySuspense';
 import { Root } from './Root';
-import { ROUTES, defaultWorkspaceId, inboxPath } from '../shared/constants/routes';
+import { ROUTES, inboxPath } from '../shared/constants/routes';
+import { WorkspaceEntry } from './WorkspaceEntry';
 
 const Inbox = lazySuspense(() =>
   import('../pages/Inbox').then((m) => ({ default: m.Inbox })),
@@ -15,9 +16,9 @@ const Inbox = lazySuspense(() =>
  * route resolves against the unmatched rest and redirects forever (`/ws/x/inbox/inbox/…`).
  */
 const ToSpaceInbox: React.FC = () => {
-  const { workspace = defaultWorkspaceId() } = useParams();
+  const { workspaceSlug = '' } = useParams();
 
-  return <Navigate to={inboxPath(workspace)} replace />;
+  return <Navigate to={inboxPath(workspaceSlug)} replace />;
 };
 
 /**
@@ -35,7 +36,7 @@ export const router = createBrowserRouter([
         Component: RequireAuth,
         children: [
           {
-            // The layout reads the space from the path: the sidebar and its links are the space's
+            // The layout resolves the workspace of the path: the sidebar and its links are its
             path: ROUTES.WORKSPACE,
             Component: Layout,
             children: [
@@ -45,10 +46,8 @@ export const router = createBrowserRouter([
               { path: '*', Component: ToSpaceInbox },
             ],
           },
-          {
-            path: '/',
-            element: <Navigate to={inboxPath(defaultWorkspaceId())} replace />,
-          },
+          // No workspace in the address: the last one, or the first
+          { path: '/', Component: WorkspaceEntry },
         ],
       },
     ],

@@ -3,6 +3,7 @@ import { IconButton, toggleSidebar, useShell } from '@task-manager-v2/ui-kit';
 import { InboxIcon, SidebarCollapseIcon, SidebarExpandIcon } from '@task-manager-v2/ui-kit/icons';
 import { NavItem } from '../../../shared/ui/NavItem';
 import { SIDEBAR_TOGGLE_KEYS, INBOX_KEYS } from './hotkeys';
+import { WorkspaceSwitcher, type WorkspaceSwitcherProps } from './WorkspaceSwitcher';
 import styles from './Sidebar.module.scss';
 
 export interface SidebarInboxProps {
@@ -13,28 +14,36 @@ export interface SidebarInboxProps {
 }
 
 export interface SidebarProps {
+  /** The workspace and the account, in the header; the rail takes only the mark. */
+  switcher: Omit<WorkspaceSwitcherProps, 'rail'>;
   inbox: SidebarInboxProps;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ inbox }) => {
+/**
+ * What is in both views under the same key, so focus stays on it across collapsing: a link by
+ * its href, anything else by `data-sidebar-key`.
+ */
+const keyOf = (element: Element) => element.getAttribute('href') ?? element.getAttribute('data-sidebar-key');
+
+export const Sidebar: React.FC<SidebarProps> = ({ switcher, inbox }) => {
   const { sidebarView } = useShell();
   const rail = sidebarView === 'collapsed';
 
   const rootRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement & HTMLAnchorElement>(null);
 
-  const lastFocus = useRef<{ inside: boolean; href: string | null }>({ inside: false, href: null });
+  const lastFocus = useRef<{ inside: boolean; key: string | null }>({ inside: false, key: null });
 
   useLayoutEffect(() => {
     const root = rootRef.current;
-    const { inside, href } = lastFocus.current;
+    const { inside, key } = lastFocus.current;
 
     if (!root || !inside || root.contains(document.activeElement)) {
       return;
     }
 
-    const again = href
-      ? [...root.querySelectorAll<HTMLAnchorElement>('a[href]')].find((link) => link.getAttribute('href') === href)
+    const again = key
+      ? [...root.querySelectorAll<HTMLElement>('a[href], [data-sidebar-key]')].find((element) => keyOf(element) === key)
       : undefined;
 
     (again ?? toggleRef.current)?.focus({ preventScroll: true });
@@ -57,15 +66,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ inbox }) => {
       className={styles.sidebar}
       data-rail={rail ? '' : undefined}
       onFocus={(event) => {
-        lastFocus.current = { inside: true, href: event.target.getAttribute('href') };
+        lastFocus.current = { inside: true, key: keyOf(event.target) };
       }}
       onBlur={(event) => {
         if (!rootRef.current?.contains(event.relatedTarget)) {
-          lastFocus.current = { inside: false, href: null };
+          lastFocus.current = { inside: false, key: null };
         }
       }}
     >
       <div className={styles.header}>
+        <WorkspaceSwitcher {...switcher} rail={rail} />
+
         {!rail && (
           <IconButton
             ref={toggleRef}

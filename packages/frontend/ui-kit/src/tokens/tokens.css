@@ -371,6 +371,8 @@
   --sidebar-collapsed: 48px;
   /* A rail button (Sidebar · 05): a square centred in the collapsed column. */
   --rail-button: 32px;
+  /* The workspace's sign: the switcher, its menu (Sidebar · 01). */
+  --workspace-mark: 24px;
   --panel-width: 420px;
   --panel-min: 360px;
   --panel-max: 640px;
