@@ -44,10 +44,10 @@ pub async fn create_workspace(
     let slug = body.slug.as_deref().map(str::trim);
     let task_prefix = body.task_prefix.as_deref().map(str::trim);
 
-    service::validate_create_workspace_request(
+    service::validate_create_workspace_fields(
         &state.pool,
         Some(&body.id),
-        name,
+        Some(name),
         slug,
         task_prefix,
     )
@@ -80,7 +80,8 @@ pub async fn create_workspace(
     .await
     .map_err(|error| match error {
         sqlx::Error::Database(db) if db.constraint() == Some(SLUG_CONSTRAINT) => {
-            service::slug_taken()
+            ApiError::new(ErrorCode::Conflict)
+                .with_field_errors(vec![FieldError::new("slug", ErrorCode::Taken)])
         }
         other => ApiError::from(other),
     })?;

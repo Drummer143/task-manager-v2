@@ -1,6 +1,6 @@
 use axum::Router;
 use axum::middleware::from_fn_with_state;
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 use utils::auth_middleware::{InternalAuthState, auth_guard};
 
 use crate::app_state::AppState;
@@ -9,6 +9,7 @@ use crate::workspaces::controllers::create::create_workspace;
 use crate::workspaces::controllers::get_me_in_workspace::get_me_in_workspace;
 use crate::workspaces::controllers::get_user_workspaces::get_user_workspaces;
 use crate::workspaces::controllers::get_workspace_by_id::get_workspace_by_id;
+use crate::workspaces::controllers::patch_workspace::patch_workspace;
 use crate::workspaces::controllers::resolve_slug::resolve_slug;
 use crate::workspaces::middleware::{load_workspace_context, load_workspace_context_with_deleted};
 
@@ -26,6 +27,7 @@ pub fn router(auth: InternalAuthState, state: AppState) -> Router<AppState> {
         ));
 
     let live = Router::new()
+        .route("/", patch(patch_workspace))
         .route("/me", get(get_me_in_workspace))
         .route_layer(from_fn_with_state(state, load_workspace_context));
 

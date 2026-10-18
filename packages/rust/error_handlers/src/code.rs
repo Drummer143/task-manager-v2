@@ -102,6 +102,27 @@ pub enum ErrorCode {
         /// The missing capability, e.g. `workspace.settings`.
         capability: String,
     },
+    /// The edit sets no field: there is nothing to change.
+    EmptyRequestBody,
+    /// Someone else changed these fields after the version the edit was made on. Nothing was
+    /// applied; reload the resource and edit again.
+    EditConflict {
+        /// The conflicting fields, each with its latest change.
+        conflicts: Vec<EditedField>,
+    },
+}
+
+/// A field changed by someone else; a param of [`ErrorCode::EditConflict`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[serde(rename_all = "camelCase")]
+pub struct EditedField {
+    /// The API's name of the field, e.g. `slug`.
+    pub field: String,
+    /// The user who changed it last; `None` once they deleted their account.
+    pub by: Option<String>,
+    /// When it was changed last, RFC 3339.
+    pub at: String,
 }
 
 impl ErrorCode {
@@ -151,6 +172,14 @@ impl ErrorCode {
             Self::AccessDenied {
                 capability: "workspace.settings".to_string(),
             },
+            Self::EmptyRequestBody,
+            Self::EditConflict {
+                conflicts: vec![EditedField {
+                    field: "slug".into(),
+                    by: Some("0192f1e0-7b1a-7c3e-9a51-3d1f0e2b4c5d".into()),
+                    at: "2026-10-18T10:00:00Z".into(),
+                }],
+            },
         ]
     }
 
@@ -164,12 +193,14 @@ impl ErrorCode {
             | Self::FileHashMismatch
             | Self::InvalidChunkSize { .. }
             | Self::VerificationFailed
-            | Self::TooManyItems { .. } => 422,
+            | Self::TooManyItems { .. }
+            | Self::EmptyRequestBody => 422,
             Self::NotFound => 404,
             Self::Conflict
             | Self::UploadWrongStep { .. }
             | Self::UploadIncomplete
-            | Self::Taken => 409,
+            | Self::Taken
+            | Self::EditConflict { .. } => 409,
             Self::Unauthorized => 401,
             Self::Forbidden
             | Self::UploadTokenInvalid
@@ -223,6 +254,8 @@ impl ErrorCode {
             Self::ValueTooShort { .. } => "VALUE_TOO_SHORT",
             Self::Taken => "TAKEN",
             Self::AccessDenied { .. } => "ACCESS_DENIED",
+            Self::EmptyRequestBody => "EMPTY_REQUEST_BODY",
+            Self::EditConflict { .. } => "EDIT_CONFLICT",
         }
     }
 

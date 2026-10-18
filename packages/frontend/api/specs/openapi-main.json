@@ -653,6 +653,64 @@
             "description": "Internal server error"
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "patchWorkspace",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The workspace as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "No `workspace.settings`"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "409": {
+            "description": "`EDIT_CONFLICT`: someone changed these fields since; or the slug is taken"
+          },
+          "422": {
+            "description": "Invalid fields, nothing to set, or a version from the future"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
       }
     },
     "/workspaces/{workspace_id}/me": {
@@ -797,6 +855,38 @@
           }
         }
       },
+      "ChangeSet": {
+        "type": "object",
+        "description": "The fields of a workspace an edit sets; a field left out stays as it is.",
+        "properties": {
+          "iconAssetId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "`null` removes the icon; leaving the field out keeps it."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "taskPrefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "CreateAssetRequest": {
         "type": "object",
         "required": [
@@ -900,6 +990,31 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "EditedField": {
+        "type": "object",
+        "description": "A field changed by someone else; a param of [`ErrorCode::EditConflict`].",
+        "required": [
+          "field",
+          "at"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "description": "When it was changed last, RFC 3339."
+          },
+          "by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The user who changed it last; `None` once they deleted their account."
+          },
+          "field": {
+            "type": "string",
+            "description": "The API's name of the field, e.g. `slug`."
           }
         }
       },
@@ -1564,6 +1679,53 @@
                 }
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "The edit sets no field: there is nothing to change.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EMPTY_REQUEST_BODY"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Someone else changed these fields after the version the edit was made on. Nothing was\napplied; reload the resource and edit again.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EDIT_CONFLICT"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "Someone else changed these fields after the version the edit was made on. Nothing was\napplied; reload the resource and edit again.",
+                "required": [
+                  "conflicts"
+                ],
+                "properties": {
+                  "conflicts": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/EditedField"
+                    },
+                    "description": "The conflicting fields, each with its latest change."
+                  }
+                }
+              }
+            }
           }
         ],
         "description": "Every error the API can return.\n\nSerialized as `{\"code\": \"FILE_TOO_LARGE\", \"params\": {...}}`; variants without data have no\n`params`. Codes are a public contract: never rename one, only add or deprecate."
@@ -1918,6 +2080,23 @@
               "null"
             ],
             "description": "Pass it as `cursor` to get the next page; `null` on the last page."
+          }
+        }
+      },
+      "PatchWorkspaceRequest": {
+        "type": "object",
+        "required": [
+          "baseVersion",
+          "set"
+        ],
+        "properties": {
+          "baseVersion": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The `version` the edit was made on."
+          },
+          "set": {
+            "$ref": "#/components/schemas/ChangeSet"
           }
         }
       },

@@ -20,20 +20,24 @@ pub struct CreateWorkspaceRequest {
 
 // WORKSPACE
 
-pub async fn validate_create_workspace_request(
+pub async fn validate_create_workspace_fields(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     id: Option<&Uuid>,
-    name: &str,
+    name: Option<&str>,
     slug: Option<&str>,
     task_prefix: Option<&str>,
 ) -> error_handlers::Result<()> {
     let mut errors: Vec<FieldError> = Vec::new();
 
-    if let Some(id) = id && id.get_version_num() != 7 {
+    if let Some(id) = id
+        && id.get_version_num() != 7
+    {
         errors.push(FieldError::new("id", ErrorCode::InvalidFormat));
     }
 
-    if let Err(code) = validate_workspace_name(name) {
+    if let Some(name) = name
+        && let Err(code) = validate_workspace_name(name)
+    {
         errors.push(FieldError::new("name", code));
     }
 
@@ -56,14 +60,9 @@ pub async fn validate_create_workspace_request(
     if let Some(slug) = slug
         && repo::is_slug_taken(executor, slug).await?
     {
-        return Err(slug_taken());
+        return Err(ApiError::new(ErrorCode::Conflict)
+            .with_field_errors(vec![FieldError::new("slug", ErrorCode::Taken)]));
     }
 
     Ok(())
-}
-
-/// `409` with `slug: TAKEN`: another workspace has it, or a live alias does.
-pub fn slug_taken() -> ApiError {
-    ApiError::new(ErrorCode::Conflict)
-        .with_field_errors(vec![FieldError::new("slug", ErrorCode::Taken)])
 }

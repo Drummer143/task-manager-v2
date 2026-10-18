@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Deserializer, Serialize};
 use sql_models::workspace::model::{Role, Workspace};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -94,4 +94,44 @@ pub struct CapabilitiesResponse {
     pub workspace_transfer: bool,
     #[serde(rename = "billing.manage")]
     pub billing_manage: bool,
+}
+
+/// The fields of a workspace an edit sets; a field left out stays as it is.
+#[derive(Debug, Default, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangeSet {
+    pub name: Option<String>,
+    pub slug: Option<String>,
+    pub task_prefix: Option<String>,
+    /// `null` removes the icon; leaving the field out keeps it.
+    #[serde(default, deserialize_with = "present")]
+    #[schema(value_type = Option<Uuid>, nullable)]
+    pub icon_asset_id: Option<Option<Uuid>>,
+}
+
+/// Tells a field sent as `null` (`Some(None)`) from a field left out (`None`, by `default`).
+fn present<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
+}
+
+/// The names of a workspace's fields in the API: in validation errors, edit conflicts and
+/// `field_changes`.
+pub mod fields {
+    pub const NAME: &str = "name";
+    pub const SLUG: &str = "slug";
+    pub const TASK_PREFIX: &str = "taskPrefix";
+    pub const ICON_ASSET_ID: &str = "iconAssetId";
+}
+
+impl ChangeSet {
+    pub fn is_empty(&self) -> bool {
+        self.name.is_none()
+            && self.slug.is_none()
+            && self.task_prefix.is_none()
+            && self.icon_asset_id.is_none()
+    }
 }

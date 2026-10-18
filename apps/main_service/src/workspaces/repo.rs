@@ -229,6 +229,112 @@ pub async fn get_user_workspaces<'a>(
     .await
 }
 
+/// The workspace, locked until the transaction ends: an edit reads, checks and writes it with no
+/// other edit in between.
+pub async fn lock_workspace<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    workspace_id: Uuid,
+) -> Result<Workspace, sqlx::Error> {
+    sqlx::query_as::<_, Workspace>("SELECT * FROM workspaces WHERE id = $1 FOR UPDATE")
+        .bind(workspace_id)
+        .fetch_one(executor)
+        .await
+}
+
+/// The fields of an edit; each is the new value, or the current one when it does not change.
+pub struct WorkspaceFields<'a> {
+    pub name: &'a str,
+    pub slug: &'a str,
+    pub task_prefix: &'a str,
+    pub icon_asset_id: Option<Uuid>,
+}
+
+/// Writes the fields and bumps the version.
+pub async fn update_workspace<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    workspace_id: Uuid,
+    fields: WorkspaceFields<'_>,
+) -> Result<Workspace, sqlx::Error> {
+    sqlx::query_as::<_, Workspace>(
+        "UPDATE workspaces
+        SET name = $2,
+            slug = $3,
+            task_prefix = $4,
+            icon_asset_id = $5,
+            version = version + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+        ",
+    )
+    .bind(workspace_id)
+    .bind(fields.name)
+    .bind(fields.slug)
+    .bind(fields.task_prefix)
+    .bind(fields.icon_asset_id)
+    .fetch_one(executor)
+    .await
+}
+
+/// After a slug change: the old slug redirects for 90 days (access spec §9.2), and an alias of
+/// the new one, taken back by its workspace, goes.
+pub async fn move_slug(
+    connection: &mut sqlx::PgConnection,
+    workspace_id: Uuid,
+    old_slug: &str,
+    new_slug: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM workspace_slug_aliases WHERE slug = $1")
+        .bind(new_slug)
+        .execute(&mut *connection)
+        .await?;
+
+    // An expired alias of the same slug may still be there: it is replaced
+    sqlx::query(
+        "INSERT INTO workspace_slug_aliases (slug, workspace_id, expires_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP + INTERVAL '90 days')
+        ON CONFLICT (slug) DO UPDATE
+        SET workspace_id = EXCLUDED.workspace_id, expires_at = EXCLUDED.expires_at
+        ",
+    )
+    .bind(old_slug)
+    .bind(workspace_id)
+    .execute(&mut *connection)
+    .await
+    .map(|_| ())
+}
+
+/// After a task prefix change: the current one is closed, the new one opened, or reopened when
+/// the workspace had it before (access spec §1.1).
+pub async fn switch_task_prefix(
+    connection: &mut sqlx::PgConnection,
+    workspace_id: Uuid,
+    new_prefix: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE workspace_prefixes
+        SET used_until = CURRENT_TIMESTAMP
+        WHERE workspace_id = $1 AND used_until IS NULL
+        ",
+    )
+    .bind(workspace_id)
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
+        "INSERT INTO workspace_prefixes (workspace_id, prefix)
+        VALUES ($1, $2)
+        ON CONFLICT (workspace_id, prefix) DO UPDATE
+        SET used_from = CURRENT_TIMESTAMP, used_until = NULL
+        ",
+    )
+    .bind(workspace_id)
+    .bind(new_prefix)
+    .execute(&mut *connection)
+    .await
+    .map(|_| ())
+}
+
 // ROLES
 
 pub async fn get_roles_by_workspace_ids<'a>(

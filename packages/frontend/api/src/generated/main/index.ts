@@ -16,6 +16,7 @@ import type {
   MeResponse,
   Notification,
   NotificationPage,
+  PatchWorkspaceRequest,
   PinnedNotifications,
   ReadAllNotificationsRequest,
   ReadAllNotificationsResponse,
@@ -217,6 +218,18 @@ export const getWorkspaceById = (
       options);
     }
 
+export const patchWorkspace = (
+    workspaceId: string,
+    patchWorkspaceRequest: PatchWorkspaceRequest,
+ options?: SecondParameter<typeof mainFetcher<WorkspaceResponse>>,) => {
+      return mainFetcher<WorkspaceResponse>(
+      {url: `/workspaces/${workspaceId}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchWorkspaceRequest
+    },
+      options);
+    }
+
 export const getMeInWorkspace = (
     workspaceId: string,
  options?: SecondParameter<typeof mainFetcher<GetMeInWorkspaceResponse>>,) => {
@@ -242,4 +255,5 @@ export type CreateWorkspaceResult = NonNullable<Awaited<ReturnType<typeof create
 export type ResolveSlugResult = NonNullable<Awaited<ReturnType<typeof resolveSlug>>>
 export type CheckSlugAvailableResult = NonNullable<Awaited<ReturnType<typeof checkSlugAvailable>>>
 export type GetWorkspaceByIdResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceById>>>
+export type PatchWorkspaceResult = NonNullable<Awaited<ReturnType<typeof patchWorkspace>>>
 export type GetMeInWorkspaceResult = NonNullable<Awaited<ReturnType<typeof getMeInWorkspace>>>

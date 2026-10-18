@@ -425,5 +425,40 @@
       "status": 403,
       "type": "urn:task-manager:error:access-denied"
     }
+  },
+  {
+    "code": "EMPTY_REQUEST_BODY",
+    "status": 422,
+    "type": "urn:task-manager:error:empty-request-body",
+    "description": "The edit sets no field: there is nothing to change.",
+    "params": [],
+    "example": {
+      "code": "EMPTY_REQUEST_BODY",
+      "status": 422,
+      "type": "urn:task-manager:error:empty-request-body"
+    }
+  },
+  {
+    "code": "EDIT_CONFLICT",
+    "status": 409,
+    "type": "urn:task-manager:error:edit-conflict",
+    "description": "Someone else changed these fields after the version the edit was made on. Nothing was\napplied; reload the resource and edit again.",
+    "params": [
+      "conflicts"
+    ],
+    "example": {
+      "code": "EDIT_CONFLICT",
+      "params": {
+        "conflicts": [
+          {
+            "at": "2026-10-18T10:00:00Z",
+            "by": "0192f1e0-7b1a-7c3e-9a51-3d1f0e2b4c5d",
+            "field": "slug"
+          }
+        ]
+      },
+      "status": 409,
+      "type": "urn:task-manager:error:edit-conflict"
+    }
   }
 ]

@@ -3,4 +3,5 @@ pub mod create;
 pub mod get_me_in_workspace;
 pub mod get_user_workspaces;
 pub mod get_workspace_by_id;
+pub mod patch_workspace;
 pub mod resolve_slug;
