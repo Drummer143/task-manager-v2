@@ -654,6 +654,55 @@
           }
         }
       },
+      "delete": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Deletes the workspace: everyone but the owner loses it at once; the owner can restore it for\n30 days, and its slug stays taken meanwhile. Deleting it again changes nothing.",
+        "operationId": "deleteWorkspace",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Deleted, now or before"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Not the owner: no `workspace.delete`"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "422": {
+            "description": "`confirmName` is not the workspace's name"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
       "patch": {
         "tags": [
           "Workspaces"
@@ -744,6 +793,95 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}/restore": {
+      "post": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Brings a deleted workspace back, as it was, for every member. Only its owner, within 30 days\nof the delete; then it is `404` (the layer, `load_workspace_context_with_deleted`). Restoring\na workspace that is not deleted changes nothing.",
+        "operationId": "restoreWorkspace",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The workspace as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Not the owner: no `workspace.delete`"
+          },
+          "404": {
+            "description": "Workspace not found, or deleted more than 30 days ago"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}/stats": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "getWorkspaceStats",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workspace stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "A guest: only the owner and members with a role see them"
           },
           "404": {
             "description": "Workspace not found"
@@ -990,6 +1128,18 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "DeleteWorkspaceRequest": {
+        "type": "object",
+        "required": [
+          "confirmName"
+        ],
+        "properties": {
+          "confirmName": {
+            "type": "string",
+            "description": "The workspace's name, typed by the owner to confirm. Case and the spaces around do not\nmatter."
           }
         }
       },
@@ -1726,6 +1876,21 @@
                 }
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "The value is not the one it must repeat, e.g. the workspace's name typed to confirm its\ndeletion. Used in per-field errors.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "MISMATCH"
+                ]
+              }
+            }
           }
         ],
         "description": "Every error the API can return.\n\nSerialized as `{\"code\": \"FILE_TOO_LARGE\", \"params\": {...}}`; variants without data have no\n`params`. Codes are a public contract: never rename one, only add or deprecate."
@@ -2254,6 +2419,30 @@
           "slug": {
             "type": "string",
             "description": "The current slug: when it differs from the asked one, the frontend replaces the address."
+          }
+        }
+      },
+      "StatsResponse": {
+        "type": "object",
+        "description": "What the workspace holds, for the texts of the Delete and Transfer dialogs: \"This will delete\n64 pages and 1,284 tasks for all 12 members\".",
+        "required": [
+          "members",
+          "pages",
+          "tasks"
+        ],
+        "properties": {
+          "members": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Active members, the owner among them."
+          },
+          "pages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "tasks": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

@@ -241,15 +241,16 @@ pub async fn lock_workspace<'a>(
         .await
 }
 
-/// The fields of an edit; each is the new value, or the current one when it does not change.
+/// The fields of a change; each is the new value, or the current one when it does not change.
 pub struct WorkspaceFields<'a> {
     pub name: &'a str,
     pub slug: &'a str,
     pub task_prefix: &'a str,
     pub icon_asset_id: Option<Uuid>,
+    pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-/// Writes the fields and bumps the version.
+/// Writes the fields and bumps the version (`service::update_workspace` is the one caller).
 pub async fn update_workspace<'a>(
     executor: impl Executor<'a, Database = sqlx::Postgres>,
     workspace_id: Uuid,
@@ -261,6 +262,7 @@ pub async fn update_workspace<'a>(
             slug = $3,
             task_prefix = $4,
             icon_asset_id = $5,
+            deleted_at = $6,
             version = version + 1,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
@@ -272,6 +274,7 @@ pub async fn update_workspace<'a>(
     .bind(fields.slug)
     .bind(fields.task_prefix)
     .bind(fields.icon_asset_id)
+    .bind(fields.deleted_at)
     .fetch_one(executor)
     .await
 }
@@ -391,6 +394,22 @@ pub async fn get_member_in_workspace<'a>(
         ",
     )
     .bind(user_id)
+    .bind(workspace_id)
+    .fetch_one(executor)
+    .await
+}
+
+pub async fn count_active_members_in_workspace<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    workspace_id: Uuid,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*)
+        FROM members
+        WHERE workspace_id = $1
+            AND deactivated_at IS NULL
+        ",
+    )
     .bind(workspace_id)
     .fetch_one(executor)
     .await

@@ -26,6 +26,9 @@ use utils::swagger::SecurityAddon;
         crate::workspaces::controllers::patch_workspace::patch_workspace,
         crate::workspaces::controllers::resolve_slug::resolve_slug,
         crate::workspaces::controllers::check_slug_available::check_slug_available,
+        crate::workspaces::controllers::stats::get_stats,
+        crate::workspaces::controllers::soft_delete_workspace::soft_delete_workspace,
+        crate::workspaces::controllers::restore_workspace::restore_workspace,
     ),
     components(schemas(
         error_handlers::ErrorBody,

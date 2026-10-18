@@ -162,4 +162,6 @@ export type ErrorCode = {
   /** The conflicting fields, each with its latest change. */
   conflicts: EditedField[];
 };
+} | {
+  code: 'MISMATCH';
 };

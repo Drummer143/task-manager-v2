@@ -110,6 +110,9 @@ pub enum ErrorCode {
         /// The conflicting fields, each with its latest change.
         conflicts: Vec<EditedField>,
     },
+    /// The value is not the one it must repeat, e.g. the workspace's name typed to confirm its
+    /// deletion. Used in per-field errors.
+    Mismatch,
 }
 
 /// A field changed by someone else; a param of [`ErrorCode::EditConflict`].
@@ -180,6 +183,7 @@ impl ErrorCode {
                     at: "2026-10-18T10:00:00Z".into(),
                 }],
             },
+            Self::Mismatch,
         ]
     }
 
@@ -194,7 +198,8 @@ impl ErrorCode {
             | Self::InvalidChunkSize { .. }
             | Self::VerificationFailed
             | Self::TooManyItems { .. }
-            | Self::EmptyRequestBody => 422,
+            | Self::EmptyRequestBody
+            | Self::Mismatch => 422,
             Self::NotFound => 404,
             Self::Conflict
             | Self::UploadWrongStep { .. }
@@ -256,6 +261,7 @@ impl ErrorCode {
             Self::AccessDenied { .. } => "ACCESS_DENIED",
             Self::EmptyRequestBody => "EMPTY_REQUEST_BODY",
             Self::EditConflict { .. } => "EDIT_CONFLICT",
+            Self::Mismatch => "MISMATCH",
         }
     }
 

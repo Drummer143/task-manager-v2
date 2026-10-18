@@ -11,6 +11,7 @@ import type {
   CreateAssetResponse,
   CreateNotificationDto,
   CreateWorkspaceRequest,
+  DeleteWorkspaceRequest,
   GetMeInWorkspaceResponse,
   ListNotificationsParams,
   MeResponse,
@@ -24,6 +25,7 @@ import type {
   ResolveSlugParams,
   SlugAvailableResponse,
   SlugResponse,
+  StatsResponse,
   SummaryResponse,
   UnarchiveNotificationRequest,
   UnreadNotificationRequest,
@@ -218,6 +220,22 @@ export const getWorkspaceById = (
       options);
     }
 
+/**
+ * @summary Deletes the workspace: everyone but the owner loses it at once; the owner can restore it for
+30 days, and its slug stays taken meanwhile. Deleting it again changes nothing.
+ */
+export const deleteWorkspace = (
+    workspaceId: string,
+    deleteWorkspaceRequest: DeleteWorkspaceRequest,
+ options?: SecondParameter<typeof mainFetcher<void>>,) => {
+      return mainFetcher<void>(
+      {url: `/workspaces/${workspaceId}`, method: 'DELETE',
+      headers: {'Content-Type': 'application/json', },
+      data: deleteWorkspaceRequest
+    },
+      options);
+    }
+
 export const patchWorkspace = (
     workspaceId: string,
     patchWorkspaceRequest: PatchWorkspaceRequest,
@@ -239,6 +257,29 @@ export const getMeInWorkspace = (
       options);
     }
 
+/**
+ * @summary Brings a deleted workspace back, as it was, for every member. Only its owner, within 30 days
+of the delete; then it is `404` (the layer, `load_workspace_context_with_deleted`). Restoring
+a workspace that is not deleted changes nothing.
+ */
+export const restoreWorkspace = (
+    workspaceId: string,
+ options?: SecondParameter<typeof mainFetcher<WorkspaceResponse>>,) => {
+      return mainFetcher<WorkspaceResponse>(
+      {url: `/workspaces/${workspaceId}/restore`, method: 'POST'
+    },
+      options);
+    }
+
+export const getWorkspaceStats = (
+    workspaceId: string,
+ options?: SecondParameter<typeof mainFetcher<StatsResponse>>,) => {
+      return mainFetcher<StatsResponse>(
+      {url: `/workspaces/${workspaceId}/stats`, method: 'GET'
+    },
+      options);
+    }
+
 export type CreateAssetResult = NonNullable<Awaited<ReturnType<typeof createAsset>>>
 export type GetMeResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
 export type ListNotificationsResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
@@ -255,5 +296,8 @@ export type CreateWorkspaceResult = NonNullable<Awaited<ReturnType<typeof create
 export type ResolveSlugResult = NonNullable<Awaited<ReturnType<typeof resolveSlug>>>
 export type CheckSlugAvailableResult = NonNullable<Awaited<ReturnType<typeof checkSlugAvailable>>>
 export type GetWorkspaceByIdResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceById>>>
+export type DeleteWorkspaceResult = NonNullable<Awaited<ReturnType<typeof deleteWorkspace>>>
 export type PatchWorkspaceResult = NonNullable<Awaited<ReturnType<typeof patchWorkspace>>>
 export type GetMeInWorkspaceResult = NonNullable<Awaited<ReturnType<typeof getMeInWorkspace>>>
+export type RestoreWorkspaceResult = NonNullable<Awaited<ReturnType<typeof restoreWorkspace>>>
+export type GetWorkspaceStatsResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceStats>>>

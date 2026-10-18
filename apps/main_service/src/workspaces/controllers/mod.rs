@@ -5,3 +5,6 @@ pub mod get_user_workspaces;
 pub mod get_workspace_by_id;
 pub mod patch_workspace;
 pub mod resolve_slug;
+pub mod restore_workspace;
+pub mod soft_delete_workspace;
+pub mod stats;

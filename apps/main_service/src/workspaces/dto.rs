@@ -125,6 +125,8 @@ pub mod fields {
     pub const SLUG: &str = "slug";
     pub const TASK_PREFIX: &str = "taskPrefix";
     pub const ICON_ASSET_ID: &str = "iconAssetId";
+    /// Set by delete, cleared by restore; never sent in an edit.
+    pub const DELETED_AT: &str = "deletedAt";
 }
 
 impl ChangeSet {

@@ -4,6 +4,7 @@
  * storage
  * OpenAPI spec version: 0.1.0
  */
+import type { EditedField } from './editedField';
 
 /**
  * Every error the API can return.
@@ -142,4 +143,25 @@ export type ErrorCode = {
 };
 } | {
   code: 'TAKEN';
+} | {
+  code: 'ACCESS_DENIED';
+  /** The user does not have the required capability to perform the action. */
+  params: {
+  /** The missing capability, e.g. `workspace.settings`. */
+  capability: string;
+};
+} | {
+  code: 'EMPTY_REQUEST_BODY';
+} | {
+  code: 'EDIT_CONFLICT';
+  /**
+     * Someone else changed these fields after the version the edit was made on. Nothing was
+     * applied; reload the resource and edit again.
+     */
+  params: {
+  /** The conflicting fields, each with its latest change. */
+  conflicts: EditedField[];
+};
+} | {
+  code: 'MISMATCH';
 };

@@ -7,6 +7,7 @@
 
 export * from './assetResponse';
 export * from './assetVisibility';
+export * from './editedField';
 export * from './errorBody';
 export * from './errorCode';
 export * from './fieldError';

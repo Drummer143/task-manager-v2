@@ -2,17 +2,17 @@ use std::collections::HashSet;
 
 use axum::{
     Extension,
-    extract::{Path, Request, State},
+    extract::{Request, State},
     middleware::Next,
     response::Response,
 };
-use error_handlers::{ApiError, ErrorCode};
+use error_handlers::{ApiError, ErrorCode, extract::ApiPath};
 use serde::Deserialize;
 use sql_models::workspace::model::{BuiltinRole, Capability, Member, Role, Workspace};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::workspaces::repo;
+use crate::workspaces::{repo, service};
 
 #[derive(Deserialize)]
 pub struct WorkspacePath {
@@ -105,7 +105,8 @@ impl WorkspaceContext {
 }
 
 /// The member's context, or `404` when they cannot see the workspace: not a member, deactivated,
-/// or the workspace is deleted — which its owner still sees when `owner_sees_deleted`.
+/// or the workspace is deleted — which its owner still sees when `owner_sees_deleted`, for as
+/// long as it can be restored.
 async fn load_context(
     pool: &PgPool,
     user_id: Uuid,
@@ -123,7 +124,9 @@ async fn load_context(
         repo::get_roles_by_workspace_ids(pool, user_id, vec![workspace_id])
     )?;
 
-    if workspace.deleted_at.is_some() && !(owner_sees_deleted && member.is_owner) {
+    if let Some(deleted_at) = workspace.deleted_at
+        && !(owner_sees_deleted && member.is_owner && service::is_restorable(deleted_at))
+    {
         return Err(ApiError::new(ErrorCode::NotFound));
     }
 
@@ -135,7 +138,7 @@ async fn load_context(
 pub async fn load_workspace_context(
     State(pool): State<PgPool>,
     Extension(user_id): Extension<Uuid>,
-    Path(path): Path<WorkspacePath>,
+    ApiPath(path): ApiPath<WorkspacePath>,
     mut request: Request,
     next: Next,
 ) -> Result<Response, ApiError> {
@@ -150,7 +153,7 @@ pub async fn load_workspace_context(
 pub async fn load_workspace_context_with_deleted(
     State(pool): State<PgPool>,
     Extension(user_id): Extension<Uuid>,
-    Path(path): Path<WorkspacePath>,
+    ApiPath(path): ApiPath<WorkspacePath>,
     mut request: Request,
     next: Next,
 ) -> Result<Response, ApiError> {

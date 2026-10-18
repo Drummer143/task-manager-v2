@@ -2263,6 +2263,31 @@
           "private"
         ]
       },
+      "EditedField": {
+        "type": "object",
+        "description": "A field changed by someone else; a param of [`ErrorCode::EditConflict`].",
+        "required": [
+          "field",
+          "at"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "description": "When it was changed last, RFC 3339."
+          },
+          "by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The user who changed it last; `None` once they deleted their account."
+          },
+          "field": {
+            "type": "string",
+            "description": "The API's name of the field, e.g. `slug`."
+          }
+        }
+      },
       "ErrorBody": {
         "allOf": [
           {
@@ -2892,6 +2917,97 @@
                 "type": "string",
                 "enum": [
                   "TAKEN"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The user does not have the required capability to perform the action.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "ACCESS_DENIED"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "The user does not have the required capability to perform the action.",
+                "required": [
+                  "capability"
+                ],
+                "properties": {
+                  "capability": {
+                    "type": "string",
+                    "description": "The missing capability, e.g. `workspace.settings`."
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The edit sets no field: there is nothing to change.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EMPTY_REQUEST_BODY"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Someone else changed these fields after the version the edit was made on. Nothing was\napplied; reload the resource and edit again.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EDIT_CONFLICT"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "Someone else changed these fields after the version the edit was made on. Nothing was\napplied; reload the resource and edit again.",
+                "required": [
+                  "conflicts"
+                ],
+                "properties": {
+                  "conflicts": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/EditedField"
+                    },
+                    "description": "The conflicting fields, each with its latest change."
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The value is not the one it must repeat, e.g. the workspace's name typed to confirm its\ndeletion. Used in per-field errors.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "MISMATCH"
                 ]
               }
             }

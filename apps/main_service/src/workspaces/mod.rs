@@ -8,5 +8,7 @@ pub mod middleware;
 pub mod repo;
 pub mod router;
 pub mod service;
+#[cfg(test)]
+pub mod test_app;
 pub mod updates;
 pub mod utils;

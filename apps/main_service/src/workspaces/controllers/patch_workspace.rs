@@ -14,21 +14,19 @@ use crate::{
     assets::repo::AssetsRepository,
     changes::{
         self,
-        dto::{Entity, FieldChange, FieldConflict},
+        dto::{Entity, FieldConflict},
     },
     shared::extractors::ClientId,
     signals::Signals,
     workspaces::{
         dto::{ChangeSet, WorkspaceResponse, fields},
         middleware::WorkspaceContext,
-        repo::{self, WorkspaceFields},
+        repo,
+        service::{self, WorkspaceState},
         updates,
         utils::{validate_task_prefix, validate_workspace_name, validate_workspace_slug},
     },
 };
-
-/// The `UNIQUE` of `workspaces.slug`: someone took the slug between the check and the write.
-const SLUG_CONSTRAINT: &str = "workspaces_slug_key";
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -69,7 +67,7 @@ pub async fn patch_workspace(
     workspace_ctx.authorize(Capability::WorkspaceSettings)?;
 
     let set = trimmed(body.set);
-    if is_empty(&set) {
+    if set.is_empty() {
         return Err(ApiError::new(ErrorCode::EmptyRequestBody));
     }
     validate(&set)?;
@@ -103,79 +101,31 @@ pub async fn patch_workspace(
         return Err(edit_conflict(found));
     }
 
-    let name = set.name.as_deref().unwrap_or(&current.name);
-    let slug = set.slug.as_deref().unwrap_or(&current.slug);
-    let task_prefix = set.task_prefix.as_deref().unwrap_or(&current.task_prefix);
-    let icon_asset_id = set.icon_asset_id.unwrap_or(current.icon_asset_id);
-
-    let diff: Vec<FieldChange> = [
-        FieldChange::if_changed(fields::NAME, &current.name.as_str(), &name),
-        FieldChange::if_changed(fields::SLUG, &current.slug.as_str(), &slug),
-        FieldChange::if_changed(
-            fields::TASK_PREFIX,
-            &current.task_prefix.as_str(),
-            &task_prefix,
-        ),
-        FieldChange::if_changed(
-            fields::ICON_ASSET_ID,
-            &current.icon_asset_id,
-            &icon_asset_id,
-        ),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
+    let next = WorkspaceState {
+        name: set.name.unwrap_or_else(|| current.name.clone()),
+        slug: set.slug.unwrap_or_else(|| current.slug.clone()),
+        task_prefix: set
+            .task_prefix
+            .unwrap_or_else(|| current.task_prefix.clone()),
+        icon_asset_id: set.icon_asset_id.unwrap_or(current.icon_asset_id),
+        ..WorkspaceState::from(&current)
+    };
 
     // Everything sent is as it already is: no new version, nothing to record
-    if diff.is_empty() {
+    let Some(updated) = service::update_workspace(&mut tx, &current, next, user_id).await? else {
         return Ok(Json(WorkspaceResponse::from(current)));
-    }
-
-    let slug_changed = slug != current.slug;
-    if slug_changed
-        && repo::is_slug_taken(&mut *tx, slug).await?
-        && !repo::is_own_slug(&mut *tx, user_id, workspace_id, slug).await?
-    {
-        return Err(slug_taken());
-    }
-
-    let updated = repo::update_workspace(
-        &mut *tx,
-        workspace_id,
-        WorkspaceFields {
-            name,
-            slug,
-            task_prefix,
-            icon_asset_id,
-        },
-    )
-    .await
-    .map_err(|error| match error {
-        sqlx::Error::Database(db) if db.constraint() == Some(SLUG_CONSTRAINT) => slug_taken(),
-        other => ApiError::from(other),
-    })?;
-
-    if slug_changed {
-        repo::move_slug(&mut tx, workspace_id, &current.slug, slug).await?;
-    }
-    if task_prefix != current.task_prefix {
-        repo::switch_task_prefix(&mut tx, workspace_id, task_prefix).await?;
-    }
-
-    changes::repo::record(
-        &mut *tx,
-        Entity::Workspace,
-        workspace_id,
-        updated.version,
-        user_id,
-        Some(workspace_id),
-        &diff,
-    )
-    .await?;
+    };
 
     tx.commit().await?;
 
-    updates::publish_updated(&pool, &signals, workspace_id, origin).await;
+    updates::publish_changed(
+        &pool,
+        &signals,
+        workspace_id,
+        updates::WORKSPACE_UPDATED,
+        origin,
+    )
+    .await;
 
     Ok(Json(WorkspaceResponse::from(updated)))
 }
@@ -188,10 +138,6 @@ fn trimmed(set: ChangeSet) -> ChangeSet {
         task_prefix: set.task_prefix.map(|v| v.trim().to_owned()),
         icon_asset_id: set.icon_asset_id,
     }
-}
-
-fn is_empty(set: &ChangeSet) -> bool {
-    sent_fields(set).is_empty()
 }
 
 /// The API's names of the fields the edit sets.
@@ -257,12 +203,6 @@ async fn ensure_icon_of(
     }
 }
 
-/// `409` with `slug: TAKEN`, like `create`.
-fn slug_taken() -> ApiError {
-    ApiError::new(ErrorCode::Conflict)
-        .with_field_errors(vec![FieldError::new(fields::SLUG, ErrorCode::Taken)])
-}
-
 fn edit_conflict(found: Vec<FieldConflict>) -> ApiError {
     ApiError::new(ErrorCode::EditConflict {
         conflicts: found
@@ -301,7 +241,7 @@ mod tests {
         let sent = set(serde_json::json!({ "taskPrefix": "VT", "iconAssetId": null }));
 
         assert_eq!(sent_fields(&sent), ["taskPrefix", "iconAssetId"]);
-        assert!(is_empty(&set(serde_json::json!({}))));
+        assert!(set(serde_json::json!({})).is_empty());
     }
 
     #[test]
@@ -326,52 +266,14 @@ mod tests {
     //   DATABASE_URL=postgres://test:test@127.0.0.1:55432/postgres cargo test -p main_service -- --ignored
     // Never point it at a shared database.
     mod api {
-        use axum::{
-            Router,
-            body::{Body, to_bytes},
-            http::{Request, StatusCode},
-            middleware::from_fn_with_state,
-            routing::{get, patch},
-        };
+        use axum::http::StatusCode;
         use serde_json::{Value, json};
-        use tower::ServiceExt;
 
         use super::*;
         use crate::{
             signals::Sent,
-            workspaces::{
-                controllers::get_workspace_by_id::get_workspace_by_id,
-                middleware::{load_workspace_context, load_workspace_context_with_deleted},
-            },
+            workspaces::test_app::{self, history as recorded, member_of, user, workspace_of},
         };
-
-        #[derive(Clone, axum::extract::FromRef)]
-        struct TestState {
-            pool: PgPool,
-            signals: Signals,
-        }
-
-        /// Like the real router: `GET /` behind the owner-sees-deleted layer, `PATCH /` behind
-        /// the default one, on the same path.
-        fn app(pool: &PgPool, signals: &Signals, user_id: Uuid) -> Router {
-            let with_deleted = Router::new()
-                .route("/", get(get_workspace_by_id))
-                .route_layer(from_fn_with_state(
-                    pool.clone(),
-                    load_workspace_context_with_deleted,
-                ));
-            let live = Router::new()
-                .route("/", patch(patch_workspace))
-                .route_layer(from_fn_with_state(pool.clone(), load_workspace_context));
-
-            Router::new()
-                .nest("/workspaces/{workspace_id}", with_deleted.merge(live))
-                .with_state(TestState {
-                    pool: pool.clone(),
-                    signals: signals.clone(),
-                })
-                .layer(Extension(user_id))
-        }
 
         async fn send(
             pool: &PgPool,
@@ -380,41 +282,7 @@ mod tests {
             workspace_id: Uuid,
             body: Option<Value>,
         ) -> (StatusCode, Value) {
-            let signals = Signals::recorded();
-            send_from(pool, &signals, None, user_id, method, workspace_id, body).await
-        }
-
-        /// `send` from the tab `client_id`, keeping the signals in `signals`.
-        async fn send_from(
-            pool: &PgPool,
-            signals: &Signals,
-            client_id: Option<Uuid>,
-            user_id: Uuid,
-            method: &str,
-            workspace_id: Uuid,
-            body: Option<Value>,
-        ) -> (StatusCode, Value) {
-            let mut request = Request::builder()
-                .method(method)
-                .uri(format!("/workspaces/{workspace_id}"))
-                .header("content-type", "application/json");
-            if let Some(client_id) = client_id {
-                request = request.header("X-Client-Id", client_id.to_string());
-            }
-            let request = match body {
-                Some(body) => request.body(Body::from(body.to_string())),
-                None => request.body(Body::empty()),
-            }
-            .unwrap();
-
-            let response = app(pool, signals, user_id).oneshot(request).await.unwrap();
-            let status = response.status();
-            let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-
-            (
-                status,
-                serde_json::from_slice(&bytes).unwrap_or(Value::Null),
-            )
+            test_app::send(pool, user_id, method, workspace_id, "", body).await
         }
 
         async fn edit(
@@ -437,66 +305,17 @@ mod tests {
             base_version: i64,
             set: Value,
         ) -> (StatusCode, Vec<Sent>) {
-            let signals = Signals::recorded();
             let body = json!({ "baseVersion": base_version, "set": set });
-            let (status, _) = send_from(
+            test_app::send_from(
                 pool,
-                &signals,
-                Some(client_id),
+                client_id,
                 user_id,
                 "PATCH",
                 workspace_id,
+                "",
                 Some(body),
             )
-            .await;
-            (status, signals.sent())
-        }
-
-        async fn user(pool: &PgPool) -> Uuid {
-            let id = Uuid::now_v7();
-            sqlx::query("INSERT INTO users (id, username) VALUES ($1, 'test')")
-                .bind(id)
-                .execute(pool)
-                .await
-                .unwrap();
-            id
-        }
-
-        async fn workspace_of(pool: &PgPool, owner: Uuid, slug: &str) -> Uuid {
-            let id = Uuid::now_v7();
-            repo::init_workspace(
-                pool,
-                repo::CreateWorkspaceRequest {
-                    id,
-                    name: "Verso team".into(),
-                    slug: slug.into(),
-                    task_prefix: "VT".into(),
-                },
-                &owner,
-            )
             .await
-            .unwrap();
-            id
-        }
-
-        async fn member_of(pool: &PgPool, workspace_id: Uuid) -> Uuid {
-            let member = user(pool).await;
-            sqlx::query("INSERT INTO members (workspace_id, user_id) VALUES ($1, $2)")
-                .bind(workspace_id)
-                .bind(member)
-                .execute(pool)
-                .await
-                .unwrap();
-            sqlx::query(
-                "INSERT INTO member_roles (workspace_id, user_id, role_id)
-                 SELECT $1, $2, id FROM roles WHERE workspace_id = $1 AND builtin = 'member'",
-            )
-            .bind(workspace_id)
-            .bind(member)
-            .execute(pool)
-            .await
-            .unwrap();
-            member
         }
 
         /// A finished upload made for the workspace's icon.
@@ -524,17 +343,6 @@ mod tests {
             .await
             .unwrap();
             id
-        }
-
-        async fn recorded(pool: &PgPool, workspace_id: Uuid) -> Vec<(i64, String, Value, Value)> {
-            sqlx::query_as(
-                "SELECT version, field, old_value, new_value FROM field_changes
-                 WHERE entity_id = $1 ORDER BY version, field",
-            )
-            .bind(workspace_id)
-            .fetch_all(pool)
-            .await
-            .unwrap()
         }
 
         #[sqlx::test(migrations = "./migrations")]
@@ -779,27 +587,15 @@ mod tests {
             .await;
 
             assert_eq!(status, StatusCode::OK);
-            let signal = |tags: Value| json!({ "type": "workspace.updated", "tags": tags, "origin": tab.to_string() });
             assert_eq!(
-                sent[0],
-                Sent {
-                    topic: format!("workspace:{workspace}"),
-                    event: "data.changed".into(),
-                    payload: signal(json!([format!("workspace:{workspace}")])),
-                }
+                test_app::sorted(sent),
+                test_app::workspace_changed(
+                    "workspace.updated",
+                    workspace,
+                    vec![owner, member],
+                    tab
+                )
             );
-            let mut to_members = sent[1..].to_vec();
-            to_members.sort_by(|a, b| a.topic.cmp(&b.topic));
-            let mut expected: Vec<_> = [owner, member]
-                .into_iter()
-                .map(|user_id| Sent {
-                    topic: format!("user:{user_id}"),
-                    event: "data.changed".into(),
-                    payload: signal(json!(["workspaces"])),
-                })
-                .collect();
-            expected.sort_by(|a, b| a.topic.cmp(&b.topic));
-            assert_eq!(to_members, expected);
         }
 
         #[sqlx::test(migrations = "./migrations")]

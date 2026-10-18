@@ -12,6 +12,8 @@ use crate::{
 
 pub const WORKSPACE_CREATED: &str = "workspace.created";
 pub const WORKSPACE_UPDATED: &str = "workspace.updated";
+pub const WORKSPACE_DELETED: &str = "workspace.deleted";
+pub const WORKSPACE_RESTORED: &str = "workspace.restored";
 
 /// A new workspace: the creator's other tabs add it to their list.
 pub async fn publish_created(signals: &Signals, user_id: Uuid, origin: Option<Uuid>) {
@@ -24,16 +26,18 @@ pub async fn publish_created(signals: &Signals, user_id: Uuid, origin: Option<Uu
     signals.publish(user_id, DATA_CHANGED, &signal).await;
 }
 
-/// The workspace's own fields changed. Its channel gets the workspace; each member gets their
-/// list, which shows it from inside the other workspaces too, where its channel is not joined.
-pub async fn publish_updated(
+/// The workspace itself changed (`kind`: edited, deleted, restored). Its channel gets the
+/// workspace; each member gets their list, which shows it from inside the other workspaces too,
+/// where its channel is not joined.
+pub async fn publish_changed(
     pool: &PgPool,
     signals: &Signals,
     workspace_id: Uuid,
+    kind: &'static str,
     origin: Option<Uuid>,
 ) {
     let signal = DataChanged {
-        kind: WORKSPACE_UPDATED,
+        kind,
         tags: vec![tags::workspace(workspace_id)],
         origin,
     };
@@ -44,13 +48,13 @@ pub async fn publish_updated(
     let members = match repo::get_member_ids(pool, workspace_id).await {
         Ok(members) => members,
         Err(error) => {
-            tracing::warn!(%workspace_id, %error, "workspace.updated not sent to the members");
+            tracing::warn!(%workspace_id, kind, %error, "signal not sent to the members");
             return;
         }
     };
 
     let signal = DataChanged {
-        kind: WORKSPACE_UPDATED,
+        kind,
         tags: vec![tags::WORKSPACES.to_owned()],
         origin,
     };
