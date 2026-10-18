@@ -162,6 +162,12 @@ CREATE TABLE invite_roles (
   FOREIGN KEY (workspace_id, role_id) REFERENCES roles (workspace_id, id) ON DELETE CASCADE
 );
 
+-- Rows written before workspaces existed point at workspaces that never were (the stand-in nil
+-- uuid of the frontend): no workspace exists yet, so every row with one goes. Account-level rows
+-- (NULL) stay
+DELETE FROM notifications WHERE workspace_id IS NOT NULL;
+DELETE FROM assets WHERE workspace_id IS NOT NULL;
+
 -- Both stay nullable: NULL is account-level. A workspace erased after its 30 days takes them along
 ALTER TABLE notifications
   ADD FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE;
