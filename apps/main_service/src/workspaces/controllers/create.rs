@@ -44,7 +44,14 @@ pub async fn create_workspace(
     let slug = body.slug.as_deref().map(str::trim);
     let task_prefix = body.task_prefix.as_deref().map(str::trim);
 
-    service::validate_create_workspace_request(&state.pool, name, slug, task_prefix).await?;
+    service::validate_create_workspace_request(
+        &state.pool,
+        Some(&body.id),
+        name,
+        slug,
+        task_prefix,
+    )
+    .await?;
 
     let slug = match slug {
         Some(slug) => slug.to_owned(),

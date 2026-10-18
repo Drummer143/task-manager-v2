@@ -22,11 +22,16 @@ pub struct CreateWorkspaceRequest {
 
 pub async fn validate_create_workspace_request(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
+    id: Option<&Uuid>,
     name: &str,
     slug: Option<&str>,
     task_prefix: Option<&str>,
 ) -> error_handlers::Result<()> {
     let mut errors: Vec<FieldError> = Vec::new();
+
+    if let Some(id) = id && id.get_version_num() != 7 {
+        errors.push(FieldError::new("id", ErrorCode::InvalidFormat));
+    }
 
     if let Err(code) = validate_workspace_name(name) {
         errors.push(FieldError::new("name", code));
