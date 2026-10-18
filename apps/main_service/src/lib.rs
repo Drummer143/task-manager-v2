@@ -5,6 +5,7 @@ use utoipa::OpenApi;
 
 pub mod app_state;
 pub mod assets;
+pub mod changes;
 pub mod config;
 pub mod me;
 pub mod notifications;
