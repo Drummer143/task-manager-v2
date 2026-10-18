@@ -69,6 +69,39 @@ impl WorkspaceContext {
     pub fn is_guest(&self) -> bool {
         !self.member.is_owner && self.roles.is_empty()
     }
+
+    /// The owner, or a member with the built-in Admin role.
+    pub fn is_admin(&self) -> bool {
+        self.member.is_owner
+            || self
+                .roles
+                .iter()
+                .any(|role| role.builtin == Some(BuiltinRole::Admin))
+    }
+
+    /// Whether this member may give and take `role` (access spec §2.4). `managed` — the roles a
+    /// role of theirs manages ("Managed by", `role_managers`).
+    ///
+    /// The owner may give any role. Admin is given only by an admin. Any other role needs
+    /// `roles.assign` or a role managing it, and gives nothing the member does not have.
+    pub fn can_assign(&self, role: &Role, managed: &HashSet<Uuid>) -> bool {
+        if role.deleted_at.is_some() || role.workspace_id != self.workspace.id {
+            return false;
+        }
+        if self.member.is_owner {
+            return true;
+        }
+        if role.builtin == Some(BuiltinRole::Admin) {
+            return self.is_admin();
+        }
+
+        let may_give = self.can(Capability::RolesAssign) || managed.contains(&role.id);
+        may_give
+            && role
+                .capabilities
+                .iter()
+                .all(|capability| self.can(*capability))
+    }
 }
 
 /// The member's context, or `404` when they cannot see the workspace: not a member, deactivated,
@@ -238,6 +271,83 @@ mod tests {
         for capability in Capability::GRANTABLE {
             assert!(!guest.can(capability), "{capability}");
         }
+    }
+
+    fn managed(roles: &[&Role]) -> HashSet<Uuid> {
+        roles.iter().map(|role| role.id).collect()
+    }
+
+    #[test]
+    fn the_owner_may_assign_any_live_role() {
+        let owner = context(true, vec![]);
+        let admin = role(Some(BuiltinRole::Admin), &[]);
+        let custom = role(None, &[Capability::MembersRemove]);
+        let mut deleted = role(None, &[]);
+        deleted.deleted_at = Some(Utc::now());
+
+        assert!(owner.can_assign(&admin, &HashSet::new()));
+        assert!(owner.can_assign(&custom, &HashSet::new()));
+        assert!(!owner.can_assign(&deleted, &HashSet::new()));
+    }
+
+    #[test]
+    fn only_an_admin_assigns_admin() {
+        let admin_role = role(Some(BuiltinRole::Admin), &[]);
+        let admin = context(false, vec![admin_role.clone()]);
+        let assigner = context(
+            false,
+            vec![role(
+                None,
+                &[Capability::RolesAssign, Capability::MembersView],
+            )],
+        );
+
+        assert!(admin.can_assign(&admin_role, &HashSet::new()));
+        assert!(!assigner.can_assign(&admin_role, &managed(&[&admin_role])));
+    }
+
+    #[test]
+    fn roles_assign_gives_only_roles_within_ones_own_capabilities() {
+        let assigner = context(
+            false,
+            vec![role(
+                None,
+                &[Capability::RolesAssign, Capability::MembersView],
+            )],
+        );
+        let within = role(Some(BuiltinRole::Member), &[Capability::MembersView]);
+        let beyond = role(None, &[Capability::MembersRemove]);
+
+        assert!(assigner.can_assign(&within, &HashSet::new()));
+        assert!(!assigner.can_assign(&beyond, &HashSet::new()));
+    }
+
+    #[test]
+    fn a_manager_role_gives_only_the_roles_it_manages() {
+        let lead = role(None, &[Capability::MembersView]);
+        let support = role(None, &[Capability::MembersView]);
+        let other = role(None, &[]);
+        let manager = context(false, vec![lead]);
+
+        assert!(manager.can_assign(&support, &managed(&[&support])));
+        assert!(!manager.can_assign(&other, &managed(&[&support])));
+    }
+
+    #[test]
+    fn a_managed_role_beyond_ones_capabilities_is_still_refused() {
+        let manager = context(false, vec![role(None, &[])]);
+        let support = role(None, &[Capability::LabelsManage]);
+
+        assert!(!manager.can_assign(&support, &managed(&[&support])));
+    }
+
+    #[test]
+    fn a_guest_assigns_nothing() {
+        let guest = context(false, vec![]);
+        let plain = role(None, &[]);
+
+        assert!(!guest.can_assign(&plain, &HashSet::new()));
+        assert!(!guest.is_admin());
     }
 
     #[test]

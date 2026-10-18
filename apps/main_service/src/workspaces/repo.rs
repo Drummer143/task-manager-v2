@@ -252,6 +252,24 @@ pub async fn get_roles_by_workspace_ids<'a>(
     .await
 }
 
+/// The live roles of the workspace, in their order.
+pub async fn get_workspace_roles<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    workspace_id: Uuid,
+) -> Result<Vec<Role>, sqlx::Error> {
+    sqlx::query_as::<_, Role>(
+        "SELECT *
+        FROM roles
+        WHERE workspace_id = $1
+            AND deleted_at IS NULL
+        ORDER BY position
+        ",
+    )
+    .bind(workspace_id)
+    .fetch_all(executor)
+    .await
+}
+
 // MEMBERS
 
 pub async fn get_member_in_workspace<'a>(
@@ -291,6 +309,24 @@ pub async fn find_similar_slugs<'a>(
         ",
     )
     .bind(slug)
+    .fetch_all(executor)
+    .await
+}
+
+// ROLE MANAGERS
+
+/// The roles that any of `role_ids` manages: their members may give and take them.
+pub async fn get_roles_managed_by<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    role_ids: &[Uuid],
+) -> Result<Vec<Uuid>, sqlx::Error> {
+    sqlx::query_scalar::<_, Uuid>(
+        "SELECT DISTINCT role_id
+        FROM role_managers
+        WHERE manager_role_id = ANY($1)
+        ",
+    )
+    .bind(role_ids)
     .fetch_all(executor)
     .await
 }

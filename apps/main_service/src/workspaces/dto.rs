@@ -60,3 +60,38 @@ impl From<Role> for RoleShortResponse {
         }
     }
 }
+
+#[derive(Serialize, ToSchema)]
+pub struct CapabilitiesResponse {
+    #[serde(rename = "workspace.settings")]
+    pub workspace_settings: bool,
+    #[serde(rename = "workspace.export")]
+    pub workspace_export: bool,
+
+    #[serde(rename = "members.view")]
+    pub members_view: bool,
+    #[serde(rename = "members.invite")]
+    pub members_invite: bool,
+    #[serde(rename = "members.remove")]
+    pub members_remove: bool,
+
+    #[serde(rename = "roles.assign")]
+    pub roles_assign: Vec<Uuid>,
+    #[serde(rename = "roles.manage")]
+    pub roles_manage: bool,
+
+    #[serde(rename = "pages.create_root")]
+    pub pages_create_root: bool,
+
+    #[serde(rename = "labels.create")]
+    pub labels_create: bool,
+    #[serde(rename = "labels.manage")]
+    pub labels_manage: bool,
+
+    #[serde(rename = "workspace.delete")]
+    pub workspace_delete: bool,
+    #[serde(rename = "workspace.transfer")]
+    pub workspace_transfer: bool,
+    #[serde(rename = "billing.manage")]
+    pub billing_manage: bool,
+}

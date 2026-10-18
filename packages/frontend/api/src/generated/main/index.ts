@@ -11,6 +11,7 @@ import type {
   CreateAssetResponse,
   CreateNotificationDto,
   CreateWorkspaceRequest,
+  GetMeInWorkspaceResponse,
   ListNotificationsParams,
   MeResponse,
   Notification,
@@ -216,6 +217,15 @@ export const getWorkspaceById = (
       options);
     }
 
+export const getMeInWorkspace = (
+    workspaceId: string,
+ options?: SecondParameter<typeof mainFetcher<GetMeInWorkspaceResponse>>,) => {
+      return mainFetcher<GetMeInWorkspaceResponse>(
+      {url: `/workspaces/${workspaceId}/me`, method: 'GET'
+    },
+      options);
+    }
+
 export type CreateAssetResult = NonNullable<Awaited<ReturnType<typeof createAsset>>>
 export type GetMeResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
 export type ListNotificationsResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
@@ -232,3 +242,4 @@ export type CreateWorkspaceResult = NonNullable<Awaited<ReturnType<typeof create
 export type ResolveSlugResult = NonNullable<Awaited<ReturnType<typeof resolveSlug>>>
 export type CheckSlugAvailableResult = NonNullable<Awaited<ReturnType<typeof checkSlugAvailable>>>
 export type GetWorkspaceByIdResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceById>>>
+export type GetMeInWorkspaceResult = NonNullable<Awaited<ReturnType<typeof getMeInWorkspace>>>

@@ -8,6 +8,7 @@
 export * from './archiveNotificationRequest';
 export * from './assetOwnerRequest';
 export * from './assetOwnerType';
+export * from './capabilitiesResponse';
 export * from './checkSlugAvailableParams';
 export * from './createAssetRequest';
 export * from './createAssetResponse';
@@ -16,6 +17,7 @@ export * from './createWorkspaceRequest';
 export * from './errorBody';
 export * from './errorCode';
 export * from './fieldError';
+export * from './getMeInWorkspaceResponse';
 export * from './inboxUpdated';
 export * from './listNotificationsParams';
 export * from './listNotificationsView';
