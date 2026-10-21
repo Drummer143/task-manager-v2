@@ -432,6 +432,50 @@ pub async fn get_member_ids<'a>(
     .await
 }
 
+/// The live workspaces `user_id` is an active member of: what their notifications count in.
+pub async fn get_user_workspace_ids<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    user_id: Uuid,
+) -> Result<Vec<Uuid>, sqlx::Error> {
+    sqlx::query_scalar::<_, Uuid>(
+        "SELECT m.workspace_id
+        FROM members m
+        JOIN workspaces w ON w.id = m.workspace_id
+        WHERE m.user_id = $1
+            AND m.deactivated_at IS NULL
+            AND w.deleted_at IS NULL
+        ORDER BY m.workspace_id
+        ",
+    )
+    .bind(user_id)
+    .fetch_all(executor)
+    .await
+}
+
+/// Whether `user_id` is an active member of `workspace_id`, while it is not deleted.
+pub async fn is_active_member<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    user_id: Uuid,
+    workspace_id: Uuid,
+) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS (
+            SELECT 1
+            FROM members m
+            JOIN workspaces w ON w.id = m.workspace_id
+            WHERE m.user_id = $1
+                AND m.workspace_id = $2
+                AND m.deactivated_at IS NULL
+                AND w.deleted_at IS NULL
+        )
+        ",
+    )
+    .bind(user_id)
+    .bind(workspace_id)
+    .fetch_one(executor)
+    .await
+}
+
 // SLUGS
 
 pub async fn find_similar_slugs<'a>(
@@ -1026,5 +1070,35 @@ mod tests {
         let mut expected = vec![owner, member];
         expected.sort();
         assert_eq!(ids, expected);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_user_is_a_member_of_their_live_workspaces_while_active(pool: PgPool) {
+        let me = user(&pool).await;
+        let mine = create(&pool, me, "mine").await;
+        let deleted = create(&pool, me, "deleted").await;
+        sqlx::query("UPDATE workspaces SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1")
+            .bind(deleted.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let left = create(&pool, user(&pool).await, "left").await;
+        sqlx::query(
+            "INSERT INTO members (workspace_id, user_id, deactivated_at)
+             VALUES ($1, $2, CURRENT_TIMESTAMP)",
+        )
+        .bind(left.id)
+        .bind(me)
+        .execute(&pool)
+        .await
+        .unwrap();
+        let theirs = create(&pool, user(&pool).await, "theirs").await;
+
+        assert_eq!(get_user_workspace_ids(&pool, me).await.unwrap(), [mine.id]);
+        assert!(is_active_member(&pool, me, mine.id).await.unwrap());
+        for other in [deleted.id, left.id, theirs.id, Uuid::now_v7()] {
+            assert!(!is_active_member(&pool, me, other).await.unwrap());
+        }
     }
 }

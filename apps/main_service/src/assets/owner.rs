@@ -5,7 +5,7 @@ use error_handlers::ApiError;
 use sql_models::asset::model::{AssetOwnerType, AssetVisibility};
 use uuid::Uuid;
 
-use crate::workspaces_mocks;
+use crate::workspaces::service as workspaces;
 
 /// What the client asks to attach a file to.
 #[derive(Debug, Clone, Copy)]
@@ -56,7 +56,7 @@ impl Owner {
     ) -> Result<(), ApiError> {
         match self.kind {
             AssetOwnerType::WorkspaceIcon => {
-                workspaces_mocks::ensure_can_change_settings(pool, user_id, self.id).await
+                workspaces::ensure_can_change_settings(pool, user_id, self.id).await
             }
         }
     }
@@ -65,7 +65,7 @@ impl Owner {
     pub async fn can_read(&self, pool: &sqlx::PgPool, user_id: Uuid) -> Result<bool, ApiError> {
         match self.kind {
             AssetOwnerType::WorkspaceIcon => {
-                match workspaces_mocks::ensure_member(pool, user_id, self.id).await {
+                match workspaces::ensure_member(pool, user_id, self.id).await {
                     Ok(()) => Ok(true),
                     Err(e) if e.status() == 404 => Ok(false),
                     Err(e) => Err(e),

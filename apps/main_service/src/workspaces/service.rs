@@ -1,8 +1,8 @@
 use chrono::{DateTime, Duration, Utc};
 use error_handlers::{ApiError, ErrorCode, FieldError};
 use serde::Deserialize;
-use sql_models::workspace::model::Workspace;
-use sqlx::{PgConnection, Postgres};
+use sql_models::workspace::model::{Capability, Workspace};
+use sqlx::{PgConnection, PgPool, Postgres};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -13,6 +13,7 @@ use crate::{
     },
     workspaces::{
         dto::fields,
+        middleware::load_context,
         repo::{self, WorkspaceFields},
         utils::{validate_task_prefix, validate_workspace_name, validate_workspace_slug},
     },
@@ -74,6 +75,43 @@ pub async fn validate_create_workspace_fields(
     }
 
     Ok(())
+}
+
+// ACCESS
+
+/// Fails unless `user_id` may see `workspace_id`: an active member of it, in any role, while it is
+/// not deleted. A workspace they are not in is a 404, not a 403, so its id reveals nothing.
+///
+/// Losing access does not delete notifications, they are just not served while access is gone
+/// (backend spec, notifications §8.2): every read of a workspace's notifications goes through here.
+pub async fn ensure_member(
+    pool: &PgPool,
+    user_id: Uuid,
+    workspace_id: Uuid,
+) -> Result<(), ApiError> {
+    if repo::is_active_member(pool, user_id, workspace_id).await? {
+        Ok(())
+    } else {
+        Err(ApiError::new(ErrorCode::NotFound))
+    }
+}
+
+/// The workspaces `user_id` is in now (active, not deleted), for counts across workspaces.
+pub async fn member_workspace_ids(pool: &PgPool, user_id: Uuid) -> Result<Vec<Uuid>, sqlx::Error> {
+    repo::get_user_workspace_ids(pool, user_id).await
+}
+
+/// Fails unless `user_id` may change `workspace_id`'s settings: its name, icon, address
+/// (`workspace.settings`, access spec §2.3). The same context as the routes of a workspace get
+/// (`load_context`): `404` when they cannot see it, `403` without the capability.
+pub async fn ensure_can_change_settings(
+    pool: &PgPool,
+    user_id: Uuid,
+    workspace_id: Uuid,
+) -> Result<(), ApiError> {
+    load_context(pool, user_id, workspace_id, false)
+        .await?
+        .authorize(Capability::WorkspaceSettings)
 }
 
 // UPDATE
@@ -274,5 +312,112 @@ mod tests {
         assert!(!is_restorable(
             now - Duration::days(30) - Duration::minutes(1)
         ));
+    }
+}
+
+// Needs a disposable Postgres; `#[sqlx::test]` creates a fresh database per test there:
+//   DATABASE_URL=postgres://test:test@127.0.0.1:55432/postgres cargo test -p main_service -- --ignored
+// Never point it at a shared database.
+#[cfg(test)]
+mod access {
+    use super::*;
+    use crate::workspaces::test_app::{guest_of, member_of, user, workspace_of};
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_member_sees_the_workspace_anyone_else_gets_a_404(pool: PgPool) {
+        let owner = user(&pool).await;
+        let workspace = workspace_of(&pool, owner, "verso-team").await;
+        // A guest is a member too: no role is needed to see it
+        let guest = guest_of(&pool, workspace).await;
+        let stranger = user(&pool).await;
+
+        for member in [owner, guest] {
+            ensure_member(&pool, member, workspace).await.unwrap();
+        }
+        let refused = ensure_member(&pool, stranger, workspace).await.unwrap_err();
+        assert_eq!(refused.status(), 404);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn the_counts_go_over_the_users_workspaces_only(pool: PgPool) {
+        let me = user(&pool).await;
+        let mine = workspace_of(&pool, me, "mine").await;
+        let other = workspace_of(&pool, user(&pool).await, "other").await;
+        let joined = guest_of(&pool, other).await;
+
+        assert_eq!(member_workspace_ids(&pool, me).await.unwrap(), [mine]);
+        assert_eq!(member_workspace_ids(&pool, joined).await.unwrap(), [other]);
+        assert!(
+            member_workspace_ids(&pool, user(&pool).await)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn the_settings_are_for_the_owner_and_admins(pool: PgPool) {
+        let owner = user(&pool).await;
+        let workspace = workspace_of(&pool, owner, "verso-team").await;
+        let admin = guest_of(&pool, workspace).await;
+        sqlx::query(
+            "INSERT INTO member_roles (workspace_id, user_id, role_id)
+             SELECT $1, $2, id FROM roles WHERE workspace_id = $1 AND builtin = 'admin'",
+        )
+        .bind(workspace)
+        .bind(admin)
+        .execute(&pool)
+        .await
+        .unwrap();
+        let member = member_of(&pool, workspace).await;
+        let guest = guest_of(&pool, workspace).await;
+
+        for allowed in [owner, admin] {
+            ensure_can_change_settings(&pool, allowed, workspace)
+                .await
+                .unwrap();
+        }
+        // The built-in Member role has no `workspace.settings`
+        for refused in [member, guest] {
+            let error = ensure_can_change_settings(&pool, refused, workspace)
+                .await
+                .unwrap_err();
+            assert_eq!(error.status(), 403);
+        }
+        let stranger = ensure_can_change_settings(&pool, user(&pool).await, workspace)
+            .await
+            .unwrap_err();
+        assert_eq!(stranger.status(), 404);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_deleted_workspace_is_seen_and_changed_by_no_one(pool: PgPool) {
+        let owner = user(&pool).await;
+        let workspace = workspace_of(&pool, owner, "verso-team").await;
+        sqlx::query("UPDATE workspaces SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1")
+            .bind(workspace)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            ensure_member(&pool, owner, workspace)
+                .await
+                .unwrap_err()
+                .status(),
+            404
+        );
+        assert_eq!(
+            ensure_can_change_settings(&pool, owner, workspace)
+                .await
+                .unwrap_err()
+                .status(),
+            404
+        );
+        assert!(member_workspace_ids(&pool, owner).await.unwrap().is_empty());
     }
 }

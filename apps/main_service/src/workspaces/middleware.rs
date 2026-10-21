@@ -106,8 +106,9 @@ impl WorkspaceContext {
 
 /// The member's context, or `404` when they cannot see the workspace: not a member, deactivated,
 /// or the workspace is deleted — which its owner still sees when `owner_sees_deleted`, for as
-/// long as it can be restored.
-async fn load_context(
+/// long as it can be restored. The layers below use it, and so does `service` for the checks of
+/// other modules.
+pub async fn load_context(
     pool: &PgPool,
     user_id: Uuid,
     workspace_id: Uuid,

@@ -18,7 +18,6 @@ pub mod swagger;
 pub mod test_support;
 pub mod webhooks;
 pub mod workspaces;
-pub mod workspaces_mocks;
 
 pub fn openapi_json() -> String {
     serde_json::to_string_pretty(&swagger::ApiDoc::openapi()).unwrap()

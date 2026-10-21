@@ -11,12 +11,6 @@ Move an item back to its area's TODO when it unblocks; tick or delete it here wh
 The table, the endpoints and the frontend's resolving of `/{slug}` are there. What is left waits on
 other pieces:
 
-- [ ] `ensure_member` and `member_workspace_ids` in `apps/main_service/src/workspaces_mocks.rs`
-      (`TODO(workspaces)`): every workspace is allowed now. Then: a non-member gets a 404 on the
-      list and on read-all; the summary counts only the workspaces the user is in (backend spec,
-      notifications §8.2: no access, not served)
-- [ ] `ensure_can_change_settings` in `workspaces_mocks.rs` (`TODO(workspaces)`): the permission
-      to attach a workspace icon (`POST /assets`); `workspace.settings` now that roles exist
 - [ ] Workspace icons in the sidebar (`TODO(storage)` in `widgets/Layout/Layout.tsx`): the app
       does not know storage's address yet, so `iconAssetId` has no URL; the letter is drawn
 - [ ] Creating a workspace has no screen: the switcher's "New workspace" and the empty state at
