@@ -137,6 +137,7 @@ pub async fn workspace_of(pool: &PgPool, owner: Uuid, slug: &str) -> Uuid {
             name: "Verso team".into(),
             slug: slug.into(),
             task_prefix: "VT".into(),
+            personal_of: None,
         },
         &owner,
     )

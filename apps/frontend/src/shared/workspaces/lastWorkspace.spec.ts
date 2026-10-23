@@ -11,6 +11,7 @@ const workspace = (id: string, deletedAt?: string): WorkspaceWithRoles => ({
   createdAt: '2026-10-01T00:00:00Z',
   deletedAt,
   isOwner: true,
+  isPersonal: false,
   roles: [],
 });
 

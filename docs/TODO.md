@@ -13,8 +13,10 @@ other pieces:
 
 - [ ] Workspace icons in the sidebar (`TODO(storage)` in `widgets/Layout/Layout.tsx`): the app
       does not know storage's address yet, so `iconAssetId` has no URL; the letter is drawn
-- [ ] Creating a workspace has no screen: the switcher's "New workspace" and the empty state at
-      `/` (`TODO(workspaces)` in `app/WorkspaceEntry.tsx`) wait for it
+- [ ] Creating a workspace has no screen: the switcher's "New workspace" waits for it, and for
+      `canCreateWorkspace` in `/me` (`VERSO_WORKSPACE_CREATION`). The empty state at `/` stays only
+      as a fallback: everyone has a personal workspace, made at `/me`
+- [ ] Leave and transfer (not built yet) must refuse the personal workspace (`personal_of`)
 - [ ] The switcher's Workspace settings, Invite members, Profile, Preferences: the sidebar shows
       them once `Layout` passes `onOpenSettings` / `onInvite`
 

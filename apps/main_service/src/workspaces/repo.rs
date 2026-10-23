@@ -90,6 +90,8 @@ pub struct CreateWorkspaceRequest {
     pub name: String,
     pub slug: String,
     pub task_prefix: String,
+    /// The user it is the personal workspace of; `None` for every other one.
+    pub personal_of: Option<Uuid>,
 }
 
 pub enum InitWorkspaceResponse {
@@ -104,8 +106,8 @@ pub async fn init_workspace<'a>(
 ) -> Result<InitWorkspaceResponse, sqlx::Error> {
     let created = sqlx::query_as::<_, Workspace>(
         "WITH created_workspace AS (
-            INSERT INTO workspaces (name, slug, task_prefix, id)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO workspaces (name, slug, task_prefix, id, personal_of)
+            VALUES ($1, $2, $3, $4, $7)
             ON CONFLICT (id) DO NOTHING
             RETURNING *
         ),
@@ -146,6 +148,7 @@ pub async fn init_workspace<'a>(
     .bind(body.id)
     .bind(owner_id)
     .bind(MEMBERS_CAPABILITIES)
+    .bind(body.personal_of)
     .fetch_optional(executor)
     .await?;
 
@@ -155,6 +158,17 @@ pub async fn init_workspace<'a>(
             .await
             .map(InitWorkspaceResponse::Existed),
     }
+}
+
+/// The user's personal workspace, if it was created already.
+pub async fn get_personal_workspace<'a>(
+    executor: impl Executor<'a, Database = sqlx::Postgres>,
+    user_id: Uuid,
+) -> Result<Option<Workspace>, sqlx::Error> {
+    sqlx::query_as::<_, Workspace>("SELECT * FROM workspaces WHERE personal_of = $1")
+        .bind(user_id)
+        .fetch_optional(executor)
+        .await
 }
 
 /// A workspace found by one of its slugs.
@@ -543,6 +557,7 @@ mod tests {
             name: "Verso team".into(),
             slug: slug.into(),
             task_prefix: "VT".into(),
+            personal_of: None,
         }
     }
 

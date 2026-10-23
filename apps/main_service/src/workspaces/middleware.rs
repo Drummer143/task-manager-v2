@@ -34,6 +34,14 @@ impl WorkspaceContext {
             Capability::GRANTABLE
                 .into_iter()
                 .chain(Capability::OWNER_ONLY)
+                // A personal workspace stays its owner's: not deleted, not handed over
+                .filter(|capability| {
+                    workspace.personal_of.is_none()
+                        || !matches!(
+                            capability,
+                            Capability::WorkspaceDelete | Capability::WorkspaceTransfer
+                        )
+                })
                 .collect()
         } else if roles.iter().any(|r| r.builtin == Some(BuiltinRole::Admin)) {
             Capability::GRANTABLE.into_iter().collect()
@@ -181,6 +189,7 @@ mod tests {
             icon_asset_id: None,
             access_epoch: 0,
             version: 1,
+            personal_of: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
             deleted_at: None,
@@ -232,6 +241,20 @@ mod tests {
             assert!(owner.can(capability), "{capability}");
         }
         assert!(!owner.is_guest());
+    }
+
+    #[test]
+    fn the_owner_of_a_personal_workspace_cannot_delete_or_hand_it_over() {
+        let personal = Workspace {
+            personal_of: Some(Uuid::now_v7()),
+            ..workspace()
+        };
+        let owner = WorkspaceContext::new(personal, member(true), vec![]);
+
+        assert!(!owner.can(Capability::WorkspaceDelete));
+        assert!(!owner.can(Capability::WorkspaceTransfer));
+        assert!(owner.can(Capability::WorkspaceSettings));
+        assert!(owner.can(Capability::BillingManage));
     }
 
     #[test]
@@ -443,6 +466,7 @@ mod tests {
                     name: "Verso team".into(),
                     slug: format!("ws-{}", id.simple()),
                     task_prefix: "VT".into(),
+                    personal_of: None,
                 },
                 &owner,
             )

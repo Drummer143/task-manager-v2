@@ -22,6 +22,8 @@ export interface WorkspaceResponse {
      */
   iconAssetId?: string | null;
   id: string;
+  /** Its owner's personal workspace: it can't be deleted, transferred or left. */
+  isPersonal: boolean;
   name: string;
   /** In URLs: `/{slug}/inbox`. */
   slug: string;

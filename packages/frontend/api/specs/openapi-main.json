@@ -2561,7 +2561,8 @@
           "slug",
           "taskPrefix",
           "version",
-          "createdAt"
+          "createdAt",
+          "isPersonal"
         ],
         "properties": {
           "createdAt": {
@@ -2587,6 +2588,10 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "isPersonal": {
+            "type": "boolean",
+            "description": "Its owner's personal workspace: it can't be deleted, transferred or left."
           },
           "name": {
             "type": "string"

@@ -145,6 +145,7 @@ const workspace: WorkspaceWithRoles = {
   version: 1,
   createdAt: '2026-10-01T00:00:00Z',
   isOwner: true,
+  isPersonal: false,
   roles: [],
 };
 

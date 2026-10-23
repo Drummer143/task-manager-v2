@@ -141,6 +141,7 @@ mod tests {
                 name: "Verso team".into(),
                 slug: format!("ws-{}", id.simple()),
                 task_prefix: "VT".into(),
+                personal_of: None,
             },
             &owner,
         )

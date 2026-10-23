@@ -24,6 +24,9 @@ pub struct WorkspaceResponse {
 
     /// Set only for the owner, while the workspace can still be restored (30 days).
     pub deleted_at: Option<DateTime<Utc>>,
+
+    /// Its owner's personal workspace: it can't be deleted, transferred or left.
+    pub is_personal: bool,
 }
 
 impl From<Workspace> for WorkspaceResponse {
@@ -37,6 +40,7 @@ impl From<Workspace> for WorkspaceResponse {
             version: value.version,
             created_at: value.created_at,
             deleted_at: None,
+            is_personal: value.personal_of.is_some(),
         }
     }
 }

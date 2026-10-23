@@ -14,8 +14,11 @@ use crate::{
     workspaces::{
         dto::fields,
         middleware::load_context,
-        repo::{self, WorkspaceFields},
-        utils::{validate_task_prefix, validate_workspace_name, validate_workspace_slug},
+        repo::{self, InitWorkspaceResponse, WorkspaceFields},
+        utils::{
+            MAX_WORKSPACE_NAME_LENGTH, find_available_slug, name_to_slug, name_to_task_prefix,
+            validate_task_prefix, validate_workspace_name, validate_workspace_slug,
+        },
     },
 };
 
@@ -75,6 +78,76 @@ pub async fn validate_create_workspace_fields(
     }
 
     Ok(())
+}
+
+// PERSONAL WORKSPACE
+
+/// The partial unique index on `workspaces.personal_of`: someone else made the personal workspace
+/// between the lookup and the insert (two first requests at once).
+const PERSONAL_CONSTRAINT: &str = "workspaces_personal_of_idx";
+
+/// Tries before giving up when the generated slug was taken in between.
+const PERSONAL_ATTEMPTS: usize = 3;
+
+const PERSONAL_SUFFIX: &str = "'s workspace";
+
+/// "Ada Lovelace's workspace"; `None` — no name to go by: "My workspace". Cut so the whole fits
+/// the name's limit.
+pub fn personal_workspace_name(owner_name: Option<&str>) -> String {
+    let owner = owner_name.map(str::trim).filter(|name| !name.is_empty());
+
+    match owner {
+        Some(owner) => {
+            let room = MAX_WORKSPACE_NAME_LENGTH as usize - PERSONAL_SUFFIX.chars().count();
+            let owner: String = owner.chars().take(room).collect();
+            format!("{}{PERSONAL_SUFFIX}", owner.trim_end())
+        }
+        None => "My workspace".to_owned(),
+    }
+}
+
+/// The user's personal workspace: created the first time it is asked for, then found. Every user
+/// has one, so there is always a workspace to open and an Inbox for invites to land in. Not a
+/// subject of `VERSO_WORKSPACE_CREATION`: that limits creating others.
+pub async fn ensure_personal_workspace(
+    pool: &PgPool,
+    user_id: Uuid,
+    owner_name: Option<&str>,
+) -> error_handlers::Result<Workspace> {
+    if let Some(workspace) = repo::get_personal_workspace(pool, user_id).await? {
+        return Ok(workspace);
+    }
+
+    let name = personal_workspace_name(owner_name);
+    let base = name_to_slug(&name);
+    let task_prefix = name_to_task_prefix(&name);
+
+    for _ in 0..PERSONAL_ATTEMPTS {
+        let similar = repo::find_similar_slugs(pool, &base).await?;
+        let request = repo::CreateWorkspaceRequest {
+            id: Uuid::now_v7(),
+            name: name.clone(),
+            slug: find_available_slug(&base, &similar),
+            task_prefix: task_prefix.clone(),
+            personal_of: Some(user_id),
+        };
+
+        match repo::init_workspace(pool, request, &user_id).await {
+            Ok(InitWorkspaceResponse::Created(workspace)) => return Ok(workspace),
+            // A fresh id never exists already
+            Ok(InitWorkspaceResponse::Existed(workspace)) => return Ok(workspace),
+            Err(sqlx::Error::Database(db)) if db.constraint() == Some(PERSONAL_CONSTRAINT) => {
+                if let Some(workspace) = repo::get_personal_workspace(pool, user_id).await? {
+                    return Ok(workspace);
+                }
+            }
+            // The slug was taken in between: look again
+            Err(sqlx::Error::Database(db)) if db.constraint() == Some(SLUG_CONSTRAINT) => {}
+            Err(other) => return Err(other.into()),
+        }
+    }
+
+    Err(ApiError::new(ErrorCode::Internal).with_source("no free slug for the personal workspace"))
 }
 
 // ACCESS
@@ -256,6 +329,7 @@ mod tests {
             icon_asset_id: None,
             access_epoch: 0,
             version: 1,
+            personal_of: None,
             created_at: at,
             updated_at: at,
             deleted_at: None,
@@ -419,5 +493,102 @@ mod access {
             404
         );
         assert!(member_workspace_ids(&pool, owner).await.unwrap().is_empty());
+    }
+}
+
+// Needs a disposable Postgres; `#[sqlx::test]` creates a fresh database per test there:
+//   DATABASE_URL=postgres://test:test@127.0.0.1:55432/postgres cargo test -p main_service -- --ignored
+// Never point it at a shared database.
+#[cfg(test)]
+mod personal {
+    use axum::http::StatusCode;
+    use serde_json::json;
+
+    use super::*;
+    use crate::workspaces::test_app::{send, user, workspace_of};
+
+    #[test]
+    fn the_personal_workspace_is_named_after_its_owner() {
+        assert_eq!(
+            personal_workspace_name(Some(" Ada Lovelace ")),
+            "Ada Lovelace's workspace"
+        );
+        assert_eq!(personal_workspace_name(None), "My workspace");
+        assert_eq!(personal_workspace_name(Some("   ")), "My workspace");
+
+        let long = personal_workspace_name(Some(&"a".repeat(100)));
+        assert_eq!(long.chars().count(), MAX_WORKSPACE_NAME_LENGTH as usize);
+        assert!(long.ends_with("'s workspace"));
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn it_is_made_once_with_its_owner_as_owner_and_admin(pool: PgPool) {
+        let ada = user(&pool).await;
+
+        let first = ensure_personal_workspace(&pool, ada, Some("Ada Lovelace"))
+            .await
+            .unwrap();
+        let again = ensure_personal_workspace(&pool, ada, Some("Someone else"))
+            .await
+            .unwrap();
+
+        assert_eq!(again.id, first.id);
+        assert_eq!(first.name, "Ada Lovelace's workspace");
+        assert_eq!(first.personal_of, Some(ada));
+        assert!(validate_workspace_slug(&first.slug).is_ok());
+
+        let member = repo::get_member_in_workspace(&pool, ada, first.id)
+            .await
+            .unwrap();
+        assert!(member.is_owner);
+        let roles = repo::get_roles_by_workspace_ids(&pool, ada, vec![first.id])
+            .await
+            .unwrap();
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles[0].slug, "admin");
+        assert_eq!(member_workspace_ids(&pool, ada).await.unwrap(), [first.id]);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn a_taken_slug_gets_a_number_and_everyone_gets_their_own(pool: PgPool) {
+        let (ada, other_ada) = (user(&pool).await, user(&pool).await);
+
+        let first = ensure_personal_workspace(&pool, ada, Some("Ada"))
+            .await
+            .unwrap();
+        let second = ensure_personal_workspace(&pool, other_ada, Some("Ada"))
+            .await
+            .unwrap();
+
+        assert_ne!(first.id, second.id);
+        assert_eq!(second.slug, format!("{}-2", first.slug));
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    #[ignore = "needs DATABASE_URL to a disposable Postgres"]
+    async fn its_owner_may_not_delete_it_and_sees_it_is_personal(pool: PgPool) {
+        let ada = user(&pool).await;
+        let personal = ensure_personal_workspace(&pool, ada, Some("Ada"))
+            .await
+            .unwrap();
+        let team = workspace_of(&pool, ada, "verso-team").await;
+
+        let (status, body) = send(&pool, ada, "GET", personal.id, "", None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body["isPersonal"], json!(true));
+        let (_, body) = send(&pool, ada, "GET", team, "", None).await;
+        assert_eq!(body["isPersonal"], json!(false));
+
+        let (_, me) = send(&pool, ada, "GET", personal.id, "/me", None).await;
+        assert_eq!(me["capabilities"]["workspace.delete"], json!(false));
+        assert_eq!(me["capabilities"]["workspace.transfer"], json!(false));
+        assert_eq!(me["capabilities"]["workspace.settings"], json!(true));
+
+        let confirm = json!({ "confirmName": personal.name });
+        let (status, body) = send(&pool, ada, "DELETE", personal.id, "", Some(confirm)).await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(body["params"]["capability"], json!("workspace.delete"));
     }
 }

@@ -20,6 +20,8 @@ pub struct Workspace {
     pub icon_asset_id: Option<Uuid>,
     pub access_epoch: i64,
     pub version: i64,
+    /// The user whose personal workspace it is: never deleted, transferred or left.
+    pub personal_of: Option<Uuid>,
 
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

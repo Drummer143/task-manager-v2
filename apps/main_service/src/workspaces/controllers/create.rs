@@ -76,6 +76,7 @@ pub async fn create_workspace(
             name: name.to_owned(),
             slug,
             task_prefix,
+            personal_of: None,
         },
         &user_id,
     )
