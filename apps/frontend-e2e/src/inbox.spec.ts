@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './support/fixtures';
-import { WS, fakeInbox, notification } from './support/inbox';
+import { SLUG, fakeInbox, notification } from './support/inbox';
 
 /**
  * Inbox (spec "[Уведомления] Inbox"): the tabs, the groups, the keyboard, read / archive / read-all
@@ -16,7 +16,7 @@ const open = async (page: Page, view?: 'unread' | 'all' | 'archived') => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
-  await page.goto(view ? `/${WS}/inbox?view=${view}` : `/${WS}/inbox`);
+  await page.goto(view ? `/${SLUG}/inbox?view=${view}` : `/${SLUG}/inbox`);
 
   return { errors };
 };
@@ -367,6 +367,6 @@ test('the sidebar Inbox row links to this workspace’s Inbox and counts its unr
   await open(page);
 
   const link = page.getByRole('link', { name: /Inbox/ });
-  await expect(link).toHaveAttribute('href', `/${WS}/inbox`);
+  await expect(link).toHaveAttribute('href', `/${SLUG}/inbox`);
   await expect.poll(() => sidebarCount(page)).toBe(2);
 });

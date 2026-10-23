@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { json, type FakeApi } from './support/api';
 import { expect, test } from './support/fixtures';
+import { SLUG, WS } from './support/inbox';
 import type { FakeRealtime } from './support/realtime';
 
 /**
@@ -9,7 +10,6 @@ import type { FakeRealtime } from './support/realtime';
  */
 test.use({ signedIn: true });
 
-const WS = '00000000-0000-0000-0000-000000000000';
 
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 
@@ -35,7 +35,7 @@ const openInbox = async (page: Page, api: FakeApi, realtime: FakeRealtime) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
-  await page.goto(`/${WS}/inbox?view=all`);
+  await page.goto(`/${SLUG}/inbox?view=all`);
   await expect(page.locator('#inbox-row-old')).toBeVisible();
   await expect.poll(() => realtime.connections.some((c) => c.joined.has('notifications'))).toBe(true);
 
@@ -162,7 +162,7 @@ test.describe('the scroll stays where the reader is', () => {
     api.on('GET /notifications/account_pinned', json({ data: [] }));
     api.on('GET /notifications/summary', json(summary(40)));
 
-    await page.goto(`/${WS}/inbox?view=all`);
+    await page.goto(`/${SLUG}/inbox?view=all`);
     await expect(page.locator('#inbox-row-r00')).toBeVisible();
     await expect.poll(() => realtime.connections.some((c) => c.joined.has('notifications'))).toBe(true);
 
