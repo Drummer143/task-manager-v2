@@ -1,7 +1,6 @@
 import React from 'react';
 import { Avatar, Menu, Skeleton, tooltipProps, type MenuItem } from '@task-manager-v2/ui-kit';
 import { ChevronDownIcon } from '@task-manager-v2/ui-kit/icons';
-import { WorkspaceMark } from '../../../shared/ui/WorkspaceMark';
 import type { SettingsGroup, SidebarUser, SidebarWorkspace } from './types';
 import styles from './WorkspaceSwitcher.module.scss';
 
@@ -58,7 +57,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
   if (!workspace) {
     return (
       <div className={rail ? styles.railLoading : styles.loading} role="status" aria-label="Loading workspace">
-        <Skeleton.Block sunken width="var(--workspace-mark)" height="var(--workspace-mark)" />
+        <Skeleton.Block sunken width="var(--avatar-sm)" height="var(--avatar-sm)" />
         {!rail && <Skeleton.Line sunken width="60%" />}
       </div>
     );
@@ -77,7 +76,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
       return {
         value: each.id,
         label: each.name,
-        icon: <WorkspaceMark name={each.name} src={each.iconUrl} />,
+        icon: <Avatar shape="square" size="xs" name={each.name} id={each.id} src={each.iconUrl} />,
         // Its number is in the Inbox row already for the current one
         dot: unread > 0 ? unreadText(unread) : undefined,
       };
@@ -130,7 +129,8 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
               type: 'action',
               id: 'preferences',
               label: 'Preferences',
-              keys: 'mod+,',
+              // Not ⌘, — the browser on macOS keeps it for its own menu (spec: Sidebar · 01)
+              keys: 'g ,',
               onSelect: () => onOpenSettings('preferences'),
             } as const,
           ]
@@ -147,7 +147,8 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
       aria-label={`${workspace.name}, workspace menu`}
       {...tooltipProps({ text: workspace.name, placement: 'right' })}
     >
-      <WorkspaceMark name={workspace.name} src={workspace.iconUrl} />
+      {/* The button's label names the workspace already */}
+      <Avatar shape="square" size="sm" name={workspace.name} id={workspace.id} src={workspace.iconUrl} aria-hidden />
     </button>
   ) : (
     <button
@@ -156,7 +157,8 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
       data-sidebar-key="workspace"
       aria-label={`${workspace.name}, workspace menu`}
     >
-      <WorkspaceMark name={workspace.name} src={workspace.iconUrl} />
+      {/* The button's label names the workspace already */}
+      <Avatar shape="square" size="sm" name={workspace.name} id={workspace.id} src={workspace.iconUrl} aria-hidden />
       <span className={styles.name} {...tooltipProps({ overflow: true })}>
         {workspace.name}
       </span>

@@ -2,7 +2,7 @@ import type { WorkspaceWithRoles } from '@task-manager-v2/api/main/schemas';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { pickWorkspace, readLastWorkspaceId, rememberWorkspace } from './lastWorkspace';
 
-const workspace = (id: string, deletedAt?: string): WorkspaceWithRoles => ({
+const workspace = (id: string, deletedAt?: string, isPersonal = false): WorkspaceWithRoles => ({
   id,
   slug: id,
   name: id,
@@ -11,7 +11,7 @@ const workspace = (id: string, deletedAt?: string): WorkspaceWithRoles => ({
   createdAt: '2026-10-01T00:00:00Z',
   deletedAt,
   isOwner: true,
-  isPersonal: false,
+  isPersonal,
   roles: [],
 });
 
@@ -25,6 +25,14 @@ describe('pickWorkspace', () => {
 
   it('the last one, while the user is still in it', () => {
     expect(pickWorkspace(list, 'b')?.id).toBe('b');
+  });
+
+  it('else their personal one: the first sign-in, another device', () => {
+    const withPersonal = [workspace('a'), workspace('mine', undefined, true), workspace('c')];
+
+    expect(pickWorkspace(withPersonal, null)?.id).toBe('mine');
+    expect(pickWorkspace(withPersonal, 'gone')?.id).toBe('mine');
+    expect(pickWorkspace(withPersonal, 'c')?.id).toBe('c');
   });
 
   it('else the first of the list', () => {

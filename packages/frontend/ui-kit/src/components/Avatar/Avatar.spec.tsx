@@ -15,6 +15,11 @@ describe('initialsOf', () => {
     expect(initialsOf('Anna Kim', 'xs')).toBe('A');
   });
 
+  it('takes one letter for a square: a workspace has one letter at every size', () => {
+    expect(initialsOf('Verso team', 'sm', 'square')).toBe('V');
+    expect(initialsOf('Verso team', 'md', 'square')).toBe('V');
+  });
+
   it('survives extra spaces and an empty name', () => {
     expect(initialsOf('  Anna   Kim ', 'sm')).toBe('AK');
     expect(initialsOf('', 'sm')).toBe('');
@@ -44,6 +49,14 @@ describe('Avatar', () => {
     expect(container.textContent).toBe('AK');
     expect(container.firstElementChild?.classList.contains(styles.sm)).toBe(true);
     expect(container.firstElementChild?.getAttribute('data-tone')).toBe(String(toneOf('u1')));
+  });
+
+  it('a square is a workspace: rounded corners, one letter', () => {
+    const { container } = render(<Avatar name="Verso team" id="w1" shape="square" />);
+
+    screen.getByRole('img', { name: 'Verso team' });
+    expect(container.textContent).toBe('V');
+    expect(container.firstElementChild?.classList.contains(styles.square)).toBe(true);
   });
 
   it('keeps the initials until the photo loads, then shows it at once', () => {

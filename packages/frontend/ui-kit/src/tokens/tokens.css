@@ -371,8 +371,6 @@
   --sidebar-collapsed: 48px;
   /* A rail button (Sidebar · 05): a square centred in the collapsed column. */
   --rail-button: 32px;
-  /* The workspace's sign: the switcher, its menu (Sidebar · 01). */
-  --workspace-mark: 24px;
   --panel-width: 420px;
   --panel-min: 360px;
   --panel-max: 640px;
@@ -399,6 +397,8 @@
   --avatar-xs: 16px;
   --avatar-sm: 20px;
   --avatar-md: 28px;
+  /* A square avatar is a workspace, a round one a person (access spec §1.1). */
+  --avatar-square-radius-sm: var(--radius-sm);
   /* A stack: at most this many, then a counter; each overlaps the previous. */
   --avatar-stack-max: 3;
   --avatar-overlap: -6px;

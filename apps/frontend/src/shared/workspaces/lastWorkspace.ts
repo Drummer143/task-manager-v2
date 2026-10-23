@@ -22,8 +22,8 @@ export const rememberWorkspace = (workspaceId: string) => {
 
 /**
  * Where the app opens when the address names no workspace: the last one, while the user is
- * still in it, else the first of the list. A deleted one (its owner still sees it for 30 days)
- * is never opened by itself.
+ * still in it; else — the first sign-in, or another device — their personal one; else the first
+ * of the list. A deleted one (its owner still sees it for 30 days) is never opened by itself.
  */
 export const pickWorkspace = (
   workspaces: readonly WorkspaceWithRoles[],
@@ -31,5 +31,9 @@ export const pickWorkspace = (
 ): WorkspaceWithRoles | undefined => {
   const live = workspaces.filter((workspace) => !workspace.deletedAt);
 
-  return live.find((workspace) => workspace.id === lastId) ?? live[0];
+  return (
+    live.find((workspace) => workspace.id === lastId) ??
+    live.find((workspace) => workspace.isPersonal) ??
+    live[0]
+  );
 };
