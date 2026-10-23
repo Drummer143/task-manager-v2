@@ -1,0 +1,122 @@
+/* WorkspaceSwitcher (spec: Sidebar · 01): a ghost button with the mark, the name and a chevron. */
+
+.trigger {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--sp-3);
+  // A long name shrinks the button, never pushes ⇤ out of the header
+  min-width: 0;
+  height: var(--control-height);
+  padding-inline: var(--sp-2) var(--sp-3);
+
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--dur-state) var(--ease-out);
+
+  &:hover {
+    background-color: var(--bg-hover);
+  }
+
+  // Pressed, and while its menu is open
+  &:active,
+  &[aria-expanded='true'] {
+    background-color: var(--bg-active);
+  }
+}
+
+.name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--type-body);
+  font-weight: var(--weight-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Does not turn when the menu opens, as at Select. */
+.chevron {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--icon-size);
+}
+
+/* The rail: the mark alone, on a rail button. */
+.railTrigger {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--rail-button);
+  height: var(--rail-button);
+  padding: 0;
+
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color var(--dur-state) var(--ease-out);
+
+  &:hover {
+    background-color: var(--bg-hover);
+  }
+
+  &:active,
+  &[aria-expanded='true'] {
+    background-color: var(--bg-active);
+  }
+}
+
+.loading {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+  height: var(--control-height);
+  padding-inline: var(--sp-2) var(--sp-3);
+}
+
+.railLoading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rail-button);
+  height: var(--rail-button);
+}
+
+/* Who is signed in, above Profile and Sign out: not an item. */
+.user {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.userName,
+.email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userName {
+  color: var(--text-primary);
+  font-size: var(--type-body);
+}
+
+.email {
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+}

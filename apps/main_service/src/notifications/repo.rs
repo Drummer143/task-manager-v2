@@ -323,6 +323,9 @@ mod tests {
         workspace_id: Option<Uuid>,
         message: &str,
     ) -> Notification {
+        if let Some(workspace_id) = workspace_id {
+            crate::test_support::ensure_workspace(pool, workspace_id).await;
+        }
         let data = NotificationKind::Debug {
             message: message.into(),
         };

@@ -5,7 +5,7 @@ use error_handlers::ApiError;
 use sql_models::asset::model::{AssetOwnerType, AssetVisibility};
 use uuid::Uuid;
 
-use crate::workspaces;
+use crate::workspaces::service as workspaces;
 
 /// What the client asks to attach a file to.
 #[derive(Debug, Clone, Copy)]

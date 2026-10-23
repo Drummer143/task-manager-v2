@@ -7,8 +7,6 @@ defmodule SocketService.Application do
 
   @impl true
   def start(_type, _args) do
-    # SocketService.Repo is not started: there are no queries yet, and it needs postgrex and a
-    # database config first (add both with the chat)
     children =
       [
         SocketServiceWeb.Telemetry,
@@ -27,10 +25,15 @@ defmodule SocketService.Application do
     Supervisor.start_link(children, opts)
   end
 
-  # The JWKS fetcher (authentik) and the RabbitMQ consumer; off in tests
+  # The database (main's tables, read only), the JWKS fetcher (authentik) and the RabbitMQ
+  # consumer; off in tests
   defp external_services do
     if Application.get_env(:socket_service, :external_services, true) do
-      [SocketService.AuthVerifier.TokenStrategy, SocketService.Notifications.Consumer]
+      [
+        SocketService.Repo,
+        SocketService.AuthVerifier.TokenStrategy,
+        SocketService.Notifications.Consumer
+      ]
     else
       []
     end

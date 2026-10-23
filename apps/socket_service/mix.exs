@@ -55,6 +55,8 @@ defmodule SocketService.MixProject do
       {:joken_jwks, "~> 1.6"},
       {:phoenix, "~> 1.8.15"},
       {:phoenix_ecto, "~> 4.5"},
+      # The Postgres driver of SocketService.Repo: membership checks read main's tables
+      {:postgrex, "~> 0.20"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"}
     ]

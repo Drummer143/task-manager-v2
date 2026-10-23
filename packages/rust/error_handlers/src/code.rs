@@ -84,6 +84,48 @@ pub enum ErrorCode {
     },
     /// A service this one depends on did not answer or answered with something unusable.
     UpstreamUnavailable,
+    /// A field is longer than allowed. Used in per-field errors.
+    ValueTooLong {
+        /// Maximum length, in characters.
+        max: u64,
+    },
+    /// A field is shorter than allowed. Used in per-field errors.
+    ValueTooShort {
+        /// Minimum length, in characters.
+        min: u64,
+    },
+    /// The value must be unique and is already used, e.g. a workspace slug. Used in per-field
+    /// errors.
+    Taken,
+    /// The user does not have the required capability to perform the action.
+    AccessDenied {
+        /// The missing capability, e.g. `workspace.settings`.
+        capability: String,
+    },
+    /// The edit sets no field: there is nothing to change.
+    EmptyRequestBody,
+    /// Someone else changed these fields after the version the edit was made on. Nothing was
+    /// applied; reload the resource and edit again.
+    EditConflict {
+        /// The conflicting fields, each with its latest change.
+        conflicts: Vec<EditedField>,
+    },
+    /// The value is not the one it must repeat, e.g. the workspace's name typed to confirm its
+    /// deletion. Used in per-field errors.
+    Mismatch,
+}
+
+/// A field changed by someone else; a param of [`ErrorCode::EditConflict`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[serde(rename_all = "camelCase")]
+pub struct EditedField {
+    /// The API's name of the field, e.g. `slug`.
+    pub field: String,
+    /// The user who changed it last; `None` once they deleted their account.
+    pub by: Option<String>,
+    /// When it was changed last, RFC 3339.
+    pub at: String,
 }
 
 impl ErrorCode {
@@ -127,6 +169,21 @@ impl ErrorCode {
             Self::FileLinkExpired,
             Self::TooManyItems { max_items: 200 },
             Self::UpstreamUnavailable,
+            Self::ValueTooLong { max: 100 },
+            Self::ValueTooShort { min: 3 },
+            Self::Taken,
+            Self::AccessDenied {
+                capability: "workspace.settings".to_string(),
+            },
+            Self::EmptyRequestBody,
+            Self::EditConflict {
+                conflicts: vec![EditedField {
+                    field: "slug".into(),
+                    by: Some("0192f1e0-7b1a-7c3e-9a51-3d1f0e2b4c5d".into()),
+                    at: "2026-10-18T10:00:00Z".into(),
+                }],
+            },
+            Self::Mismatch,
         ]
     }
 
@@ -140,14 +197,21 @@ impl ErrorCode {
             | Self::FileHashMismatch
             | Self::InvalidChunkSize { .. }
             | Self::VerificationFailed
-            | Self::TooManyItems { .. } => 422,
+            | Self::TooManyItems { .. }
+            | Self::EmptyRequestBody
+            | Self::Mismatch => 422,
             Self::NotFound => 404,
-            Self::Conflict | Self::UploadWrongStep { .. } | Self::UploadIncomplete => 409,
+            Self::Conflict
+            | Self::UploadWrongStep { .. }
+            | Self::UploadIncomplete
+            | Self::Taken
+            | Self::EditConflict { .. } => 409,
             Self::Unauthorized => 401,
             Self::Forbidden
             | Self::UploadTokenInvalid
             | Self::FileLinkInvalid
-            | Self::FileLinkExpired => 403,
+            | Self::FileLinkExpired
+            | Self::AccessDenied { .. } => 403,
             Self::Internal => 500,
             Self::MalformedRequest => 400,
             Self::UnsupportedMediaType => 415,
@@ -157,6 +221,7 @@ impl ErrorCode {
             Self::InsufficientStorage => 507,
             Self::UpstreamUnavailable => 502,
             Self::PayloadTooLarge | Self::FileTooLarge { .. } => 413,
+            Self::ValueTooLong { .. } | Self::ValueTooShort { .. } => 422,
         }
     }
 
@@ -190,6 +255,13 @@ impl ErrorCode {
             Self::FileLinkExpired => "FILE_LINK_EXPIRED",
             Self::TooManyItems { .. } => "TOO_MANY_ITEMS",
             Self::UpstreamUnavailable => "UPSTREAM_UNAVAILABLE",
+            Self::ValueTooLong { .. } => "VALUE_TOO_LONG",
+            Self::ValueTooShort { .. } => "VALUE_TOO_SHORT",
+            Self::Taken => "TAKEN",
+            Self::AccessDenied { .. } => "ACCESS_DENIED",
+            Self::EmptyRequestBody => "EMPTY_REQUEST_BODY",
+            Self::EditConflict { .. } => "EDIT_CONFLICT",
+            Self::Mismatch => "MISMATCH",
         }
     }
 

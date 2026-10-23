@@ -350,6 +350,8 @@ services:
             AUTHENTIK_JWKS_URL: ${AUTHENTIK_JWKS_URL:?AUTHENTIK_JWKS_URL is required}
             AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER:?AUTHENTIK_ISSUER is required}
             AUTHENTIK_AUDIENCE: ${AUTHENTIK_AUDIENCE:?AUTHENTIK_AUDIENCE is required}
+            # main's database, read only: membership checks of the workspace channels
+            DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
         deploy:
             resources:
                 limits:

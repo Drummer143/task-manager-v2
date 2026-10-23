@@ -4,6 +4,7 @@
  * storage
  * OpenAPI spec version: 0.1.0
  */
+import type { EditedField } from './editedField';
 
 /**
  * Every error the API can return.
@@ -120,4 +121,47 @@ export type ErrorCode = {
 };
 } | {
   code: 'UPSTREAM_UNAVAILABLE';
+} | {
+  code: 'VALUE_TOO_LONG';
+  /** A field is longer than allowed. Used in per-field errors. */
+  params: {
+  /**
+     * Maximum length, in characters.
+     * @minimum 0
+     */
+  max: number;
+};
+} | {
+  code: 'VALUE_TOO_SHORT';
+  /** A field is shorter than allowed. Used in per-field errors. */
+  params: {
+  /**
+     * Minimum length, in characters.
+     * @minimum 0
+     */
+  min: number;
+};
+} | {
+  code: 'TAKEN';
+} | {
+  code: 'ACCESS_DENIED';
+  /** The user does not have the required capability to perform the action. */
+  params: {
+  /** The missing capability, e.g. `workspace.settings`. */
+  capability: string;
+};
+} | {
+  code: 'EMPTY_REQUEST_BODY';
+} | {
+  code: 'EDIT_CONFLICT';
+  /**
+     * Someone else changed these fields after the version the edit was made on. Nothing was
+     * applied; reload the resource and edit again.
+     */
+  params: {
+  /** The conflicting fields, each with its latest change. */
+  conflicts: EditedField[];
+};
+} | {
+  code: 'MISMATCH';
 };

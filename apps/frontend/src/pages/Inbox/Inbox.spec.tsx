@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import type { WorkspaceWithRoles } from '@task-manager-v2/api/main/schemas';
+import { WorkspaceProvider } from '../../shared/workspaces';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { KitRoot, useCursorStore } from '@task-manager-v2/ui-kit';
 import type { Notification } from '@task-manager-v2/api/main/schemas';
@@ -134,14 +136,29 @@ const LocationProbe: React.FC = () => <output data-testid="location">{useLocatio
 
 const location = () => screen.getByTestId('location').textContent;
 
+// The workspace the layout resolved: Inbox reads its id
+const workspace: WorkspaceWithRoles = {
+  id: WS,
+  slug: 'verso',
+  name: 'Verso team',
+  taskPrefix: 'VT',
+  version: 1,
+  createdAt: '2026-10-01T00:00:00Z',
+  isOwner: true,
+  isPersonal: false,
+  roles: [],
+};
+
 const renderInbox = (search = '') =>
   render(
     <QueryClientProvider client={queryClient}>
       <KitRoot>
-        <MemoryRouter initialEntries={[`/${WS}/inbox${search}`]}>
-          <Routes>
-            <Route path="/:workspace/inbox" element={<><Inbox /><LocationProbe /></>} />
-          </Routes>
+        <MemoryRouter initialEntries={[`/${workspace.slug}/inbox${search}`]}>
+          <WorkspaceProvider workspace={workspace}>
+            <Routes>
+              <Route path="/:workspaceSlug/inbox" element={<><Inbox /><LocationProbe /></>} />
+            </Routes>
+          </WorkspaceProvider>
         </MemoryRouter>
       </KitRoot>
     </QueryClientProvider>,

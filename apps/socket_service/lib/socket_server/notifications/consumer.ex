@@ -31,19 +31,30 @@ defmodule SocketService.Notifications.Consumer do
   defp declare_exchange(channel),
     do: AMQP.Exchange.declare(channel, @exchange, :fanout, durable: true)
 
-  # main publishes with the user id as the routing key (`metadata: [:routing_key]` above
-  # brings it here): one user's signals go through one processor and keep their order
-  defp partition(%Message{metadata: %{routing_key: user_id}}), do: :erlang.phash2(user_id)
+  # main publishes with the topic as the routing key (`metadata: [:routing_key]` above brings
+  # it here): one topic's signals go through one processor and keep their order
+  defp partition(%Message{metadata: %{routing_key: topic}}), do: :erlang.phash2(topic)
 
+  # The envelope of main (signals.rs): `topic` is `user:{id}`, which the channel `notifications`
+  # of each of the user's tabs listens to, or `workspace:{id}`, the workspace's channel itself
   @impl true
   def handle_message(_processor, %Message{data: data} = message, _context) do
     case Jason.decode(data) do
-      {:ok, %{"user_id" => user_id, "event" => event, "payload" => payload}} ->
-        SocketServiceWeb.Endpoint.broadcast("user:" <> user_id, event, payload)
-        message
+      {:ok, %{"topic" => topic, "event" => event, "payload" => payload}}
+      when is_binary(event) ->
+        if allowed_topic?(topic) do
+          SocketServiceWeb.Endpoint.broadcast(topic, event, payload)
+          message
+        else
+          Message.failed(message, :invalid_topic)
+        end
 
       _ ->
         Message.failed(message, :invalid_payload)
     end
   end
+
+  defp allowed_topic?("user:" <> id) when id != "", do: true
+  defp allowed_topic?("workspace:" <> id) when id != "", do: true
+  defp allowed_topic?(_topic), do: false
 end

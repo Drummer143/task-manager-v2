@@ -1,7 +1,9 @@
 import type { Notification } from '@task-manager-v2/api/main/schemas';
-import { json, status, type FakeApi } from './api';
+import { WORKSPACE, json, status, type FakeApi } from './api';
 
-export const WS = '00000000-0000-0000-0000-000000000000';
+/** The workspace's id, as notifications name it, and its slug, as addresses do. */
+export const WS = WORKSPACE.id;
+export const SLUG = WORKSPACE.slug;
 
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 

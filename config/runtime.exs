@@ -30,6 +30,11 @@ if config_env() != :test do
     jwks_url: System.fetch_env!("AUTHENTIK_JWKS_URL"),
     issuer: System.fetch_env!("AUTHENTIK_ISSUER"),
     audience: System.fetch_env!("AUTHENTIK_AUDIENCE")
+
+  # main's database: membership checks of the workspace channels read it, never migrate it
+  config :socket_service, SocketService.Repo,
+    url: System.fetch_env!("DATABASE_URL"),
+    pool_size: String.to_integer(System.get_env("SOCKET_SERVICE_POOL_SIZE", "5"))
 end
 
 if config_env() == :prod do

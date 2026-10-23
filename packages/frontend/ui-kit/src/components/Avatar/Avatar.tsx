@@ -5,9 +5,13 @@ import styles from './Avatar.module.scss';
 
 export type AvatarSize = 'xs' | 'sm' | 'md';
 
+export type AvatarShape = 'circle' | 'square';
+
 type AvatarOwnProps = {
   /** xs — a menu (16); sm — a card, a table row (20); md — the panel, presence (28). */
   size?: AvatarSize;
+  /** circle — a person; square — a workspace, with one letter at every size (spec 08). */
+  shape?: AvatarShape;
 };
 
 /** A person: the kit knows nothing about users — only a name, a stable id and a photo URL. */
@@ -31,12 +35,15 @@ export type AvatarProps = AvatarOwnProps &
   (PersonProps | EmptyProps) &
   Omit<React.HTMLAttributes<HTMLElement>, 'children' | 'onClick' | 'id'> & { ref?: React.Ref<HTMLElement> };
 
-/** Two letters — first and last word; one letter at 16 px, where two are unreadable (spec 08). */
-export const initialsOf = (name: string, size: AvatarSize) => {
+/**
+ * Two letters — first and last word; one letter at 16 px, where two are unreadable, and on a
+ * square, which is a workspace's sign (spec 08).
+ */
+export const initialsOf = (name: string, size: AvatarSize, shape: AvatarShape = 'circle') => {
   const words = name.trim().split(/\s+/).filter(Boolean);
   const letters = words.length > 1 ? [words[0][0], words[words.length - 1][0]] : [words[0]?.[0] ?? ''];
 
-  return (size === 'xs' ? letters.slice(0, 1) : letters).join('').toUpperCase();
+  return (size === 'xs' || shape === 'square' ? letters.slice(0, 1) : letters).join('').toUpperCase();
 };
 
 /** A stable tone 1…4 for an id (djb2): the same person, the same color, on every screen. */
@@ -72,8 +79,21 @@ const Photo: React.FC<{ src: string }> = ({ src }) => {
   );
 };
 
-/** A person as a circle (spec 08): the photo, or initials on a neutral tone. */
-export const Avatar: React.FC<AvatarProps> = ({ name, id, src, size = 'sm', onClick, className, ref, ...props }) => {
+/**
+ * A person as a circle, a workspace as a square (spec 08): the photo or logo, or initials on a
+ * neutral tone.
+ */
+export const Avatar: React.FC<AvatarProps> = ({
+  name,
+  id,
+  src,
+  size = 'sm',
+  shape = 'circle',
+  onClick,
+  className,
+  ref,
+  ...props
+}) => {
   const messages = useMessages();
 
   if (name === undefined) {
@@ -99,11 +119,11 @@ export const Avatar: React.FC<AvatarProps> = ({ name, id, src, size = 'sm', onCl
       aria-label={name}
       {...props}
       ref={ref as React.Ref<HTMLSpanElement>}
-      className={cx(styles.avatar, styles[size], className)}
+      className={cx(styles.avatar, styles[size], shape === 'square' && styles.square, className)}
       data-tone={toneOf(id ?? name)}
     >
       <span className={styles.initials} aria-hidden="true">
-        {initialsOf(name, size)}
+        {initialsOf(name, size, shape)}
       </span>
       {/* Keyed by src: a new photo starts over from the initials. */}
       {src && <Photo key={src} src={src} />}

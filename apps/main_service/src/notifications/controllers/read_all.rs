@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::notifications::{repo::NotificationsRepository, updates};
 use crate::signals::Signals;
-use crate::workspaces;
+use crate::workspaces::service as workspaces;
 
 #[derive(Deserialize, ToSchema)]
 pub struct ReadAllNotificationsRequest {

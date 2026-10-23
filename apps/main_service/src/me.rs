@@ -12,7 +12,10 @@ use sqlx::PgPool;
 use utils::auth_middleware::{Claims, InternalAuthState, auth_guard};
 use utoipa::ToSchema;
 
-use crate::repos::users::{TokenUserDto, UsersRepository};
+use crate::{
+    repos::users::{TokenUserDto, UsersRepository},
+    workspaces,
+};
 
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -51,11 +54,24 @@ pub async fn me(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<MeResponse>, ApiError> {
+    // The personal workspace is named after the person, not after a login
+    let owner_name = claims
+        .name
+        .clone()
+        .or_else(|| claims.preferred_username.clone());
     let user = UsersRepository::get_or_create_from_token(&pool, token_user(claims)).await?;
 
     // Deactivated in authentik (synced by the webhook): the token may still be valid for minutes
     if !user.is_active {
         return Err(ApiError::new(ErrorCode::Forbidden).with_source("the user is deactivated"));
+    }
+
+    // Made at the first sign-in, and at the next one for users from before it existed. Failing
+    // to make it does not keep anyone out: the next `/me` tries again
+    if let Err(error) =
+        workspaces::service::ensure_personal_workspace(&pool, user.id, owner_name.as_deref()).await
+    {
+        tracing::warn!(user_id = %user.id, ?error, "the personal workspace was not created");
     }
 
     Ok(Json(MeResponse {

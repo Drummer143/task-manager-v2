@@ -135,6 +135,7 @@ mod tests {
     }
 
     async fn pending(pool: &PgPool, user_id: Uuid) -> Asset {
+        crate::test_support::ensure_workspace(pool, WS).await;
         AssetsRepository::create_pending(
             pool,
             NewAsset {

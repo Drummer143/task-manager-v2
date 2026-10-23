@@ -6,20 +6,31 @@
  */
 import type {
   ArchiveNotificationRequest,
+  CheckSlugAvailableParams,
   CreateAssetRequest,
   CreateAssetResponse,
   CreateNotificationDto,
+  CreateWorkspaceRequest,
+  DeleteWorkspaceRequest,
+  GetMeInWorkspaceResponse,
   ListNotificationsParams,
   MeResponse,
   Notification,
   NotificationPage,
+  PatchWorkspaceRequest,
   PinnedNotifications,
   ReadAllNotificationsRequest,
   ReadAllNotificationsResponse,
   ReadNotificationRequest,
+  ResolveSlugParams,
+  SlugAvailableResponse,
+  SlugResponse,
+  StatsResponse,
   SummaryResponse,
   UnarchiveNotificationRequest,
-  UnreadNotificationRequest
+  UnreadNotificationRequest,
+  WorkspaceResponse,
+  WorkspaceWithRoles
 } from './schemas';
 
 import { mainFetcher } from '../../fetcher';
@@ -156,6 +167,119 @@ export const unreadNotification = (
       options);
     }
 
+export const getUserWorkspaces = (
+
+ options?: SecondParameter<typeof mainFetcher<WorkspaceWithRoles[]>>,) => {
+      return mainFetcher<WorkspaceWithRoles[]>(
+      {url: `/workspaces`, method: 'GET'
+    },
+      options);
+    }
+
+/**
+ * @summary Creates a workspace with its built-in roles; the creator becomes its owner with Admin.
+Sending the same request again (same `id`, same creator) returns the workspace with `200`.
+ */
+export const createWorkspace = (
+    createWorkspaceRequest: CreateWorkspaceRequest,
+ options?: SecondParameter<typeof mainFetcher<WorkspaceResponse>>,) => {
+      return mainFetcher<WorkspaceResponse>(
+      {url: `/workspaces`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createWorkspaceRequest
+    },
+      options);
+    }
+
+export const resolveSlug = (
+    params: ResolveSlugParams,
+ options?: SecondParameter<typeof mainFetcher<SlugResponse>>,) => {
+      return mainFetcher<SlugResponse>(
+      {url: `/workspaces/resolve`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+export const checkSlugAvailable = (
+    params: CheckSlugAvailableParams,
+ options?: SecondParameter<typeof mainFetcher<SlugAvailableResponse>>,) => {
+      return mainFetcher<SlugAvailableResponse>(
+      {url: `/workspaces/slug-available`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+export const getWorkspaceById = (
+    workspaceId: string,
+ options?: SecondParameter<typeof mainFetcher<WorkspaceResponse>>,) => {
+      return mainFetcher<WorkspaceResponse>(
+      {url: `/workspaces/${workspaceId}`, method: 'GET'
+    },
+      options);
+    }
+
+/**
+ * @summary Deletes the workspace: everyone but the owner loses it at once; the owner can restore it for
+30 days, and its slug stays taken meanwhile. Deleting it again changes nothing.
+ */
+export const deleteWorkspace = (
+    workspaceId: string,
+    deleteWorkspaceRequest: DeleteWorkspaceRequest,
+ options?: SecondParameter<typeof mainFetcher<void>>,) => {
+      return mainFetcher<void>(
+      {url: `/workspaces/${workspaceId}`, method: 'DELETE',
+      headers: {'Content-Type': 'application/json', },
+      data: deleteWorkspaceRequest
+    },
+      options);
+    }
+
+export const patchWorkspace = (
+    workspaceId: string,
+    patchWorkspaceRequest: PatchWorkspaceRequest,
+ options?: SecondParameter<typeof mainFetcher<WorkspaceResponse>>,) => {
+      return mainFetcher<WorkspaceResponse>(
+      {url: `/workspaces/${workspaceId}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchWorkspaceRequest
+    },
+      options);
+    }
+
+export const getMeInWorkspace = (
+    workspaceId: string,
+ options?: SecondParameter<typeof mainFetcher<GetMeInWorkspaceResponse>>,) => {
+      return mainFetcher<GetMeInWorkspaceResponse>(
+      {url: `/workspaces/${workspaceId}/me`, method: 'GET'
+    },
+      options);
+    }
+
+/**
+ * @summary Brings a deleted workspace back, as it was, for every member. Only its owner, within 30 days
+of the delete; then it is `404` (the layer, `load_workspace_context_with_deleted`). Restoring
+a workspace that is not deleted changes nothing.
+ */
+export const restoreWorkspace = (
+    workspaceId: string,
+ options?: SecondParameter<typeof mainFetcher<WorkspaceResponse>>,) => {
+      return mainFetcher<WorkspaceResponse>(
+      {url: `/workspaces/${workspaceId}/restore`, method: 'POST'
+    },
+      options);
+    }
+
+export const getWorkspaceStats = (
+    workspaceId: string,
+ options?: SecondParameter<typeof mainFetcher<StatsResponse>>,) => {
+      return mainFetcher<StatsResponse>(
+      {url: `/workspaces/${workspaceId}/stats`, method: 'GET'
+    },
+      options);
+    }
+
 export type CreateAssetResult = NonNullable<Awaited<ReturnType<typeof createAsset>>>
 export type GetMeResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
 export type ListNotificationsResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
@@ -167,3 +291,13 @@ export type ReadAllNotificationsResult = NonNullable<Awaited<ReturnType<typeof r
 export type GetNotificationSummaryResult = NonNullable<Awaited<ReturnType<typeof getNotificationSummary>>>
 export type UnarchiveNotificationResult = NonNullable<Awaited<ReturnType<typeof unarchiveNotification>>>
 export type UnreadNotificationResult = NonNullable<Awaited<ReturnType<typeof unreadNotification>>>
+export type GetUserWorkspacesResult = NonNullable<Awaited<ReturnType<typeof getUserWorkspaces>>>
+export type CreateWorkspaceResult = NonNullable<Awaited<ReturnType<typeof createWorkspace>>>
+export type ResolveSlugResult = NonNullable<Awaited<ReturnType<typeof resolveSlug>>>
+export type CheckSlugAvailableResult = NonNullable<Awaited<ReturnType<typeof checkSlugAvailable>>>
+export type GetWorkspaceByIdResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceById>>>
+export type DeleteWorkspaceResult = NonNullable<Awaited<ReturnType<typeof deleteWorkspace>>>
+export type PatchWorkspaceResult = NonNullable<Awaited<ReturnType<typeof patchWorkspace>>>
+export type GetMeInWorkspaceResult = NonNullable<Awaited<ReturnType<typeof getMeInWorkspace>>>
+export type RestoreWorkspaceResult = NonNullable<Awaited<ReturnType<typeof restoreWorkspace>>>
+export type GetWorkspaceStatsResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceStats>>>

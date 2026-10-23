@@ -25,7 +25,7 @@ mod response;
 pub mod trace;
 
 pub use body::{ErrorBody, FieldError};
-pub use code::ErrorCode;
+pub use code::{EditedField, ErrorCode};
 pub use error::ApiError;
 
 pub type Result<T> = std::result::Result<T, ApiError>;

@@ -6,18 +6,47 @@ use lapin::{
 use serde::Serialize;
 use uuid::Uuid;
 
+/// What the socket server's consumer reads (consumer.ex): it broadcasts `payload` to the PubSub
+/// `topic` under the name `event`.
 #[derive(Serialize)]
 struct Envelope<'a, T: Serialize> {
-    user_id: Uuid,
+    topic: &'a str,
     event: &'a str,
     payload: &'a T,
+}
+
+/// The PubSub topic of a user: the channel `notifications` of each of their tabs listens to it.
+pub fn user_topic(user_id: Uuid) -> String {
+    format!("user:{user_id}")
+}
+
+/// The PubSub topic of a workspace: the channel `workspace:{id}` itself, joined by its members.
+pub fn workspace_topic(workspace_id: Uuid) -> String {
+    format!("workspace:{workspace_id}")
 }
 
 const NOTIFICATIONS_EXCHANGE: &str = "notifications";
 
 #[derive(Clone)]
 pub struct Signals {
-    channel: Channel,
+    sink: Sink,
+}
+
+#[derive(Clone)]
+enum Sink {
+    Amqp(Channel),
+    /// Keeps what is sent, for the tests to look at, instead of sending it.
+    #[cfg(test)]
+    Recorded(std::sync::Arc<std::sync::Mutex<Vec<Sent>>>),
+}
+
+/// A signal as it was sent, with its payload as JSON.
+#[cfg(test)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct Sent {
+    pub topic: String,
+    pub event: String,
+    pub payload: serde_json::Value,
 }
 
 impl Signals {
@@ -36,30 +65,82 @@ impl Signals {
             )
             .await?;
 
-        Ok(Self { channel })
+        Ok(Self {
+            sink: Sink::Amqp(channel),
+        })
     }
 
+    /// Signals that are kept, not sent: `sent()` returns them.
+    #[cfg(test)]
+    pub fn recorded() -> Self {
+        Self {
+            sink: Sink::Recorded(Default::default()),
+        }
+    }
+
+    /// What was sent so far, in order. Only for `recorded()`.
+    #[cfg(test)]
+    pub fn sent(&self) -> Vec<Sent> {
+        match &self.sink {
+            Sink::Recorded(sent) => sent.lock().unwrap().clone(),
+            Sink::Amqp(_) => panic!("only recorded signals can be read back"),
+        }
+    }
+
+    /// To every tab of the user.
     pub async fn publish(&self, user_id: Uuid, event: &str, payload: &impl Serialize) {
-        if let Err(error) = self.try_publish(user_id, event, payload).await {
-            tracing::warn!(%user_id, event, %error, "signal dropped");
+        self.publish_to(&user_topic(user_id), event, payload).await;
+    }
+
+    /// To every tab that has the workspace's channel joined.
+    pub async fn publish_to_workspace(
+        &self,
+        workspace_id: Uuid,
+        event: &str,
+        payload: &impl Serialize,
+    ) {
+        self.publish_to(&workspace_topic(workspace_id), event, payload)
+            .await;
+    }
+
+    /// Best effort: the change is done already, so a failure is logged, never the request's error.
+    async fn publish_to(&self, topic: &str, event: &str, payload: &impl Serialize) {
+        if let Err(error) = self.try_publish(topic, event, payload).await {
+            tracing::warn!(topic, event, %error, "signal dropped");
         }
     }
 
     async fn try_publish(
         &self,
-        user_id: Uuid,
+        topic: &str,
         event: &str,
         payload: &impl Serialize,
     ) -> anyhow::Result<()> {
+        // Outside tests the sink is always AMQP, and the match has one arm
+        #[cfg_attr(not(test), allow(clippy::infallible_destructuring_match))]
+        let channel = match &self.sink {
+            Sink::Amqp(channel) => channel,
+            #[cfg(test)]
+            Sink::Recorded(sent) => {
+                sent.lock().unwrap().push(Sent {
+                    topic: topic.to_owned(),
+                    event: event.to_owned(),
+                    payload: serde_json::to_value(payload)?,
+                });
+                return Ok(());
+            }
+        };
+
         let body = serde_json::to_vec(&Envelope {
-            user_id,
+            topic,
             event,
             payload,
         })?;
-        self.channel
+        // The topic is the routing key: the consumer keeps one topic's signals in order by it
+        channel
             .basic_publish(
                 NOTIFICATIONS_EXCHANGE.into(),
-                user_id.to_string().into(),
+                topic.into(),
                 BasicPublishOptions::default(),
                 &body,
                 BasicProperties::default()
@@ -84,7 +165,7 @@ mod tests {
         let payload = json!({ "kind": "debug", "facts": { "message": "hello" } });
 
         let envelope = serde_json::to_value(Envelope {
-            user_id,
+            topic: &user_topic(user_id),
             event: "inbox.updated",
             payload: &payload,
         })
@@ -93,7 +174,7 @@ mod tests {
         assert_eq!(
             envelope,
             json!({
-                "user_id": "00000000-0000-0000-0000-000000000000",
+                "topic": "user:00000000-0000-0000-0000-000000000000",
                 "event": "inbox.updated",
                 "payload": { "kind": "debug", "facts": { "message": "hello" } },
             })

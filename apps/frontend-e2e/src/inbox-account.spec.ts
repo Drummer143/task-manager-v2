@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { type FakeApi, json, status } from './support/api';
 import { expect, test } from './support/fixtures';
+import { SLUG, WS } from './support/inbox';
 
 /**
  * The Account group (Inbox spec 01): the unread account-level notifications pinned above Today in
@@ -8,7 +9,6 @@ import { expect, test } from './support/fixtures';
  */
 test.use({ signedIn: true });
 
-const WS = '00000000-0000-0000-0000-000000000000';
 
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 
@@ -44,7 +44,7 @@ const openInbox = async (page: Page, api: FakeApi, view: 'all' | 'unread' | 'arc
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
-  await page.goto(`/${WS}/inbox?view=${view}`);
+  await page.goto(`/${SLUG}/inbox?view=${view}`);
 
   return { errors };
 };
@@ -136,7 +136,7 @@ test.describe('a failed part stays in its place', () => {
     );
     api.on('GET /notifications/summary', json({ byWorkspace: { [WS]: 1 }, accountUnread: 1 }));
 
-    await page.goto(`/${WS}/inbox?view=all`);
+    await page.goto(`/${SLUG}/inbox?view=all`);
 
     return { recoverPinned: () => (pinnedFails = false) };
   };

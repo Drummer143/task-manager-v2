@@ -7,7 +7,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::notifications::repo::NotificationsRepository;
-use crate::workspaces;
+use crate::workspaces::service as workspaces;
 
 /// Unread counts (spec: Inbox · 09): the sidebar's Inbox shows `byWorkspace[current] +
 /// accountUnread`, the workspace menu a dot where that sum is above zero.
@@ -27,7 +27,7 @@ pub async fn load_summary(
 ) -> Result<SummaryResponse, sqlx::Error> {
     // A workspace the user has left is not counted (backend spec, notifications §8.2)
     let members = workspaces::member_workspace_ids(pool, user_id).await?;
-    let counts = NotificationsRepository::count_unread(pool, user_id, members.as_deref()).await?;
+    let counts = NotificationsRepository::count_unread(pool, user_id, Some(&members)).await?;
 
     Ok(SummaryResponse {
         by_workspace: counts.by_workspace.into_iter().collect(),

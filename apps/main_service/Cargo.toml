@@ -22,6 +22,7 @@ path = "src/bin/export_openapi.rs"
 anyhow.workspace = true
 axum = { workspace = true, features = ["macros"] }
 chrono.workspace = true
+deunicode = "1.6.2"
 error_handlers = { workspace = true, features = ["sqlx", "openapi"] }
 jsonwebtoken.workspace = true
 lapin.workspace = true

@@ -440,6 +440,457 @@
           }
         }
       }
+    },
+    "/workspaces": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "getUserWorkspaces",
+        "responses": {
+          "200": {
+            "description": "The user's workspaces, by name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkspaceWithRoles"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Creates a workspace with its built-in roles; the creator becomes its owner with Admin.\nSending the same request again (same `id`, same creator) returns the workspace with `200`.",
+        "operationId": "createWorkspace",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Workspace already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Workspace created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "409": {
+            "description": "The slug is taken, or the id belongs to another workspace"
+          },
+          "422": {
+            "description": "Invalid name, slug or task prefix"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/resolve": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "resolveSlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "query",
+            "description": "Target slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Slug found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlugResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Slug not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/slug-available": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "checkSlugAvailable",
+        "parameters": [
+          {
+            "name": "s",
+            "in": "query",
+            "description": "The slug as typed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "description": "The workspace whose address is being changed",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Whether the slug can be used, and why not",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlugAvailableResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "getWorkspaceById",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Deletes the workspace: everyone but the owner loses it at once; the owner can restore it for\n30 days, and its slug stays taken meanwhile. Deleting it again changes nothing.",
+        "operationId": "deleteWorkspace",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Deleted, now or before"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Not the owner: no `workspace.delete`"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "422": {
+            "description": "`confirmName` is not the workspace's name"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "patchWorkspace",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The workspace as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "No `workspace.settings`"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "409": {
+            "description": "`EDIT_CONFLICT`: someone changed these fields since; or the slug is taken"
+          },
+          "422": {
+            "description": "Invalid fields, nothing to set, or a version from the future"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}/me": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "getMeInWorkspace",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The member's roles and capabilities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetMeInWorkspaceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}/restore": {
+      "post": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Brings a deleted workspace back, as it was, for every member. Only its owner, within 30 days\nof the delete; then it is `404` (the layer, `load_workspace_context_with_deleted`). Restoring\na workspace that is not deleted changes nothing.",
+        "operationId": "restoreWorkspace",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The workspace as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Not the owner: no `workspace.delete`"
+          },
+          "404": {
+            "description": "Workspace not found, or deleted more than 30 days ago"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}/stats": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "getWorkspaceStats",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workspace stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "A guest: only the owner and members with a role see them"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -478,6 +929,101 @@
         "enum": [
           "workspace_icon"
         ]
+      },
+      "CapabilitiesResponse": {
+        "type": "object",
+        "required": [
+          "workspace.settings",
+          "workspace.export",
+          "members.view",
+          "members.invite",
+          "members.remove",
+          "roles.assign",
+          "roles.manage",
+          "pages.create_root",
+          "labels.create",
+          "labels.manage",
+          "workspace.delete",
+          "workspace.transfer",
+          "billing.manage"
+        ],
+        "properties": {
+          "billing.manage": {
+            "type": "boolean"
+          },
+          "labels.create": {
+            "type": "boolean"
+          },
+          "labels.manage": {
+            "type": "boolean"
+          },
+          "members.invite": {
+            "type": "boolean"
+          },
+          "members.remove": {
+            "type": "boolean"
+          },
+          "members.view": {
+            "type": "boolean"
+          },
+          "pages.create_root": {
+            "type": "boolean"
+          },
+          "roles.assign": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "roles.manage": {
+            "type": "boolean"
+          },
+          "workspace.delete": {
+            "type": "boolean"
+          },
+          "workspace.export": {
+            "type": "boolean"
+          },
+          "workspace.settings": {
+            "type": "boolean"
+          },
+          "workspace.transfer": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ChangeSet": {
+        "type": "object",
+        "description": "The fields of a workspace an edit sets; a field left out stays as it is.",
+        "properties": {
+          "iconAssetId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "`null` removes the icon; leaving the field out keeps it."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "taskPrefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
       },
       "CreateAssetRequest": {
         "type": "object",
@@ -556,6 +1102,71 @@
             }
           }
         ]
+      },
+      "CreateWorkspaceRequest": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "taskPrefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "DeleteWorkspaceRequest": {
+        "type": "object",
+        "required": [
+          "confirmName"
+        ],
+        "properties": {
+          "confirmName": {
+            "type": "string",
+            "description": "The workspace's name, typed by the owner to confirm. Case and the spaces around do not\nmatter."
+          }
+        }
+      },
+      "EditedField": {
+        "type": "object",
+        "description": "A field changed by someone else; a param of [`ErrorCode::EditConflict`].",
+        "required": [
+          "field",
+          "at"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "description": "When it was changed last, RFC 3339."
+          },
+          "by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The user who changed it last; `None` once they deleted their account."
+          },
+          "field": {
+            "type": "string",
+            "description": "The API's name of the field, e.g. `slug`."
+          }
+        }
       },
       "ErrorBody": {
         "allOf": [
@@ -1112,6 +1723,174 @@
                 ]
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "A field is longer than allowed. Used in per-field errors.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALUE_TOO_LONG"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "A field is longer than allowed. Used in per-field errors.",
+                "required": [
+                  "max"
+                ],
+                "properties": {
+                  "max": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum length, in characters.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A field is shorter than allowed. Used in per-field errors.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VALUE_TOO_SHORT"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "A field is shorter than allowed. Used in per-field errors.",
+                "required": [
+                  "min"
+                ],
+                "properties": {
+                  "min": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Minimum length, in characters.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The value must be unique and is already used, e.g. a workspace slug. Used in per-field\nerrors.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "TAKEN"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The user does not have the required capability to perform the action.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "ACCESS_DENIED"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "The user does not have the required capability to perform the action.",
+                "required": [
+                  "capability"
+                ],
+                "properties": {
+                  "capability": {
+                    "type": "string",
+                    "description": "The missing capability, e.g. `workspace.settings`."
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The edit sets no field: there is nothing to change.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EMPTY_REQUEST_BODY"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Someone else changed these fields after the version the edit was made on. Nothing was\napplied; reload the resource and edit again.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EDIT_CONFLICT"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "Someone else changed these fields after the version the edit was made on. Nothing was\napplied; reload the resource and edit again.",
+                "required": [
+                  "conflicts"
+                ],
+                "properties": {
+                  "conflicts": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/EditedField"
+                    },
+                    "description": "The conflicting fields, each with its latest change."
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The value is not the one it must repeat, e.g. the workspace's name typed to confirm its\ndeletion. Used in per-field errors.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "MISMATCH"
+                ]
+              }
+            }
           }
         ],
         "description": "Every error the API can return.\n\nSerialized as `{\"code\": \"FILE_TOO_LARGE\", \"params\": {...}}`; variants without data have no\n`params`. Codes are a public contract: never rename one, only add or deprecate."
@@ -1135,6 +1914,29 @@
           }
         ],
         "description": "Error attached to a single request field."
+      },
+      "GetMeInWorkspaceResponse": {
+        "type": "object",
+        "required": [
+          "isOwner",
+          "roles",
+          "capabilities"
+        ],
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/CapabilitiesResponse"
+          },
+          "isOwner": {
+            "type": "boolean"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleShortResponse"
+            },
+            "description": "The member's roles, in their order; empty for a guest."
+          }
+        }
       },
       "InboxUpdated": {
         "type": "object",
@@ -1446,6 +2248,23 @@
           }
         }
       },
+      "PatchWorkspaceRequest": {
+        "type": "object",
+        "required": [
+          "baseVersion",
+          "set"
+        ],
+        "properties": {
+          "baseVersion": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The `version` the edit was made on."
+          },
+          "set": {
+            "$ref": "#/components/schemas/ChangeSet"
+          }
+        }
+      },
       "PinnedNotifications": {
         "type": "object",
         "description": "The Account group: few by nature, so one answer and no pages.",
@@ -1533,6 +2352,97 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "RoleShortResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "color"
+        ],
+        "properties": {
+          "color": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        }
+      },
+      "SlugAvailability": {
+        "type": "string",
+        "enum": [
+          "available",
+          "invalid",
+          "taken",
+          "current"
+        ]
+      },
+      "SlugAvailableResponse": {
+        "type": "object",
+        "required": [
+          "available",
+          "reason"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Whether the slug can be set: `available` and `current`."
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SlugAvailability"
+          }
+        }
+      },
+      "SlugResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "slug"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "description": "The current slug: when it differs from the asked one, the frontend replaces the address."
+          }
+        }
+      },
+      "StatsResponse": {
+        "type": "object",
+        "description": "What the workspace holds, for the texts of the Delete and Transfer dialogs: \"This will delete\n64 pages and 1,284 tasks for all 12 members\".",
+        "required": [
+          "members",
+          "pages",
+          "tasks"
+        ],
+        "properties": {
+          "members": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Active members, the owner among them."
+          },
+          "pages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "tasks": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -1641,6 +2551,90 @@
             "type": "string"
           }
         }
+      },
+      "WorkspaceResponse": {
+        "type": "object",
+        "description": "A workspace as its members see it.",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "taskPrefix",
+          "version",
+          "createdAt",
+          "isPersonal"
+        ],
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set only for the owner, while the workspace can still be restored (30 days)."
+          },
+          "iconAssetId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The icon; `None` draws the first letter of the name. Public, so the frontend builds its\nlink itself: `{storage}/public/files/{iconAssetId}`."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isPersonal": {
+            "type": "boolean",
+            "description": "Its owner's personal workspace: it can't be deleted, transferred or left."
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string",
+            "description": "In URLs: `/{slug}/inbox`."
+          },
+          "taskPrefix": {
+            "type": "string",
+            "description": "In task keys: `TM` in `TM-248`."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "`baseVersion` for `PATCH`."
+          }
+        }
+      },
+      "WorkspaceWithRoles": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WorkspaceResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "isOwner",
+              "roles"
+            ],
+            "properties": {
+              "isOwner": {
+                "type": "boolean"
+              },
+              "roles": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RoleShortResponse"
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "securitySchemes": {

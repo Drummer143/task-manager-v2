@@ -57,6 +57,13 @@ function Stand() {
         <Avatar size="md" name="Ivan Petrov" id="u-ivan" src="/missing-photo.png" />
         <Caption>a broken photo keeps the initials</Caption>
       </div>
+      <Caption>square · a workspace</Caption>
+      <div style={row}>
+        <Avatar size="xs" shape="square" name="Verso team" id="w-verso" />
+        <Avatar size="sm" shape="square" name="Verso team" id="w-verso" />
+        <Avatar size="md" shape="square" name="Side project" id="w-side" />
+        <Avatar size="md" shape="square" name="Acme client" id="w-acme" src={PHOTO} />
+      </div>
       <Caption>nobody · assign</Caption>
       <div style={row}>
         <Avatar size="sm" />

@@ -1,7 +1,7 @@
 use anyhow::Context;
 use axum::{
     Router,
-    http::{Method, header},
+    http::{HeaderName, Method, header},
 };
 use mimalloc::MiMalloc;
 use sqlx::postgres::PgPoolOptions;
@@ -15,8 +15,12 @@ use utils::{
 };
 
 use main_app::{
-    app_state::AppState, assets, assets::upload_token::UploadTokenKey, config::Config, me,
-    notifications, signals, swagger::ApiDoc, webhooks,
+    app_state::AppState,
+    assets::{self, upload_token::UploadTokenKey},
+    config::Config,
+    me, notifications, signals,
+    swagger::ApiDoc,
+    webhooks, workspaces,
 };
 use utoipa::OpenApi;
 
@@ -81,6 +85,8 @@ async fn main() -> anyhow::Result<()> {
             header::AUTHORIZATION,
             header::ACCEPT,
             error_handlers::trace::REQUEST_ID_HEADER,
+            // Each tab's id, returned in the signals its requests cause (`origin`)
+            HeaderName::from_static("x-client-id"),
         ])
         // The frontend shows it next to errors, so people can quote it
         .expose_headers([error_handlers::trace::REQUEST_ID_HEADER]);
@@ -114,6 +120,7 @@ async fn main() -> anyhow::Result<()> {
             auth.clone(),
             ServiceAuthState::new(config.internal_service_token.clone()),
         ))
+        .merge(workspaces::router::router(auth.clone(), state.clone()))
         .merge(me::router(auth))
         .merge(webhooks::authentik::router(ServiceAuthState::new(
             config.user_sync_webhook_token.clone(),

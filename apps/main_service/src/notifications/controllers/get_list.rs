@@ -9,7 +9,7 @@ use crate::notifications::{
     cursor::Cursor,
     repo::{InboxView, NotificationsRepository},
 };
-use crate::workspaces;
+use crate::workspaces::service as workspaces;
 
 const DEFAULT_LIMIT: i64 = 50;
 const MAX_LIMIT: i64 = 100;
