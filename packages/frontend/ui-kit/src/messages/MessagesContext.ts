@@ -60,6 +60,8 @@ export interface KitMessages {
   treeRename: string;
   /** Said by screen readers after a node is moved (a drop, mod+arrows). */
   treeMoved(label: string): string;
+  /** Said by screen readers after a list row is dragged to another place. */
+  listMoved(position: number, count: number): string;
   /** Toasts: the buttons, the region readers land in, a notification's "+N more", a failed undo. */
   toastUndo: string;
   toastDismiss: string;
@@ -91,6 +93,7 @@ export const DEFAULT_MESSAGES: KitMessages = {
   treeMore: 'More',
   treeRename: 'Page name',
   treeMoved: (label) => `Moved “${label}”`,
+  listMoved: (position, count) => `Moved to position ${position} of ${count}`,
   toastUndo: 'Undo',
   toastDismiss: 'Dismiss',
   toastCancel: 'Cancel',

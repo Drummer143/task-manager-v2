@@ -1,6 +1,9 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VirtualList, type VirtualListProps } from './VirtualList';
+import { listItemDrag } from './dnd';
+import { defineDragType, dropTargetForElements } from '../../interaction/dnd';
+import { dragOver, installFakeDrag } from '../../testing/dnd';
 
 /*
  * jsdom has no layout. The virtualizer reads the scroll element's size from `offsetHeight`, its
@@ -751,6 +754,175 @@ describe('VirtualList', () => {
           ?.nextElementSibling?.hasAttribute('data-footer'),
       ).toBe(true);
       canvas.remove();
+    });
+  });
+
+  describe('drag and drop', () => {
+    installFakeDrag();
+
+    beforeEach(() => {
+      // jsdom applies no CSS modules: the scroller's overflow is not there for the auto-scroll to see
+      const warn = console.warn;
+      vi.spyOn(console, 'warn').mockImplementation((message, ...rest) => {
+        if (!String(message).startsWith('Auto scrolling has been attached')) warn(message, ...rest);
+      });
+    });
+
+    /** The rows' boxes, for the hitbox: where the virtualizer put them, less the scroll. */
+    const layOut = (scroller: Element) => {
+      rows().forEach((li) => {
+        vi.spyOn(li, 'getBoundingClientRect').mockReturnValue(
+          DOMRect.fromRect({ x: 0, y: top(li) - scroller.scrollTop, width: 240, height: ROW }),
+        );
+      });
+    };
+
+    const row = (id: string) => rowOf(id) as HTMLElement;
+
+    it('is off without onReorder and dragData: no row is lifted', async () => {
+      const received = vi.fn();
+      const outside = document.createElement('div');
+      document.body.appendChild(outside);
+      const cleanup = dropTargetForElements({ element: outside, onDrop: received });
+      const { scroller } = await renderList();
+
+      layOut(scroller);
+
+      expect(row('r1').getAttribute('draggable')).toBeNull();
+
+      await dragOver(row('r1'), outside, { drop: true });
+
+      expect(received).not.toHaveBeenCalled();
+
+      cleanup();
+      outside.remove();
+    });
+
+    it('the top half of a row is the place before it, the bottom half the place after it', async () => {
+      const onReorder = vi.fn();
+      const { scroller } = await renderList({ onReorder });
+
+      layOut(scroller);
+      await dragOver(row('r1'), row('r3'), { y: 4 });
+
+      expect(row('r3').getAttribute('data-drop-edge')).toBe('top');
+      expect(row('r1').hasAttribute('data-drag-source')).toBe(true);
+
+      await dragOver(row('r1'), row('r3'), { y: 16, drop: true });
+
+      // r1 taken out, r3 is at 2: after it is 3
+      expect(onReorder).toHaveBeenCalledWith('r1', 3);
+      expect(row('r3').hasAttribute('data-drop-edge')).toBe(false);
+      await vi.waitFor(() =>
+        expect(document.querySelector('[role="status"]')?.textContent).toBe('Moved to position 4 of 1000'),
+        // The live region speaks a moment later, so focus changes do not cut it off
+        { timeout: 2000 },
+      );
+    });
+
+    it('moves up as well: before a row above is that row’s place', async () => {
+      const onReorder = vi.fn();
+      const { scroller } = await renderList({ onReorder });
+
+      layOut(scroller);
+      await dragOver(row('r3'), row('r1'), { y: 4, drop: true });
+
+      expect(onReorder).toHaveBeenCalledWith('r3', 1);
+    });
+
+    it('where the row already is is no place: no line, nothing called', async () => {
+      const onReorder = vi.fn();
+      const { scroller } = await renderList({ onReorder });
+
+      layOut(scroller);
+      await dragOver(row('r1'), row('r2'), { y: 4 });
+
+      expect(row('r2').hasAttribute('data-drop-edge')).toBe(false);
+
+      await dragOver(row('r1'), row('r0'), { y: 16, drop: true });
+
+      expect(onReorder).not.toHaveBeenCalled();
+    });
+
+    it('a row of another list does not land', async () => {
+      const onReorder = vi.fn();
+      const { scroller } = await renderList({ onReorder });
+      const other = render(
+        <VirtualList<string>
+          className={SCROLLER}
+          data={['x0', 'x1']}
+          getKey={(id) => id}
+          fixedHeight={ROW}
+          renderItem={(id) => item(id)}
+          onReorder={vi.fn()}
+        />,
+      );
+      await settle();
+
+      layOut(scroller);
+      await dragOver(row('x0'), row('r2'), { y: 4, drop: true });
+
+      expect(onReorder).not.toHaveBeenCalled();
+      expect(row('r2').hasAttribute('data-drop-edge')).toBe(false);
+
+      other.unmount();
+    });
+
+    it('a row carries its key and the app’s data out, with dragData alone', async () => {
+      const received = vi.fn();
+      const rowDrag = defineDragType<{ id: string }>('row');
+      const outside = document.createElement('div');
+      document.body.appendChild(outside);
+      const cleanup = dropTargetForElements({
+        element: outside,
+        canDrop: ({ source }) => listItemDrag.is(source.data),
+        onDrop: ({ source }) => received(listItemDrag.get(source.data)?.key, rowDrag.get(source.data)),
+      });
+      const { scroller } = await renderList({ dragData: (id) => rowDrag.data({ id }) });
+
+      layOut(scroller);
+      await dragOver(row('r2'), row('r4'), { y: 4 });
+
+      // Nothing lands in the list itself without onReorder
+      expect(row('r4').hasAttribute('data-drop-edge')).toBe(false);
+
+      await dragOver(row('r2'), outside, { drop: true });
+
+      expect(received).toHaveBeenCalledWith('r2', { id: 'r2' });
+
+      cleanup();
+      outside.remove();
+    });
+
+    it('a placeholder is neither lifted nor dropped on', async () => {
+      const { scroller } = await renderList({
+        data: ids(3),
+        count: 10,
+        onReorder: vi.fn(),
+        renderPlaceholder: (index) => <div data-placeholder={index}>…</div>,
+      });
+
+      layOut(scroller);
+
+      const hole = document.querySelector('[data-placeholder="4"]')?.closest('li') as HTMLElement;
+
+      expect(row('r1').getAttribute('draggable')).toBe('true');
+      expect(hole.getAttribute('draggable')).toBeNull();
+
+      await dragOver(row('r1'), hole, { y: 4 });
+
+      expect(hole.hasAttribute('data-drop-edge')).toBe(false);
+    });
+
+    it('keeps the dragged row mounted while the list scrolls it away', async () => {
+      const { scroller } = await renderList({ onReorder: vi.fn(), overscan: 0 });
+
+      layOut(scroller);
+      await dragOver(row('r1'), row('r3'), { y: 4 });
+      await scrollTo(scroller, 10_000);
+
+      expect(rowOf('r1')).toBeTruthy();
+      expect(top(rowOf('r1') as Element)).toBe(ROW);
     });
   });
 });

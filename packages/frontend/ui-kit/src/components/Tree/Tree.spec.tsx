@@ -1,6 +1,7 @@
 import { createRef, useState } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { dragFrame, dragOver, FakeDataTransfer, installFakeDrag } from '../../testing/dnd';
 import { Tree } from './Tree';
 import type { TreeDropPlace, TreeHandle, TreeMoveTarget, TreeNode, TreeProps } from './types';
 import { treeItemDrag } from './dnd';
@@ -377,87 +378,16 @@ describe('Tree', () => {
   });
 
   describe('drag and drop', () => {
-    /** jsdom has no DataTransfer: what the native drag events carry, one object for the whole drag. */
-    class FakeDataTransfer {
-      dropEffect = 'none';
-      effectAllowed = 'all';
-      files = [] as File[];
-      items = [] as DataTransferItem[];
-      private store = new Map<string, string>();
-
-      get types() {
-        return [...this.store.keys()];
-      }
-
-      setData(type: string, value: string) {
-        this.store.set(type, value);
-      }
-
-      getData(type: string) {
-        return this.store.get(type) ?? '';
-      }
-
-      clearData() {
-        this.store.clear();
-      }
-
-      setDragImage() {
-        // The browser's
-      }
-    }
-
-    /** jsdom has no DragEvent: drag events with a pointer position, as the browser's have. */
-    class FakeDragEvent extends MouseEvent {
-      dataTransfer: DataTransfer | null;
-
-      constructor(type: string, init: MouseEventInit & { dataTransfer?: DataTransfer } = {}) {
-        super(type, init);
-        this.dataTransfer = init.dataTransfer ?? null;
-      }
-    }
-
-    beforeAll(() => vi.stubGlobal('DragEvent', FakeDragEvent));
-    afterAll(() => vi.unstubAllGlobals());
+    installFakeDrag();
 
     /** jsdom has no layout: every row is 28 px, stacked from the top, 240 px wide. */
     const layOut = () => {
-      // The library looks under the pointer when a drag ends (its fix for a stuck hover)
-      document.elementsFromPoint = () => [];
-
       [...tree().querySelectorAll<HTMLElement>('[data-tree-row]')].forEach((row, position) => {
         vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 0, y: position * 28, width: 240, height: 28 }));
       });
     };
 
-    /** The library starts a drag in the next frame. */
-    const frame = () => act(() => new Promise((resolve) => setTimeout(resolve, 20)));
-
     const row = (label: string) => item(label);
-
-    /** Lifts `from`, moves over `to` at `y` px down that row (and `x` across), lets go if asked. */
-    const dragOver = async (from: Element, to: Element, { y = 14, x = 60, drop = false } = {}) => {
-      const dataTransfer = new FakeDataTransfer();
-      const top = to.getBoundingClientRect().top;
-      const at = { dataTransfer, clientX: x, clientY: top + y };
-
-      fireEvent.dragStart(from, { dataTransfer, clientX: 10, clientY: 10 });
-      await frame();
-      fireEvent.dragEnter(to, at);
-      fireEvent.dragOver(to, at);
-      await frame();
-
-      if (drop) {
-        fireEvent.drop(to, at);
-        await frame();
-      }
-
-      return { dataTransfer, at };
-    };
-
-    afterEach(() => {
-      // A drag left hanging would carry into the next test
-      fireEvent.dragEnd(window);
-    });
 
     it('a row dropped on the middle of a container goes inside it', async () => {
       const onMove = vi.fn();
@@ -470,7 +400,7 @@ describe('Tree', () => {
       expect(row('Mobile').hasAttribute('data-drag-source')).toBe(true);
 
       fireEvent.drop(row('Archive'), { dataTransfer: new FakeDataTransfer(), clientX: 60, clientY: row('Archive').getBoundingClientRect().top + 14 });
-      await frame();
+      await dragFrame();
 
       expect(onMove).toHaveBeenCalledWith('mobile', { parentId: 'archive', index: 0 });
       expect(row('Archive').hasAttribute('data-drop')).toBe(false);
