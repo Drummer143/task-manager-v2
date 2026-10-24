@@ -1,5 +1,5 @@
 # The ui-kit's Storybook as a static site, served by nginx (caddy routes STORYBOOK_DOMAIN to it)
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 
 RUN corepack enable && corepack prepare pnpm@10.5.2 --activate
 
