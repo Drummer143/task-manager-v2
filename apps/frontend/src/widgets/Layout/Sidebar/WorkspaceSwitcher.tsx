@@ -117,7 +117,13 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
             </span>
             <span className={styles.who}>
               <span className={styles.userName}>{user.name}</span>
-              {user.email && <span className={styles.email}>{user.email}</span>}
+              {/* The space keeps the group's name "name email" without the column's CSS; the flex column drops it */}
+              {user.email && (
+                <>
+                  {' '}
+                  <span className={styles.email}>{user.email}</span>
+                </>
+              )}
             </span>
           </span>
         ),
