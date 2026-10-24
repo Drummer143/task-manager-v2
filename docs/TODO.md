@@ -74,19 +74,72 @@ Small:
 
 Built on 2026-10-24 (backend: `docs/pages-backend.md` "Built"; frontend: the Pages section of the
 sidebar on the kit Tree, `/{ws}/p/{shortId}` with the title edited in place, the crumbs in the
-canvas header, a group's children, the trash state with Restore; e2e `pages.spec.ts`). Left, each
-its own piece, free to pick:
-- [ ] Yjs: socket_service `DocRoom` and the `doc:*` channel, the join token from main, the client
-      provider, cursors, offline (`docs/pages-backend.md` §5)
-- [ ] The RTE in the kit, with Collaboration, and its custom nodes (`pageRef`, `taskRef`,
-      mentions, `boardView`)
-- [ ] Creation as the spec draws it: client-made `id` / `shortId` and no wait for the server, the
-      title in the tree at every keystroke (drafts over the cache), the "new" mark, the type
-      switch under the title (the API has it: `PATCH { set: { type } }`), the empty abandoned
-      page removed with Undo (`DELETE ?if_empty`, not built)
-- [ ] The derive worker (`yrs` → JSON → `plain`, `page_refs`, mentions)
-- [ ] The kit Breadcrumbs (the canvas header has a plain trail), the icon picker, the trash
-      list, Page history, Duplicate, Move to…
+canvas header, a group's children, the trash state with Restore; e2e `pages.spec.ts`). Specs:
+«Verso — страницы» (part 1), «[Страницы] Создание страницы». Not done yet, by area:
+
+Bodies (Yjs) — `docs/pages-backend.md` §3.8, §4, §5:
+- [ ] socket_service: the `doc:{kind}:{id}` channel, `DocRoom` (log written before the
+      broadcast, fold after 2 s / 200 updates, stop 30 s after the last leaves), `read_only` for
+      `ro`, awareness passed through, `pg_notify('doc_folded')` in the fold
+- [ ] main: the join token (`docToken` in `by-short`, HMAC, `DOC_TOKEN_SECRET` in both services'
+      config); `GET …/body` (snapshot + tail merged with `yrs`, ETag = seq, `304`);
+      `GET …/body.json`
+- [ ] Client: the provider over the channel, `y-indexeddb`, connecting only once the body has
+      content (else `has_content` sees an empty page as written), the sync indicator (Syncing… /
+      Offline / Read only), `Y.UndoManager` for one's own edits
+- [ ] Control events to open documents (`doc.deleted`, `doc.access_changed`, `doc.apply`):
+      `allowed_topic?` learns `doc:`, the channel intercepts them
+- [ ] Derive worker: `rich_text` crate (`yrs` snapshot → ProseMirror JSON, `plain`, refs),
+      `page_refs` migration, mention notifications, `page.body_derived`, backlinks endpoint
+- [ ] Revisions: written in the fold (10 min of editing, last leave), `GET …/body/revisions`,
+      Page history in ⋯, restore as an ordinary edit (§4.4)
+- [ ] The trash job: erase pages 30 days after their delete with their bodies and refs; drop
+      revisions after 90 days
+
+Creation (creation spec):
+- [ ] No wait for the server: client-made `id` / `shortId` (the API takes them), the page in the
+      tree and the address in the same frame, `409` on `shortId` → a new one and `replaceState`
+- [ ] The title in the tree and the crumbs at every keystroke (drafts over the cache), PATCH after
+      400 ms of quiet; now it is saved on Enter / blur
+- [ ] The "new" mark (`--tree-new-mark`, 2 s after 201), the "Not synced yet" dot after 1 s,
+      retries 1 · 4 · 15 s and the danger dot with Retry (§05)
+- [ ] The type switch under the title while the page is empty (⌥1–3, a radiogroup); the API is
+      there (`PATCH { set: { type } }`, `409 PAGE_NOT_EMPTY` → toast)
+- [ ] The empty abandoned page removed on leaving it, with "Empty page removed · Undo":
+      `DELETE ?if_empty=true` (not built: purge past the trash, `page.deleted` with `purged`)
+- [ ] ⌥⌘N / Ctrl+Alt+N: in the tree's cursor node, else in the open page, else at the root
+- [ ] Refusals while creating: `403` (row gone, back to the last page, "Copy text"), parent
+      deleted (`422 parentId` → at the root with a toast when allowed)
+- [ ] Board side data: statuses To do · In progress · Done and the "Board" view, made with a board
+      and when a page becomes one, dropped when it stops being one (board tables first, §3)
+
+The canvas (pages spec §6):
+- [ ] Header right side: presence avatars, the sync indicator, Share, ⋯ (Copy link ⌘⇧C,
+      Duplicate, Move to… ⌘⇧M, Add to Favorites, Hide description, Page history, Delete ⌘⌫)
+- [ ] The meta line ("Created just now", "Mira Sato · edited 2h ago")
+- [ ] Enter / ↓ at the end of the title → the body (document), the description (board),
+      "New page" (group)
+- [ ] The icon: "Add icon" over the title, the emoji picker, Remove (`PATCH { set: { icon } }`
+      exists). Lucide icons are accepted by the API but drawn as the type's icon
+- [ ] The empty document's hint ("Press Enter to start writing, or type / for blocks"); a board's
+      "Add a description", "Hide description" (localStorage per page)
+- [ ] The board canvas: view tabs, FilterBar, board / table / list (its own spec)
+- [ ] The kit Breadcrumbs (spec [UI-kit] Breadcrumbs): the header has a plain trail with no
+      collapsing of long paths
+
+Tree and navigation:
+- [ ] Undo of a move (the Tree's `onMove` expects the app's undo toast); a failed rename or move
+      marks the node (`error`, `onRetry`) instead of only a toast
+- [ ] G S (reveal the open page, Sidebar · 09) and the tree's other sidebar hotkeys
+- [ ] Expanded nodes are kept for the visit only: keep them per workspace (localStorage)
+- [ ] Pages without access (`access: 'none'`, spec §1.2) and the "You don't have access to this
+      page · Request access" screen — after page grants
+- [ ] The trash list (open, restore, delete forever); a workspace's home = the last opened page
+- [ ] Lazy children past 2 000 nodes (`?parent_id=`), not before a workspace gets there
+- [ ] Duplicate (body with new block ids, children; a board with statuses and views, no tasks),
+      Move to… (the parent picker palette)
+- [ ] `/{ws}/t/{KEY}` → the task's board with `?task=` (after tasks)
+- [ ] e2e of the tree's own actions: drag to move, F2, delete with Undo
 
 Spec: «Verso — страницы», part 1 (the Yjs version). Started on 2026-10-24 with the migration
 (`20261024000000_pages.sql`: `pages`, `page_bodies`, `page_body_updates`, `page_body_revisions`).
