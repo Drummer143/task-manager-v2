@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { UNTITLED } from '../../shared/pages';
 import styles from './Page.module.scss';
 
@@ -18,6 +18,8 @@ export interface PageTitleProps {
 export const PageTitle: React.FC<PageTitleProps> = ({ title, autoFocus, onSave }) => {
   const [draft, setDraft] = useState(title);
   const [saved, setSaved] = useState(title);
+  // Esc leaves the field too: its blur must not save the edit it just dropped
+  const cancelled = useRef(false);
 
   // Renamed elsewhere (the tree, another tab): the field follows unless it holds an edit
   if (title !== saved) {
@@ -26,6 +28,11 @@ export const PageTitle: React.FC<PageTitleProps> = ({ title, autoFocus, onSave }
   }
 
   const save = () => {
+    if (cancelled.current) {
+      cancelled.current = false;
+      return;
+    }
+
     const next = draft.trim();
     setDraft(next);
     if (next !== saved) onSave(next);
@@ -48,6 +55,7 @@ export const PageTitle: React.FC<PageTitleProps> = ({ title, autoFocus, onSave }
           event.preventDefault();
           event.currentTarget.blur();
         } else if (event.key === 'Escape') {
+          cancelled.current = true;
           setDraft(saved);
           event.currentTarget.blur();
         }
