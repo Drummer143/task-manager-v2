@@ -45,3 +45,7 @@ storage.{$DOMAIN} {
 auth.{$DOMAIN} {
     reverse_proxy authentik_server:9000
 }
+
+storybook.ui-kit.dev.{$DOMAIN} {
+    reverse_proxy ui-kit-storybook:80
+}

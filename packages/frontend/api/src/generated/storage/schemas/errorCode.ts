@@ -164,4 +164,18 @@ export type ErrorCode = {
 };
 } | {
   code: 'MISMATCH';
+} | {
+  code: 'PAGE_NOT_EMPTY';
+} | {
+  code: 'PAGE_CYCLE';
+} | {
+  code: 'PAGE_TOO_DEEP';
+  /** Pages cannot be nested deeper than this. */
+  params: {
+  /**
+     * Maximum depth; a page at the root is at depth 1.
+     * @minimum 0
+     */
+  max: number;
+};
 };

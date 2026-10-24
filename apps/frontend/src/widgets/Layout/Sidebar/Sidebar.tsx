@@ -17,6 +17,8 @@ export interface SidebarProps {
   /** The workspace and the account, in the header; the rail takes only the mark. */
   switcher: Omit<WorkspaceSwitcherProps, 'rail'>;
   inbox: SidebarInboxProps;
+  /** The workspace's pages, under Inbox; not on the rail. */
+  pages?: React.ReactNode;
 }
 
 /**
@@ -25,7 +27,7 @@ export interface SidebarProps {
  */
 const keyOf = (element: Element) => element.getAttribute('href') ?? element.getAttribute('data-sidebar-key');
 
-export const Sidebar: React.FC<SidebarProps> = ({ switcher, inbox }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ switcher, inbox, pages }) => {
   const { sidebarView } = useShell();
   const rail = sidebarView === 'collapsed';
 
@@ -91,6 +93,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ switcher, inbox }) => {
 
       <nav className={styles.body}>
         {inboxItem}
+
+        {!rail && pages}
 
         {rail && (
           <IconButton

@@ -77,6 +77,8 @@ export async function fakeApi(page: Page) {
     ['GET /me', json(defaultMe())],
     ['GET /workspaces', json([WORKSPACE])],
     [`GET /workspaces/${WORKSPACE.id}/me`, json(defaultMeInWorkspace())],
+    // The sidebar's pages tree: empty unless a test sets up pages (support/pages.ts)
+    [`GET /workspaces/${WORKSPACE.id}/pages`, json([])],
   ]);
   const requests: Request[] = [];
   const unhandled: string[] = [];

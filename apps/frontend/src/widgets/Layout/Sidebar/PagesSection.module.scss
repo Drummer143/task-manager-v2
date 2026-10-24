@@ -1,0 +1,27 @@
+/* The Pages section of the sidebar (spec: Sidebar · 03): its title with + at the right, the tree. */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--sp-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--tree-row);
+  padding-inline: var(--sp-5) var(--sp-3);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  font-weight: var(--weight-strong);
+}
+
+.tree {
+  margin-inline: var(--sp-2);
+}

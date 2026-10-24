@@ -10,19 +10,25 @@ import type {
   CreateAssetRequest,
   CreateAssetResponse,
   CreateNotificationDto,
+  CreatePageRequest,
   CreateWorkspaceRequest,
   DeleteWorkspaceRequest,
   GetMeInWorkspaceResponse,
   ListNotificationsParams,
   MeResponse,
+  MovePageRequest,
   Notification,
   NotificationPage,
+  PageNodeResponse,
+  PageResponse,
+  PatchPageRequest,
   PatchWorkspaceRequest,
   PinnedNotifications,
   ReadAllNotificationsRequest,
   ReadAllNotificationsResponse,
   ReadNotificationRequest,
   ResolveSlugParams,
+  RestorePageResponse,
   SlugAvailableResponse,
   SlugResponse,
   StatsResponse,
@@ -258,6 +264,114 @@ export const getMeInWorkspace = (
     }
 
 /**
+ * @summary Every page of the workspace the user sees, flat: the client builds the tree from `parentId`,
+each parent's children ordered by `position`, then `id`.
+ */
+export const getPageTree = (
+    workspaceId: string,
+ options?: SecondParameter<typeof mainFetcher<PageNodeResponse[]>>,) => {
+      return mainFetcher<PageNodeResponse[]>(
+      {url: `/workspaces/${workspaceId}/pages`, method: 'GET'
+    },
+      options);
+    }
+
+/**
+ * @summary Creates a page, last among its siblings, with its (empty) body. The client may make the id and
+the short id itself, to open the page before the answer (pages spec, creation §02); sending
+the same request again (same `id`, same creator) answers with the page, `200`.
+ */
+export const createPage = (
+    workspaceId: string,
+    createPageRequest: CreatePageRequest,
+ options?: SecondParameter<typeof mainFetcher<PageResponse>>,) => {
+      return mainFetcher<PageResponse>(
+      {url: `/workspaces/${workspaceId}/pages`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createPageRequest
+    },
+      options);
+    }
+
+/**
+ * @summary Opens a page by its address, `/{ws}/p/{shortId}`. A page in the trash is answered too, with
+`deletedAt`: the address is right, the page shows "This page is in Trash" (pages spec §2).
+ */
+export const getPageByShortId = (
+    workspaceId: string,
+    shortId: string,
+ options?: SecondParameter<typeof mainFetcher<PageResponse>>,) => {
+      return mainFetcher<PageResponse>(
+      {url: `/workspaces/${workspaceId}/pages/by-short/${shortId}`, method: 'GET'
+    },
+      options);
+    }
+
+/**
+ * @summary Moves the page, with every page under it, to the trash (pages spec §7): `restore` brings them
+back for 30 days. Deleting a page in the trash changes nothing.
+ */
+export const deletePage = (
+    workspaceId: string,
+    pageId: string,
+ options?: SecondParameter<typeof mainFetcher<void>>,) => {
+      return mainFetcher<void>(
+      {url: `/workspaces/${workspaceId}/pages/${pageId}`, method: 'DELETE'
+    },
+      options);
+    }
+
+/**
+ * @summary Edits the title, the icon, the type — only the fields sent, each checked for a conflict on its
+own (backend spec §5.3). The type changes only while the page is empty.
+ */
+export const patchPage = (
+    workspaceId: string,
+    pageId: string,
+    patchPageRequest: PatchPageRequest,
+ options?: SecondParameter<typeof mainFetcher<PageResponse>>,) => {
+      return mainFetcher<PageResponse>(
+      {url: `/workspaces/${workspaceId}/pages/${pageId}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchPageRequest
+    },
+      options);
+    }
+
+/**
+ * @summary Puts the page, with everything under it, at `index` among the children of `parentId`. Never
+under itself, never deeper than 12 levels for any page of its subtree.
+ */
+export const movePage = (
+    workspaceId: string,
+    pageId: string,
+    movePageRequest: MovePageRequest,
+ options?: SecondParameter<typeof mainFetcher<PageResponse>>,) => {
+      return mainFetcher<PageResponse>(
+      {url: `/workspaces/${workspaceId}/pages/${pageId}/move`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: movePageRequest
+    },
+      options);
+    }
+
+/**
+ * @summary Brings back a page from the trash with the pages trashed with it, at its old place. When its
+parent is gone or in the trash, at the end of the root instead. A page trashed with its
+parent is restored by restoring that parent (`deletedRoot`); restoring a live page changes
+nothing.
+ */
+export const restorePage = (
+    workspaceId: string,
+    pageId: string,
+ options?: SecondParameter<typeof mainFetcher<RestorePageResponse>>,) => {
+      return mainFetcher<RestorePageResponse>(
+      {url: `/workspaces/${workspaceId}/pages/${pageId}/restore`, method: 'POST'
+    },
+      options);
+    }
+
+/**
  * @summary Brings a deleted workspace back, as it was, for every member. Only its owner, within 30 days
 of the delete; then it is `404` (the layer, `load_workspace_context_with_deleted`). Restoring
 a workspace that is not deleted changes nothing.
@@ -299,5 +413,12 @@ export type GetWorkspaceByIdResult = NonNullable<Awaited<ReturnType<typeof getWo
 export type DeleteWorkspaceResult = NonNullable<Awaited<ReturnType<typeof deleteWorkspace>>>
 export type PatchWorkspaceResult = NonNullable<Awaited<ReturnType<typeof patchWorkspace>>>
 export type GetMeInWorkspaceResult = NonNullable<Awaited<ReturnType<typeof getMeInWorkspace>>>
+export type GetPageTreeResult = NonNullable<Awaited<ReturnType<typeof getPageTree>>>
+export type CreatePageResult = NonNullable<Awaited<ReturnType<typeof createPage>>>
+export type GetPageByShortIdResult = NonNullable<Awaited<ReturnType<typeof getPageByShortId>>>
+export type DeletePageResult = NonNullable<Awaited<ReturnType<typeof deletePage>>>
+export type PatchPageResult = NonNullable<Awaited<ReturnType<typeof patchPage>>>
+export type MovePageResult = NonNullable<Awaited<ReturnType<typeof movePage>>>
+export type RestorePageResult = NonNullable<Awaited<ReturnType<typeof restorePage>>>
 export type RestoreWorkspaceResult = NonNullable<Awaited<ReturnType<typeof restoreWorkspace>>>
 export type GetWorkspaceStatsResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceStats>>>

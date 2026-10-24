@@ -13,6 +13,10 @@ export const tag = {
   workspace: (workspaceId: string) => `workspace:${workspaceId}` as const,
   /** The signed-in user's workspaces (`GET /workspaces`). */
   workspaces: () => 'workspaces' as const,
+  /** A workspace's pages tree: titles, icons, types, what is where (`GET …/pages`). */
+  tree: (workspaceId: string) => `tree:${workspaceId}` as const,
+  /** One page: its title, icon, type, place. */
+  page: (pageId: string) => `page:${pageId}` as const,
 };
 
 export type Tag = ReturnType<(typeof tag)[keyof typeof tag]>;

@@ -803,6 +803,405 @@
         }
       }
     },
+    "/workspaces/{workspace_id}/pages": {
+      "get": {
+        "tags": [
+          "Pages"
+        ],
+        "summary": "Every page of the workspace the user sees, flat: the client builds the tree from `parentId`,\neach parent's children ordered by `position`, then `id`.",
+        "operationId": "getPageTree",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pages, each parent's children in their order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PageNodeResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pages"
+        ],
+        "summary": "Creates a page, last among its siblings, with its (empty) body. The client may make the id and\nthe short id itself, to open the page before the answer (pages spec, creation §02); sending\nthe same request again (same `id`, same creator) answers with the page, `200`.",
+        "operationId": "createPage",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created before by the same request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Page created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "At the root without `pages.create_root`"
+          },
+          "404": {
+            "description": "Workspace not found"
+          },
+          "409": {
+            "description": "The short id is taken, or the id is another page's"
+          },
+          "422": {
+            "description": "Invalid fields, the parent is not here, or too deep"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}/pages/by-short/{short_id}": {
+      "get": {
+        "tags": [
+          "Pages"
+        ],
+        "summary": "Opens a page by its address, `/{ws}/p/{shortId}`. A page in the trash is answered too, with\n`deletedAt`: the address is right, the page shows \"This page is in Trash\" (pages spec §2).",
+        "operationId": "getPageByShortId",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "short_id",
+            "in": "path",
+            "description": "The page's short id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page, live or in the trash",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "No such page in this workspace"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}/pages/{page_id}": {
+      "delete": {
+        "tags": [
+          "Pages"
+        ],
+        "summary": "Moves the page, with every page under it, to the trash (pages spec §7): `restore` brings them\nback for 30 days. Deleting a page in the trash changes nothing.",
+        "operationId": "deletePage",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page_id",
+            "in": "path",
+            "description": "Target page id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "In the trash, now or before"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Page not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Pages"
+        ],
+        "summary": "Edits the title, the icon, the type — only the fields sent, each checked for a conflict on its\nown (backend spec §5.3). The type changes only while the page is empty.",
+        "operationId": "patchPage",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page_id",
+            "in": "path",
+            "description": "Target page id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchPageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The page as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Page not found, or in the trash"
+          },
+          "409": {
+            "description": "`EDIT_CONFLICT`: someone changed these fields since; `PAGE_NOT_EMPTY`: the type can no longer change"
+          },
+          "422": {
+            "description": "Invalid fields, nothing to set, or a version from the future"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}/pages/{page_id}/move": {
+      "post": {
+        "tags": [
+          "Pages"
+        ],
+        "summary": "Puts the page, with everything under it, at `index` among the children of `parentId`. Never\nunder itself, never deeper than 12 levels for any page of its subtree.",
+        "operationId": "movePage",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page_id",
+            "in": "path",
+            "description": "Target page id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovePageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The page at its new place",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "To the root without `pages.create_root`"
+          },
+          "404": {
+            "description": "Page not found, or in the trash"
+          },
+          "422": {
+            "description": "The parent is not here, `PAGE_CYCLE` or `PAGE_TOO_DEEP`"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}/pages/{page_id}/restore": {
+      "post": {
+        "tags": [
+          "Pages"
+        ],
+        "summary": "Brings back a page from the trash with the pages trashed with it, at its old place. When its\nparent is gone or in the trash, at the end of the root instead. A page trashed with its\nparent is restored by restoring that parent (`deletedRoot`); restoring a live page changes\nnothing.",
+        "operationId": "restorePage",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Target workspace id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page_id",
+            "in": "path",
+            "description": "Target page id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page, back",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestorePageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Page not found, or erased from the trash"
+          },
+          "409": {
+            "description": "Trashed with its parent: restore `deletedRoot`"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/workspaces/{workspace_id}/restore": {
       "post": {
         "tags": [
@@ -1102,6 +1501,56 @@
             }
           }
         ]
+      },
+      "CreatePageRequest": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "icon": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageIcon"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Made by the client (UUIDv7), so the page has its address before the server answers. The\nsame request again answers with the page it made. Left out: the server makes one."
+          },
+          "parentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "`null` or left out: at the root, which needs `pages.create_root`."
+          },
+          "shortId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Made by the client, 10 characters of base58. Taken: `409`, make another. Left out: the\nserver makes one."
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/PageType"
+          }
+        }
       },
       "CreateWorkspaceRequest": {
         "type": "object",
@@ -1891,6 +2340,67 @@
                 ]
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "The page has content (text in its body, children, tasks): its type can no longer change.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "PAGE_NOT_EMPTY"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A page cannot be moved under itself or one of its own children.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "PAGE_CYCLE"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Pages cannot be nested deeper than this.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "PAGE_TOO_DEEP"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "Pages cannot be nested deeper than this.",
+                "required": [
+                  "max"
+                ],
+                "properties": {
+                  "max": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum depth; a page at the root is at depth 1.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
           }
         ],
         "description": "Every error the API can return.\n\nSerialized as `{\"code\": \"FILE_TOO_LARGE\", \"params\": {...}}`; variants without data have no\n`params`. Codes are a public contract: never rename one, only add or deprecate."
@@ -1993,6 +2503,28 @@
               "type": "object"
             },
             "description": "Workspaces the user is a member of; there are none until workspaces exist."
+          }
+        }
+      },
+      "MovePageRequest": {
+        "type": "object",
+        "required": [
+          "index"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The place among the new siblings, counted without the moved page (as the kit Tree's\n`onMove` gives it). Past the end: last.",
+            "minimum": 0
+          },
+          "parentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "`null`: to the root, which needs `pages.create_root` when the page comes from elsewhere."
           }
         }
       },
@@ -2248,6 +2780,299 @@
           }
         }
       },
+      "PageAccess": {
+        "type": "string",
+        "description": "What the user may do with a page (pages spec §5). Until pages have their own grants, every\nmember has Full access to every page; the field is here so the frontend does not change when\nthey come.",
+        "enum": [
+          "full"
+        ]
+      },
+      "PageChangeSet": {
+        "type": "object",
+        "description": "The fields of a page an edit sets; a field left out stays as it is.",
+        "properties": {
+          "icon": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageIcon",
+                "description": "`null` removes the icon; leaving the field out keeps it."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageType",
+                "description": "Only while the page is empty: no text in its body, no children. Else `409 PAGE_NOT_EMPTY`."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PageIcon": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "One emoji.",
+            "required": [
+              "value",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "emoji"
+                ]
+              },
+              "value": {
+                "type": "string",
+                "description": "One emoji."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A Lucide icon by its name, `kebab-case`.",
+            "required": [
+              "value",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "lucide"
+                ]
+              },
+              "value": {
+                "type": "string",
+                "description": "A Lucide icon by its name, `kebab-case`."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "An uploaded image. Not accepted yet: there is no picker for it.",
+            "required": [
+              "value",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "asset"
+                ]
+              },
+              "value": {
+                "type": "string",
+                "format": "uuid",
+                "description": "An uploaded image. Not accepted yet: there is no picker for it."
+              }
+            }
+          }
+        ],
+        "description": "`pages.icon`: `{ kind, value }`. No icon: the icon of the page's type."
+      },
+      "PageNodeResponse": {
+        "type": "object",
+        "description": "A page in the tree: what the sidebar, breadcrumbs and links draw.",
+        "required": [
+          "id",
+          "position",
+          "type",
+          "title",
+          "shortId",
+          "access",
+          "version"
+        ],
+        "properties": {
+          "access": {
+            "$ref": "#/components/schemas/PageAccess"
+          },
+          "icon": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageIcon"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "`null`: at the root."
+          },
+          "position": {
+            "type": "string",
+            "description": "Orders the siblings, compared as strings; equal ones by `id`."
+          },
+          "shortId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "description": "May be empty: shown as \"Untitled\"."
+          },
+          "type": {
+            "$ref": "#/components/schemas/PageType"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "`baseVersion` for a rename right in the tree."
+          }
+        }
+      },
+      "PageResponse": {
+        "type": "object",
+        "description": "A page as it is opened.",
+        "required": [
+          "id",
+          "workspaceId",
+          "position",
+          "type",
+          "title",
+          "shortId",
+          "access",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "access": {
+            "$ref": "#/components/schemas/PageAccess"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "In the trash since. Only `by-short` and `restore` answer with a trashed page."
+          },
+          "deletedRoot": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The page the delete was made on: the one to restore. Itself when it was deleted on its own."
+          },
+          "icon": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageIcon"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "position": {
+            "type": "string"
+          },
+          "shortId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PageType"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedBy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "`baseVersion` for `PATCH`."
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "PageType": {
+        "type": "string",
+        "description": "`pages.type` (pages spec §1.1). Changes only while the page is empty.",
+        "enum": [
+          "document",
+          "board",
+          "group"
+        ]
+      },
+      "PatchPageRequest": {
+        "type": "object",
+        "required": [
+          "baseVersion",
+          "set"
+        ],
+        "properties": {
+          "baseVersion": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The `version` the edit was made on."
+          },
+          "set": {
+            "$ref": "#/components/schemas/PageChangeSet"
+          }
+        }
+      },
       "PatchWorkspaceRequest": {
         "type": "object",
         "required": [
@@ -2352,6 +3177,22 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "RestorePageResponse": {
+        "type": "object",
+        "required": [
+          "page",
+          "restoredToRoot"
+        ],
+        "properties": {
+          "page": {
+            "$ref": "#/components/schemas/PageResponse"
+          },
+          "restoredToRoot": {
+            "type": "boolean",
+            "description": "Its parent was gone or in the trash: the page came back at the root instead (\"Restored to\nthe top level\")."
           }
         }
       },

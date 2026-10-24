@@ -1,0 +1,72 @@
+/* A page's canvas (pages spec §6): one column, centred, the title above what the type holds. */
+
+.canvas {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-8) var(--sp-6);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: 100%;
+  max-width: var(--doc-width);
+}
+
+.icon {
+  font-size: var(--page-icon-size);
+  line-height: 1;
+}
+
+/* Edited in place: no frame, the placeholder says "Untitled". */
+.title {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--type-display);
+  font-weight: var(--weight-strong);
+
+  &::placeholder {
+    color: var(--text-placeholder);
+  }
+}
+
+.later {
+  margin: 0;
+  color: var(--text-placeholder);
+}
+
+.children {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Larger than a tree row (pages spec §6). */
+.child {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: var(--row-height);
+  padding-inline: var(--sp-3);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+
+  &:hover {
+    background-color: var(--bg-hover);
+  }
+}
+
+.childIcon {
+  display: inline-flex;
+  color: var(--text-muted);
+}

@@ -70,6 +70,117 @@ Frontend:
 Small:
 - [ ] `GET /workspaces/slug-available` takes `?s=`, the spec says `?slug=`
 
+## Pages
+
+Built on 2026-10-24 (backend: `docs/pages-backend.md` "Built"; frontend: the Pages section of the
+sidebar on the kit Tree, `/{ws}/p/{shortId}` with the title edited in place, the crumbs in the
+canvas header, a group's children, the trash state with Restore; e2e `pages.spec.ts`). Specs:
+«Verso — страницы» (part 1), «[Страницы] Создание страницы». Not done yet, by area:
+
+Bodies (Yjs on Hocuspocus, decided 2026-10-24) — `docs/pages-backend.md` §3–§5:
+- [ ] collab_service (Node, Hocuspocus): `onAuthenticate` with main's token, `onLoadDocument`
+      (snapshot + log tail), `onChange` (the log), `onStoreDocument` (the fold: snapshot, JSON
+      and `plain` by Tiptap's transformer, `pg_notify('doc_folded')`); image, compose service,
+      `collab.{$DOMAIN}` in Caddy, `DOC_TOKEN_SECRET` in main and collab_service
+- [ ] main: `POST …/pages/{id}/doc-token` (HS256, `mode` from access), `GET …/body.json`
+- [ ] Client `shared/collab`: one Hocuspocus socket made when the first editor mounts and closed
+      30 s after the last one, a provider per editor with the token as a function (asked on every
+      reconnect), `y-indexeddb`, connecting a new page's body only once it has content (else
+      `has_content` sees the page as written), the sync indicator, presence from awareness
+- [ ] `doc_control` (`pg_notify` from main, collab_service listens): `close` on trash and erase,
+      `revoke` on an access change
+- [ ] main's derive: `doc_folded` → `page_refs` (migration), mention notifications,
+      `page.body_derived`, backlinks; the walk of `json` in `rich_text` (no Yjs in Rust)
+- [ ] Revisions in the fold (10 min of editing, the last one leaving), `GET …/body/revisions`,
+      Page history in ⋯, restoring as an ordinary edit (§4.4)
+- [ ] The trash job: erase pages 30 days after their delete with their bodies and refs; drop
+      revisions after 90 days
+- [ ] Server-side edits and Duplicate through collab_service's `/internal/docs/…` (§4.6)
+
+Creation (creation spec):
+- [ ] No wait for the server: client-made `id` / `shortId` (the API takes them), the page in the
+      tree and the address in the same frame, `409` on `shortId` → a new one and `replaceState`
+- [ ] The title in the tree and the crumbs at every keystroke (drafts over the cache), PATCH after
+      400 ms of quiet; now it is saved on Enter / blur
+- [ ] The "new" mark (`--tree-new-mark`, 2 s after 201), the "Not synced yet" dot after 1 s,
+      retries 1 · 4 · 15 s and the danger dot with Retry (§05)
+- [ ] The type switch under the title while the page is empty (⌥1–3, a radiogroup); the API is
+      there (`PATCH { set: { type } }`, `409 PAGE_NOT_EMPTY` → toast)
+- [ ] The empty abandoned page removed on leaving it, with "Empty page removed · Undo":
+      `DELETE ?if_empty=true` (not built: purge past the trash, `page.deleted` with `purged`)
+- [ ] ⌥⌘N / Ctrl+Alt+N: in the tree's cursor node, else in the open page, else at the root
+- [ ] Refusals while creating: `403` (row gone, back to the last page, "Copy text"), parent
+      deleted (`422 parentId` → at the root with a toast when allowed)
+- [ ] Board side data: statuses To do · In progress · Done and the "Board" view, made with a board
+      and when a page becomes one, dropped when it stops being one (board tables first, §3)
+
+The canvas (pages spec §6):
+- [ ] Header right side: presence avatars, the sync indicator, Share, ⋯ (Copy link ⌘⇧C,
+      Duplicate, Move to… ⌘⇧M, Add to Favorites, Hide description, Page history, Delete ⌘⌫)
+- [ ] The meta line ("Created just now", "Mira Sato · edited 2h ago")
+- [ ] Enter / ↓ at the end of the title → the body (document), the description (board),
+      "New page" (group)
+- [ ] The icon: "Add icon" over the title, the emoji picker, Remove (`PATCH { set: { icon } }`
+      exists). Lucide icons are accepted by the API but drawn as the type's icon
+- [ ] The empty document's hint ("Press Enter to start writing, or type / for blocks"); a board's
+      "Add a description", "Hide description" (localStorage per page)
+- [ ] The board canvas: view tabs, FilterBar, board / table / list (its own spec)
+- [ ] The kit Breadcrumbs (spec [UI-kit] Breadcrumbs): the header has a plain trail with no
+      collapsing of long paths
+
+Tree and navigation:
+- [ ] Undo of a move (the Tree's `onMove` expects the app's undo toast); a failed rename or move
+      marks the node (`error`, `onRetry`) instead of only a toast
+- [ ] G S (reveal the open page, Sidebar · 09) and the tree's other sidebar hotkeys
+- [ ] Expanded nodes are kept for the visit only: keep them per workspace (localStorage)
+- [ ] Pages without access (`access: 'none'`, spec §1.2) and the "You don't have access to this
+      page · Request access" screen — after page grants
+- [ ] The trash list (open, restore, delete forever); a workspace's home = the last opened page
+- [ ] Lazy children past 2 000 nodes (`?parent_id=`), not before a workspace gets there
+- [ ] Duplicate (body with new block ids, children; a board with statuses and views, no tasks),
+      Move to… (the parent picker palette)
+- [ ] `/{ws}/t/{KEY}` → the task's board with `?task=` (after tasks)
+- [ ] e2e of the tree's own actions: drag to move, F2, delete with Undo
+
+Spec: «Verso — страницы», part 1 (the Yjs version). Started on 2026-10-24 with the migration
+(`20261024000000_pages.sql`: `pages`, `page_bodies`, `page_body_updates`, `page_body_revisions`).
+To settle with the designer, then fix in the spec or the code:
+- [ ] `move { parent_id, position }` makes the client compute the fractional key. Better
+      `{ parent_id, index }`, as the kit Tree's `onMove` gives it: the server builds the key and
+      rebalances in the same transaction, the client needs no fractional-index code
+- [ ] Page access levels (Full / Edit / Comment / View, spec §5) need page grants, and the spec has
+      no table for them. Until it does: every member has Full access, and the tree already returns
+      `access` so the frontend does not change when grants come
+- [ ] §4.4: «Phoenix asks Rust for the right». Decided 2026-10-24: bodies run on Hocuspocus
+      (collab_service, Node), not Phoenix; main signs a short-lived token
+      (`POST …/pages/{id}/doc-token`, `{ doc, sub, mode: rw | ro, exp }`, HS256), collab_service
+      only verifies it and never evaluates access. Revocation: `doc_control` `revoke` closes the
+      connections, the provider asks for a new token. Ownership: collab_service writes the
+      document (log, snapshot, its JSON and `plain`, revisions), main the meaning (refs,
+      notifications). `docs/pages-backend.md` §1, §4, §5
+- [ ] The spec does not say how main learns of a fold. Decided: `pg_notify('doc_folded')` inside
+      the fold transaction (delivered only on commit), plus a sweep of
+      `page_bodies_underived_idx` at start and every minute
+- [ ] What happens past the 2 MB snapshot limit (§4.2): refuse further updates, or only warn?
+- [ ] No `GET …/body` with the Yjs state (spec §9): the first frame comes from `y-indexeddb`, else
+      the provider's sync. If pages never opened on a device render too late, collab_service
+      serves the state over HTTP
+- [ ] One Hocuspocus instance per document: `seq` is counted in its memory. Several instances
+      need the Redis extension and a sticky route per document; the `(doc_id, seq)` key refuses
+      a second writer
+- [ ] Deviation from §4.2: the body tables carry `workspace_id` (an erased workspace takes its
+      bodies), and the log and revisions hang on `page_bodies` by FK, so deleting a body row
+      deletes all of it. `doc_id` has no FK to pages or tasks (it is either): the trash job
+      deletes the body explicitly
+- [ ] The names `page_body_*` also hold task descriptions (`doc_kind = 'task'`): `doc_*` would
+      read better; rename before the first code that uses them, or keep
+- [ ] Body schema (§4.2): the JSON is made by Tiptap's transformer in collab_service with the
+      kit's extensions; main walks that JSON for refs and checks node and mark types and
+      attribute types (refs, XSS in `href`) against `rte-schema.json` generated from the kit's
+      RTE. Unknown nodes are kept and logged, not refused. No Yjs in Rust
+- [ ] Not in the migration yet, by phase: `page_refs` (backlinks, mentions), board tables (§3)
+- [ ] Open questions of the spec (§10): templates, `/board` creating a board, public pages
+
 ## Real notification kinds and `subject`
 
 Only `debug` exists. It has no `subject`, so nothing to open; its rows are not links (decided

@@ -6,6 +6,7 @@ use sqlx::PgPool;
 use utils::auth_middleware::{InternalAuthState, auth_guard};
 
 use crate::app_state::AppState;
+use crate::pages;
 use crate::signals::Signals;
 use crate::workspaces::controllers::check_slug_available::check_slug_available;
 use crate::workspaces::controllers::create::create_workspace;
@@ -57,6 +58,7 @@ where
         .route("/", patch(patch_workspace))
         .route("/me", get(get_me_in_workspace))
         .route("/stats", get(get_stats))
+        .nest("/pages", pages::router::routes())
         .route_layer(from_fn_with_state(state, load_workspace_context));
 
     with_deleted.merge(live)
