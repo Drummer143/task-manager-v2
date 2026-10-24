@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/frontend/*
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  esbuild: true
+  nx: true
