@@ -1,4 +1,5 @@
 import type React from 'react';
+import type { DragData } from '../../interaction/dnd';
 import type { MenuItem } from '../Menu';
 
 export interface TreeNode {
@@ -32,6 +33,35 @@ export interface TreeMoveTarget {
   index: number;
 }
 
+/**
+ * What a dragged row carries for anyone who listens (`treeItemDrag.get(source.data)`): the node,
+ * and where it was. `tree` tells one Tree's rows from another's.
+ */
+export interface TreeDragItem {
+  tree: string;
+  node: TreeNode;
+  parentId: string | null;
+  index: number;
+}
+
+/**
+ * Where a drag from outside the tree would land: the place among a parent's children; `onto` —
+ * dropped on that node's middle, to go inside it (spec: Tree · 02).
+ */
+export interface TreeDropPlace extends TreeMoveTarget {
+  onto?: string;
+}
+
+/**
+ * Drags that are not this tree's own rows — another tree's page, a favorite, a card. The tree
+ * draws the line or lights up the row as for its own; the app says what may land where.
+ */
+export interface TreeAccept {
+  /** Asked while the drag moves over the rows, with the place it points at. */
+  canDrop(data: DragData, place: TreeDropPlace): boolean;
+  onDrop(data: DragData, place: TreeDropPlace): void;
+}
+
 export interface TreeHandle {
   /** Starts renaming a node — as soon as it is rendered (right after `onAdd` created it). */
   rename(id: string): void;
@@ -62,6 +92,14 @@ export interface TreeProps {
   onRename?(id: string, label: string): void;
   /** Drag and drop, mod+arrows. Optimistic, with the app's undo toast. */
   onMove?(id: string, to: TreeMoveTarget): void;
+  /**
+   * More data for a dragged row, next to the kit's own (`treeItemDrag`): the app's types
+   * (`defineDragType`), so its drop targets elsewhere need not know a TreeNode. Rows are lifted
+   * only with this or `onMove`: without both, the tree has no drag and drop.
+   */
+  dragData?(node: TreeNode): Record<string, unknown>;
+  /** Drops from outside the tree. Without it, only the tree's own rows land here. */
+  accept?: TreeAccept;
   /** The row's ⋯, the right click, Shift+F10. */
   actions?(node: TreeNode): MenuItem[];
   /** The row's +: create a page inside, then usually `ref.rename(newId)`. */

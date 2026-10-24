@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import React, { CSSProperties, ReactNode, useRef, useState } from 'react';
+import React, { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
 import { Tree } from './Tree';
-import type { TreeHandle, TreeMoveTarget, TreeNode } from './types';
+import { treeItemDrag } from './dnd';
+import type { TreeDropPlace, TreeHandle, TreeMoveTarget, TreeNode } from './types';
+import { defineDragType, draggable, dropTargetForElements } from '../../interaction/dnd';
 import type { MenuItem } from '../Menu';
 import { RouterContext, type RouterAdapter } from '../../router';
 import { Surface, type SurfaceTone } from '../Surface';
@@ -200,6 +202,103 @@ function Live({ tone = 'default' }: { tone?: SurfaceTone }) {
   );
 }
 
+/** The app's own kind of drag: a page template, from a gallery. */
+const templateDrag = defineDragType<{ name: string }>('template');
+
+const box: CSSProperties = {
+  display: 'grid',
+  gap: cssVar('sp-2'),
+  padding: cssVar('sp-3'),
+  border: `${cssVar('border-width')} dashed ${cssVar('border-hairline')}`,
+  borderRadius: cssVar('radius-sm'),
+  minWidth: 200,
+};
+
+/** Takes rows dragged out of the tree: the app's drop target, which only knows `treeItemDrag`. */
+function Favorites() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [over, setOver] = useState(false);
+  const [labels, setLabels] = useState<string[]>([]);
+
+  useEffect(() => {
+    const element = ref.current;
+
+    return element
+      ? dropTargetForElements({
+          element,
+          canDrop: ({ source }) => treeItemDrag.is(source.data),
+          onDragEnter: () => setOver(true),
+          onDragLeave: () => setOver(false),
+          onDrop: ({ source }) => {
+            setOver(false);
+            const node = treeItemDrag.get(source.data)?.node;
+
+            if (node) {
+              setLabels((current) => (current.includes(node.label) ? current : [...current, node.label]));
+            }
+          },
+        })
+      : undefined;
+  }, []);
+
+  return (
+    <div ref={ref} style={{ ...box, background: over ? cssVar('bg-selected') : undefined }}>
+      <strong>Favorites</strong>
+      {labels.length === 0 ? <span>Drop a page here</span> : labels.map((label) => <span key={label}>{label}</span>)}
+    </div>
+  );
+}
+
+/** Something the tree takes in (`accept`): the app's draggable, with its own drag type. */
+function Template({ name }: { name: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+
+    return element ? draggable({ element, getInitialData: () => templateDrag.data({ name }) }) : undefined;
+  }, [name]);
+
+  return (
+    <div ref={ref} style={{ ...box, cursor: 'grab' }}>
+      Template · {name}
+    </div>
+  );
+}
+
+function DragDemo() {
+  const [log, setLog] = useState('Drag a row to Favorites, or a template into the tree.');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(['web']));
+  const pages = usePages(setLog);
+  const where = (place: TreeDropPlace) =>
+    place.onto ? `inside “${place.onto}”` : `under “${place.parentId ?? 'the root'}”, at ${place.index}`;
+
+  return (
+    <Surface tone="default" style={stand}>
+      <div style={{ width: cssVar('sidebar-width') }}>
+        <Tree
+          aria-label="Pages"
+          nodes={pages.nodes}
+          expanded={expanded}
+          onExpandedChange={setExpanded}
+          loadChildren={pages.load}
+          onMove={pages.move}
+          accept={{
+            // Templates go anywhere a page could; other drags are not the tree's business
+            canDrop: (data) => templateDrag.is(data),
+            onDrop: (data, place) => setLog(`Would create “${templateDrag.get(data)?.name}” ${where(place)}`),
+          }}
+        />
+      </div>
+      <div style={{ display: 'grid', gap: cssVar('sp-3'), alignContent: 'start' }}>
+        <Favorites />
+        <Template name="Meeting notes" />
+        <span>{log}</span>
+      </div>
+    </Surface>
+  );
+}
+
 const meta: Meta<typeof Tree> = {
   title: 'Navigation/Tree',
   component: Tree,
@@ -211,6 +310,12 @@ export default meta;
 type Story = StoryObj<typeof Tree>;
 
 export const PageTree: Story = { render: () => <Live /> };
+
+/**
+ * The tree's drag and drop is public: its rows reach the app's drop targets (`treeItemDrag`), and
+ * it takes the app's drags in (`accept`). A row dragged out of the browser carries its address.
+ */
+export const DragInAndOut: Story = { render: () => <DragDemo /> };
 
 /** The same tree on an inverse surface: every value comes from the inverse set (spec: Tree · 04). */
 export const Inverse: Story = { render: () => <Live tone="inverse" /> };

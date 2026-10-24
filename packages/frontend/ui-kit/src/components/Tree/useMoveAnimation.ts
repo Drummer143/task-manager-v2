@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef } from 'react';
-import { ROW_ATTR } from './useTreeDrag';
+import { ROW_ATTR } from './dnd';
 
 const rowsIn = (container: HTMLElement | null) =>
   Array.from(container?.querySelectorAll<HTMLElement>(`[${ROW_ATTR}]`) ?? []);

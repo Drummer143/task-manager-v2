@@ -286,13 +286,15 @@
   }
 }
 
-/* What follows the pointer: the row, lifted. Placed by transform, never re-rendered. */
+/* The drag image's container: transparent room, so the row's shadow is in the browser's snapshot. */
+.ghostFrame {
+  padding: var(--sp-3);
+}
+
+/* The drag image: the row, lifted (spec: Tree · 02). The browser snapshots it once. */
 .ghost {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: var(--z-drag);
   display: flex;
+  width: var(--tree-ghost-width);
   align-items: center;
   gap: var(--sp-2);
   height: var(--tree-row);

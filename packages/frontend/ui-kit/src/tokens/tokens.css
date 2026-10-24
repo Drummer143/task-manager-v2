@@ -522,11 +522,9 @@
   --tree-move: var(--dur-move) var(--ease-inout);
   /* Hovering a collapsed node while dragging opens it after this long. */
   --tree-hover-expand: 600ms;
+  /* The drag image of a row: its copy at this width, whatever the row's. */
+  --tree-ghost-width: 180px;
 
-  /* Dragging near the edge of a scroll area scrolls it: this close to the edge,
-     this far per frame — linear, never in jerks (philosophy 09). */
-  --drag-autoscroll-zone: 32px;
-  --drag-autoscroll-step: 8px;
   /* What is being dragged stays in its place as a ghost of itself. */
   --drag-source-opacity: 0.45;
 
@@ -554,7 +552,6 @@
   --undo-window: 8000ms;
   --tooltip-delay: 400ms;
   --highlight-remote: 400ms;
-  --drag-threshold: 4px;
 
   /* Screen states (Skeleton · Empty · Error). A skeleton appears after
      --spinner-delay, pulses once and then holds still — endless shimmer

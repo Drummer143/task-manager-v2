@@ -1,20 +1,23 @@
 import React, { useEffect, useEffectEvent, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { announce } from '@atlaskit/pragmatic-drag-and-drop-live-region';
 import { cx, detectPlatform } from '../../utils';
 import { useRouter } from '../../router';
 import { isAppHotkey } from '../../interaction/hotkeys';
+import { useMessages } from '../../messages';
 import { ContextMenu, type ContextMenuHandle } from '../Menu';
 import { Surface, useSurface } from '../Surface';
+import { ROW_ATTR, ROW_KEY, TREE_KEY, treeItemDrag } from './dnd';
 import {
   ancestorsOf,
+  blockedOn,
   canContain,
-  dropTarget,
   indexTree,
   isExpandable,
   keyboardMove,
   nextByLetter,
+  rowMode,
   visibleRows,
-  zoneAt,
   type DropTarget,
   type KeyboardMove,
   type LoadState,
@@ -23,7 +26,7 @@ import {
 import { TreeNote, TreeRow, type RowControls } from './TreeRow';
 import type { TreeMoveTarget, TreeNode, TreeProps } from './types';
 import { useMoveAnimation } from './useMoveAnimation';
-import { ROW_ATTR, useTreeDrag } from './useTreeDrag';
+import { useTreeDnd } from './useTreeDnd';
 import { raw } from '../../tokens';
 import styles from './Tree.module.scss';
 
@@ -63,6 +66,8 @@ export const Tree: React.FC<TreeProps> = ({
   loadChildren,
   onRename,
   onMove,
+  dragData,
+  accept,
   actions,
   onAdd,
   onRetry,
@@ -72,6 +77,7 @@ export const Tree: React.FC<TreeProps> = ({
 }) => {
   const surface = useSurface();
   const router = useRouter();
+  const messages = useMessages();
   const baseId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<ContextMenuHandle>(null);
@@ -266,6 +272,12 @@ export const Tree: React.FC<TreeProps> = ({
     }
 
     onMove?.(id, to);
+
+    const label = index.get(id)?.node.label;
+
+    if (label !== undefined) {
+      announce(messages.treeMoved(label));
+    }
   };
 
   const openMenu = (id: string, anchor: HTMLElement | null) => {
@@ -284,22 +296,16 @@ export const Tree: React.FC<TreeProps> = ({
     }
   };
 
-  // Taken apart: the ghost's ref must not make the drag state look like a ref to the compiler
-  const { drag, ghostRef, start: startDrag } = useTreeDrag({
+  const { drag, preview, renderPreview } = useTreeDnd({
+    treeId: baseId,
     containerRef,
-    targetAt: (draggedId, rowId, fraction) => {
-      const row = rowById.get(rowId);
-
-      return row ? dropTarget(nodes, index, row, zoneAt(fraction, canContain(row.node)), draggedId) : null;
-    },
-    opensOnHover: (rowId) => {
-      const row = rowById.get(rowId);
-
-      return row !== undefined && isExpandable(row.node) && !row.expanded;
-    },
-    expand: (rowId) => setOpen([rowId], true),
-    drop: (id, target: DropTarget) =>
-      move(id, target.move, target.line === null ? (target.move.parentId ?? undefined) : undefined),
+    rowById,
+    index,
+    canMove: onMove !== undefined,
+    accept,
+    expand: (id) => setOpen([id], true),
+    // Dropped inside a node: it opens, so the moved node stays in view
+    move: (id, target: DropTarget) => move(id, target.move, target.onto),
   });
 
   // Rows are memoized and hold this one object; their handlers call the latest controls,
@@ -319,11 +325,6 @@ export const Tree: React.FC<TreeProps> = ({
       toggle: (id) => {
         setCursorId(id);
         setOpen([id], !expanded.has(id));
-      },
-      pointerDown: (event, node) => {
-        if (onMove && node.disabledReason === undefined && renamingId !== node.id) {
-          startDrag(event, node.id);
-        }
       },
       add: (id) => onAdd?.(id),
       more: (id, anchor) => {
@@ -348,6 +349,15 @@ export const Tree: React.FC<TreeProps> = ({
           containerRef.current?.focus({ preventScroll: true });
         }
       },
+      canDrag: (node) => node.disabledReason === undefined && renamingId !== node.id,
+      dragData: (row) => ({
+        // The app's own types first: the kit's key is never overwritten
+        ...dragData?.(row.node),
+        ...treeItemDrag.data({ tree: baseId, node: row.node, parentId: row.parentId, index: row.index }),
+      }),
+      preview: renderPreview,
+      canDropOn: (data) => (treeItemDrag.get(data)?.tree === baseId ? onMove !== undefined : accept !== undefined),
+      targetData: (id) => ({ [TREE_KEY]: baseId, [ROW_KEY]: id }),
     };
   });
 
@@ -495,7 +505,6 @@ export const Tree: React.FC<TreeProps> = ({
   };
 
   const menuNode = menuNodeId === null ? undefined : index.get(menuNodeId)?.node;
-  const draggedNode = drag ? index.get(drag.id)?.node : undefined;
   const target = drag?.target;
 
   const tree = (
@@ -506,13 +515,15 @@ export const Tree: React.FC<TreeProps> = ({
       tabIndex={0}
       aria-activedescendant={cursor === undefined ? undefined : domIdOf(cursor)}
       className={cx(styles.tree, className)}
-      data-dragging={drag ? '' : undefined}
+      data-dragging={drag?.sourceId != null ? '' : undefined}
       onKeyDown={handleKeyDown}
-      onMouseDown={(event) => {
-        // Focus stays on the tree whatever part of a row is pressed (and no text gets selected).
-        if (!(event.target as HTMLElement).closest('input')) {
-          event.preventDefault();
-          containerRef.current?.focus({ preventScroll: true });
+      onFocus={(event) => {
+        // Focus stays on the tree whatever part of a row is clicked — a link, a button. Not by
+        // preventing mousedown, and not within it: either stops the native drag from starting.
+        if (event.target !== event.currentTarget && !(event.target instanceof HTMLInputElement)) {
+          const container = event.currentTarget;
+
+          setTimeout(() => container.focus({ preventScroll: true }));
         }
       }}
       onContextMenu={(event) => {
@@ -544,11 +555,15 @@ export const Tree: React.FC<TreeProps> = ({
             cursor={id === cursor}
             active={id === activeId}
             renaming={id === renamingId}
-            dragSource={id === drag?.id}
+            dragSource={id === drag?.sourceId}
             drop={drop}
             dropDepth={drop && target?.line ? target.line.depth : undefined}
             canAdd={onAdd !== undefined && canContain(row.node)}
             hasActions={actions !== undefined}
+            dropMode={rowMode(row)}
+            liftable={onMove !== undefined || dragData !== undefined}
+            droppable={onMove !== undefined || accept !== undefined}
+            dropBlocked={blockedOn(index, row)}
             path={
               row.depth >= raw['tree-max-depth']
                 ? [...ancestorsOf(index, id), id].map((part) => index.get(part)?.node.label).join(' / ')
@@ -570,17 +585,19 @@ export const Tree: React.FC<TreeProps> = ({
       ) : (
         tree
       )}
-      {drag &&
-        draggedNode &&
+      {preview &&
         createPortal(
-          // The lifted row keeps the tree's surface: the portal is out of reach of CSS inheritance.
-          <Surface tone={surface} asChild>
-            <div ref={ghostRef} className={styles.ghost} style={{ width: drag.width }} aria-hidden="true">
-              {draggedNode.icon !== undefined && <span className={styles.icon}>{draggedNode.icon}</span>}
-              <span className={styles.label}>{draggedNode.label}</span>
-            </div>
-          </Surface>,
-          document.body,
+          // Out of the tree's DOM: the lifted row takes the tree's surface along. Transparent room
+          // around it, so the shadow is in the snapshot too.
+          <div className={styles.ghostFrame}>
+            <Surface tone={surface} asChild>
+              <div className={styles.ghost} aria-hidden="true">
+                {preview.node.icon !== undefined && <span className={styles.icon}>{preview.node.icon}</span>}
+                <span className={styles.label}>{preview.node.label}</span>
+              </div>
+            </Surface>
+          </div>,
+          preview.container,
         )}
     </>
   );
