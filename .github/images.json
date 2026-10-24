@@ -58,5 +58,20 @@
       ".dockerignore",
       "docker/Dockerfile.elixir"
     ]
+  },
+  {
+    "name": "ui-kit-storybook",
+    "dockerfile": "docker/Dockerfile.storybook",
+    "compose_service": "ui-kit-storybook",
+    "paths": [
+      "packages/frontend/ui-kit/**",
+      "package.json",
+      "pnpm-lock.yaml",
+      "nx.json",
+      "tsconfig.base.json",
+      ".dockerignore",
+      "docker/Dockerfile.storybook",
+      "docker/nginx.storybook.conf"
+    ]
   }
 ]

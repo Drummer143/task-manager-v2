@@ -40,6 +40,7 @@ services:
             - "443:443/udp"
         environment:
             DOMAIN: ${DOMAIN:?DOMAIN is required}
+            STORYBOOK_DOMAIN: ${STORYBOOK_DOMAIN:-storybook.ui-kit.dev.website}
         volumes:
             - ./Caddyfile:/etc/caddy/Caddyfile:ro
             - caddy_data:/data
@@ -52,6 +53,7 @@ services:
             - socket-service
             - storage-service
             - authentik_server
+            - ui-kit-storybook
 
     postgres:
         image: postgres:18-alpine
@@ -232,6 +234,22 @@ services:
             resources:
                 limits:
                     memory: 48M
+                    cpus: "0.25"
+        networks:
+            - net
+
+    # The ui-kit's Storybook, static. Served by caddy on STORYBOOK_DOMAIN
+    ui-kit-storybook:
+        restart: unless-stopped
+        container_name: ui-kit-storybook
+        image: ghcr.io/drummer143/task-manager-v2/ui-kit-storybook:${IMAGE_TAG:-latest}
+        build:
+            context: ..
+            dockerfile: docker/Dockerfile.storybook
+        deploy:
+            resources:
+                limits:
+                    memory: 32M
                     cpus: "0.25"
         networks:
             - net
