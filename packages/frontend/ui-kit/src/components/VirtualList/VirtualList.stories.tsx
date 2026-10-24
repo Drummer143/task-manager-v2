@@ -128,6 +128,54 @@ export const KeyboardCursor: Story = {
   render: () => <KeyboardCursorDemo />,
 };
 
+const ReorderDemo: React.FC = () => {
+  const [ids, setIds] = useState(() => Array.from({ length: 500 }, (_, i) => `row-${i}`));
+  const [last, setLast] = useState('Drag a row; near the edges the list scrolls.');
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <span style={{ padding: cssVar('sp-3') }}>{last}</span>
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <VirtualList
+          data={ids}
+          getKey={(id) => id}
+          gap={4}
+          fixedHeight={ROW}
+          onReorder={(key, to) => {
+            setLast(`Moved ${key} to ${to}`);
+            setIds((current) => {
+              const next = current.filter((id) => id !== key);
+
+              next.splice(to, 0, key as string);
+
+              return next;
+            });
+          }}
+          renderItem={(id) => (
+            <div
+              style={{
+                height: ROW,
+                paddingInline: cssVar('sp-3'),
+                display: 'flex',
+                alignItems: 'center',
+                background: cssVar('bg-hover'),
+                cursor: 'grab',
+              }}
+            >
+              {id}
+            </div>
+          )}
+        />
+      </div>
+    </div>
+  );
+};
+
+/** Drag and drop (`onReorder`): the line sits in the middle of the gap; the app moves the row. */
+export const Reorder: Story = {
+  render: () => <ReorderDemo />,
+};
+
 /*
  * The Inbox shape: day headers (32 px) between notifications (56 px), two known heights given
  * to `estimateSize`, so the list never jumps when rows come in.

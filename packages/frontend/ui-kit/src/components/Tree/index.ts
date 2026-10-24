@@ -1,2 +1,11 @@
 export { Tree } from './Tree';
-export type { TreeHandle, TreeMoveTarget, TreeNode, TreeProps } from './types';
+export { treeItemDrag } from './dnd';
+export type {
+  TreeAccept,
+  TreeDragItem,
+  TreeDropPlace,
+  TreeHandle,
+  TreeMoveTarget,
+  TreeNode,
+  TreeProps,
+} from './types';

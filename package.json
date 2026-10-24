@@ -10,6 +10,10 @@
   },
   "private": true,
   "dependencies": {
+    "@atlaskit/pragmatic-drag-and-drop": "4.0.0",
+    "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "3.2.1",
+    "@atlaskit/pragmatic-drag-and-drop-hitbox": "3.0.0",
+    "@atlaskit/pragmatic-drag-and-drop-live-region": "2.1.0",
     "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-virtual": "^3.14.13",
     "@zag-js/menu": "1.44.0",

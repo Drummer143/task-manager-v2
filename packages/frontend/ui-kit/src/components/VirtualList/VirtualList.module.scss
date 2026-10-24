@@ -6,6 +6,8 @@
 
 .listContainer {
   position: relative;
+  /* A row showing the drop line rises over its neighbours, never over the page around the list */
+  isolation: isolate;
 
   margin: 0;
 
@@ -18,4 +20,26 @@
   left: 0;
 
   width: 100%;
+
+  /* The insertion line: in the middle of the gap at the row's edge (the list sets --_gap). */
+  &[data-drop-edge] {
+    z-index: var(--z-drag);
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset-inline: 0;
+      height: var(--border-width-strong);
+      background-color: var(--border-accent);
+      pointer-events: none;
+    }
+  }
+
+  &[data-drop-edge='top']::after {
+    top: calc((var(--_gap) + var(--border-width-strong)) / -2);
+  }
+
+  &[data-drop-edge='bottom']::after {
+    bottom: calc((var(--_gap) + var(--border-width-strong)) / -2);
+  }
 }

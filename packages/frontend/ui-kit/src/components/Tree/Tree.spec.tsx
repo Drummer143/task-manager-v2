@@ -1,8 +1,11 @@
 import { createRef, useState } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { dragFrame, dragOver, FakeDataTransfer, installFakeDrag } from '../../testing/dnd';
 import { Tree } from './Tree';
-import type { TreeHandle, TreeMoveTarget, TreeNode, TreeProps } from './types';
+import type { TreeDropPlace, TreeHandle, TreeMoveTarget, TreeNode, TreeProps } from './types';
+import { treeItemDrag } from './dnd';
+import { defineDragType, draggable, dropTargetForElements, type DragData } from '../../interaction/dnd';
 import { RouterContext, type RouterAdapter } from '../../router';
 import { useHotkeysStore } from '../../interaction/hotkeys';
 import type { MenuItem } from '../Menu';
@@ -375,73 +378,182 @@ describe('Tree', () => {
   });
 
   describe('drag and drop', () => {
-    /** jsdom has no layout: every row is 28 px, stacked from the top. */
+    installFakeDrag();
+
+    /** jsdom has no layout: every row is 28 px, stacked from the top, 240 px wide. */
     const layOut = () => {
-      const rows = [...tree().querySelectorAll<HTMLElement>('[data-tree-row]')];
-
-      rows.forEach((row, position) => {
-        vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({
-          top: position * 28,
-          bottom: position * 28 + 28,
-          height: 28,
-          left: 0,
-          right: 240,
-          width: 240,
-          x: 0,
-          y: position * 28,
-          toJSON: () => undefined,
-        });
+      [...tree().querySelectorAll<HTMLElement>('[data-tree-row]')].forEach((row, position) => {
+        vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 0, y: position * 28, width: 240, height: 28 }));
       });
-
-      document.elementFromPoint = (_x: number, y: number) => rows[Math.floor(y / 28)] ?? null;
     };
 
-    const pointer = (type: string, y: number) =>
-      act(() => {
-        const init = { bubbles: true, clientX: 60, clientY: y, button: 0 };
+    const row = (label: string) => item(label);
 
-        if (type === 'pointerdown') {
-          fireEvent.pointerDown(document.querySelector('[data-tree-row="mobile"]') as Element, init);
-        } else {
-          window.dispatchEvent(new MouseEvent(type, init));
-        }
-      });
-
-    it('a press that moves past the threshold drags; the drop asks for the move', () => {
+    it('a row dropped on the middle of a container goes inside it', async () => {
       const onMove = vi.fn();
 
       render(<Owned onMove={onMove} />);
       layOut();
 
-      // Mobile is row 4; Archive (a container) is row 6 — its middle means "into".
-      pointer('pointerdown', 4 * 28 + 10);
-      pointer('pointermove', 4 * 28 + 12);
-      expect(tree().hasAttribute('data-dragging')).toBe(false);
+      await dragOver(row('Mobile'), row('Archive'));
+      expect(row('Archive').getAttribute('data-drop')).toBe('into');
+      expect(row('Mobile').hasAttribute('data-drag-source')).toBe(true);
 
-      pointer('pointermove', 6 * 28 + 14);
-      expect(tree().hasAttribute('data-dragging')).toBe(true);
-      expect(item('Archive').getAttribute('data-drop')).toBe('into');
+      fireEvent.drop(row('Archive'), { dataTransfer: new FakeDataTransfer(), clientX: 60, clientY: row('Archive').getBoundingClientRect().top + 14 });
+      await dragFrame();
 
-      pointer('pointerup', 6 * 28 + 14);
       expect(onMove).toHaveBeenCalledWith('mobile', { parentId: 'archive', index: 0 });
-      expect(tree().hasAttribute('data-dragging')).toBe(false);
+      expect(row('Archive').hasAttribute('data-drop')).toBe(false);
     });
 
-    it('Esc cancels the drag: nothing moves', () => {
+    it('the top of a row is the place before it: a line', async () => {
       const onMove = vi.fn();
 
       render(<Owned onMove={onMove} />);
       layOut();
 
-      pointer('pointerdown', 4 * 28 + 10);
-      pointer('pointermove', 1 * 28 + 2);
-      act(() => {
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-      });
-      pointer('pointerup', 1 * 28 + 2);
+      await dragOver(row('Mobile'), row('Q3 board'), { y: 2, drop: true });
+
+      expect(onMove).toHaveBeenCalledWith('mobile', { parentId: 'web', index: 0 });
+    });
+
+    it('never into itself or its own children', async () => {
+      const onMove = vi.fn();
+
+      render(<Owned onMove={onMove} />);
+      layOut();
+
+      await dragOver(row('Web'), row('Requirements'), { drop: true });
 
       expect(onMove).not.toHaveBeenCalled();
-      expect(tree().hasAttribute('data-dragging')).toBe(false);
+    });
+
+    it('a row carries its node and the app’s data out, and its address for other apps', async () => {
+      const received = vi.fn();
+      const pageDrag = defineDragType<{ pageId: string }>('page');
+      const outside = document.createElement('div');
+      document.body.appendChild(outside);
+      const cleanup = dropTargetForElements({
+        element: outside,
+        canDrop: ({ source }) => treeItemDrag.is(source.data),
+        onDrop: ({ source }) => received(treeItemDrag.get(source.data)?.node.id, pageDrag.get(source.data)),
+      });
+
+      render(<Owned onMove={vi.fn()} dragData={(node) => pageDrag.data({ pageId: node.id })} />);
+      layOut();
+
+      const { dataTransfer } = await dragOver(row('Mobile'), outside, { drop: true });
+
+      expect(received).toHaveBeenCalledWith('mobile', { pageId: 'mobile' });
+      expect(dataTransfer.getData('text/uri-list')).toBe(new URL('/p/mobile', window.location.href).href);
+
+      cleanup();
+      outside.remove();
+    });
+
+    it('takes a drag from outside where the app accepts it, with the place it points at', async () => {
+      const cardDrag = defineDragType<{ cardId: string }>('card');
+      const card = document.createElement('div');
+      document.body.appendChild(card);
+      const cleanup = draggable({ element: card, getInitialData: () => cardDrag.data({ cardId: 'c1' }) });
+      const accept = {
+        // Only inside a node
+        canDrop: vi.fn((_data: DragData, place: TreeDropPlace) => place.onto !== undefined),
+        onDrop: vi.fn(),
+      };
+
+      render(<Owned accept={accept} />);
+      layOut();
+
+      await dragOver(card, row('Q3 board'), { y: 2 });
+      expect(row('Q3 board').hasAttribute('data-drop')).toBe(false);
+      expect(tree().querySelector('[data-edge]')).toBeNull();
+
+      await dragOver(card, row('Archive'), { drop: true });
+
+      expect(accept.onDrop).toHaveBeenCalledWith(expect.objectContaining(cardDrag.data({ cardId: 'c1' })), {
+        parentId: 'archive',
+        index: 0,
+        onto: 'archive',
+      });
+
+      cleanup();
+      card.remove();
+    });
+
+    it('without accept, nothing from outside lands', async () => {
+      const onMove = vi.fn();
+      const other = document.createElement('div');
+      document.body.appendChild(other);
+      const cleanup = draggable({ element: other, getInitialData: () => ({ something: true }) });
+
+      render(<Owned onMove={onMove} />);
+      layOut();
+
+      await dragOver(other, row('Archive'), { drop: true });
+
+      expect(onMove).not.toHaveBeenCalled();
+      expect(row('Archive').hasAttribute('data-drop')).toBe(false);
+
+      cleanup();
+      other.remove();
+    });
+
+    it('resting on a collapsed node opens it', async () => {
+      render(<Owned onMove={vi.fn()} />);
+      layOut();
+
+      await dragOver(row('Mobile'), row('Requirements'));
+      expect(screen.queryByRole('treeitem', { name: 'API contracts' })).toBeNull();
+
+      // --tree-hover-expand
+      await act(() => new Promise((resolve) => setTimeout(resolve, 650)));
+
+      expect(row('API contracts')).toBeTruthy();
+    });
+
+    it('a row without access is not lifted', async () => {
+      const onMove = vi.fn();
+
+      render(<Owned onMove={onMove} />);
+      layOut();
+
+      await dragOver(row('Legal'), row('Archive'), { drop: true });
+
+      expect(onMove).not.toHaveBeenCalled();
+    });
+
+    it('without onMove, dragData and accept, the tree has no drag and drop', async () => {
+      const received = vi.fn();
+      const outside = document.createElement('div');
+      document.body.appendChild(outside);
+      const cleanup = dropTargetForElements({ element: outside, onDrop: received });
+
+      render(<Owned />);
+      layOut();
+
+      expect(row('Mobile').getAttribute('draggable')).toBeNull();
+
+      await dragOver(row('Mobile'), outside, { drop: true });
+
+      expect(received).not.toHaveBeenCalled();
+
+      cleanup();
+      outside.remove();
+    });
+
+    it('dragData alone lifts rows out, while nothing lands in the tree', async () => {
+      const onMove = vi.fn();
+
+      render(<Owned dragData={() => ({})} />);
+      layOut();
+
+      expect(row('Mobile').getAttribute('draggable')).toBe('true');
+
+      await dragOver(row('Mobile'), row('Archive'), { drop: true });
+
+      expect(row('Archive').hasAttribute('data-drop')).toBe(false);
+      expect(onMove).not.toHaveBeenCalled();
     });
   });
 });

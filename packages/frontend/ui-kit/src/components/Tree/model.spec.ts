@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  blockedOn,
   dropTarget,
   indexTree,
   keyboardMove,
   nextByLetter,
+  rowMode,
   visibleRows,
-  zoneAt,
   type TreeRow,
 } from './model';
 import type { TreeNode } from './types';
@@ -88,24 +89,31 @@ describe('keyboardMove', () => {
   });
 });
 
-describe('zoneAt', () => {
-  it('a container splits into quarters: before, into, after', () => {
-    expect(zoneAt(0.1, true)).toBe('before');
-    expect(zoneAt(0.5, true)).toBe('into');
-    expect(zoneAt(0.9, true)).toBe('after');
+describe('rowMode and blockedOn', () => {
+  const rows = visibleRows(NODES, new Set(['web', 'req']), () => undefined);
+
+  it('an open node with children has no "below"; the last of its siblings lets the pointer step out', () => {
+    expect(rowMode(rowOf(rows, 'web'))).toBe('expanded');
+    expect(rowMode(rowOf(rows, 'q3'))).toBe('standard');
+    expect(rowMode(rowOf(rows, 'retro'))).toBe('last-in-group');
   });
 
-  it('a leaf splits in halves', () => {
-    expect(zoneAt(0.4, false)).toBe('before');
-    expect(zoneAt(0.6, false)).toBe('after');
+  it('nothing goes inside a node that holds nothing', () => {
+    expect(blockedOn(INDEX, rowOf(rows, 'q3'))).toEqual(['make-child']);
+    expect(blockedOn(INDEX, rowOf(rows, 'archive'))).toEqual([]);
+    expect(blockedOn(INDEX, rowOf(rows, 'legal'))).toEqual(['make-child']);
   });
 });
 
 describe('dropTarget', () => {
   const rows = visibleRows(NODES, new Set(['web', 'req']), () => undefined);
+  const level = { currentLevel: 1, indentPerLevel: 16 };
+  const above = { type: 'reorder-above', ...level } as const;
+  const below = { type: 'reorder-below', ...level } as const;
+  const child = { type: 'make-child', ...level } as const;
 
-  it('before a row: that row’s place, the line at its top and its level', () => {
-    expect(dropTarget(NODES, INDEX, rowOf(rows, 'q3'), 'before', 'mobile')).toEqual({
+  it('above a row: that row’s place, the line at its top and its level', () => {
+    expect(dropTarget(INDEX, rowOf(rows, 'q3'), above, 'mobile')).toEqual({
       move: { parentId: 'web', index: 0 },
       rowId: 'q3',
       line: { edge: 'top', depth: 1 },
@@ -113,38 +121,53 @@ describe('dropTarget', () => {
   });
 
   it('counts the place without the dragged node when it moves within its parent', () => {
-    // q3 (0) goes after retro (2): with q3 taken out, retro is at 1, so q3 lands at 2.
-    expect(dropTarget(NODES, INDEX, rowOf(rows, 'retro'), 'after', 'q3')?.move).toEqual({ parentId: 'web', index: 2 });
+    // q3 (0) goes below retro (2): with q3 taken out, retro is at 1, so q3 lands at 2.
+    expect(dropTarget(INDEX, rowOf(rows, 'retro'), below, 'q3')?.move).toEqual({ parentId: 'web', index: 2 });
   });
 
-  it('after an open node means its first child’s place', () => {
-    expect(dropTarget(NODES, INDEX, rowOf(rows, 'req'), 'after', 'mobile')).toEqual({
+  it('a child of an open node goes to its first place, under the row', () => {
+    expect(dropTarget(INDEX, rowOf(rows, 'req'), child, 'mobile')).toEqual({
       move: { parentId: 'req', index: 0 },
       rowId: 'req',
       line: { edge: 'bottom', depth: 2 },
     });
   });
 
-  it('into a container: at its end, the row lights up instead of a line', () => {
-    const archive = rowOf(rows, 'archive');
-
-    expect(dropTarget(NODES, INDEX, archive, 'into', 'mobile')).toEqual({
+  it('into a closed container: at its end, the row lights up instead of a line', () => {
+    expect(dropTarget(INDEX, rowOf(rows, 'archive'), child, 'mobile')).toEqual({
       move: { parentId: 'archive', index: 0 },
       rowId: 'archive',
       line: null,
+      onto: 'archive',
     });
-    expect(dropTarget(NODES, INDEX, rowOf(rows, 'legal'), 'into', 'mobile')).toBeNull();
+    expect(dropTarget(INDEX, rowOf(rows, 'legal'), child, 'mobile')).toBeNull();
   });
 
-  it('never onto itself or inside itself', () => {
-    expect(dropTarget(NODES, INDEX, rowOf(rows, 'req'), 'into', 'req')).toBeNull();
-    expect(dropTarget(NODES, INDEX, rowOf(rows, 'api'), 'before', 'req')).toBeNull();
-    expect(dropTarget(NODES, INDEX, rowOf(rows, 'api'), 'after', 'web')).toBeNull();
+  it('stepping out left under the last child: right after the ancestor on that level', () => {
+    const reparent = { type: 'reparent', currentLevel: 2, indentPerLevel: 16, desiredLevel: 0 } as const;
+
+    // Mobile is right there already (after web): q3 is moved instead
+    expect(dropTarget(INDEX, rowOf(rows, 'ux'), reparent, 'q3')).toEqual({
+      move: { parentId: null, index: 1 },
+      rowId: 'ux',
+      line: { edge: 'bottom', depth: 0 },
+    });
+  });
+
+  it('never onto itself or inside itself; a blocked instruction is no target', () => {
+    expect(dropTarget(INDEX, rowOf(rows, 'req'), child, 'req')).toBeNull();
+    expect(dropTarget(INDEX, rowOf(rows, 'api'), above, 'req')).toBeNull();
+    expect(dropTarget(INDEX, rowOf(rows, 'api'), below, 'web')).toBeNull();
+    expect(dropTarget(INDEX, rowOf(rows, 'q3'), { type: 'instruction-blocked', desired: child }, 'mobile')).toBeNull();
   });
 
   it('where it already is is no target', () => {
-    expect(dropTarget(NODES, INDEX, rowOf(rows, 'retro'), 'before', 'req')).toBeNull();
-    expect(dropTarget(NODES, INDEX, rowOf(rows, 'q3'), 'after', 'req')).toBeNull();
+    expect(dropTarget(INDEX, rowOf(rows, 'retro'), above, 'req')).toBeNull();
+    expect(dropTarget(INDEX, rowOf(rows, 'q3'), below, 'req')).toBeNull();
+  });
+
+  it('a drag from outside takes nothing out first', () => {
+    expect(dropTarget(INDEX, rowOf(rows, 'retro'), below, null)?.move).toEqual({ parentId: 'web', index: 3 });
   });
 });
 

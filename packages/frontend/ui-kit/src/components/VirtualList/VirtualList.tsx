@@ -1,12 +1,12 @@
-import React, {
-  useEffect,
-  useEffectEvent,
-  useLayoutEffect,
-  useRef,
-} from 'react';
+import React, { useEffect, useEffectEvent, useId, useLayoutEffect, useRef } from 'react';
+import { announce } from '@atlaskit/pragmatic-drag-and-drop-live-region';
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 import styles from './VirtualList.module.scss';
 import { cx } from '../../utils';
+import { useMessages } from '../../messages';
+import { INDEX_KEY, LIST_KEY, listItemDrag } from './dnd';
+import { useListDnd } from './useListDnd';
+import { VirtualListRow, type RowControls } from './VirtualListRow';
 
 export interface VirtualListClassNames {
   root?: string;
@@ -75,6 +75,18 @@ export interface VirtualListProps<Item> {
   getScrollElement?: () => Element | null;
   /** A row not loaded yet (a hole in `data`, or past its end), e.g. a skeleton line. */
   renderPlaceholder?: (index: number) => React.ReactNode;
+  /**
+   * Drag a row to another place in the list: `key` (by `getKey`, which reordering needs), `to`
+   * — its index in the list as it will be. Optimistic: the app updates `data`, and offers the
+   * same move from the keyboard. Placeholders are neither dragged nor dropped on.
+   */
+  onReorder?: (key: React.Key, to: number) => void;
+  /**
+   * More data for a dragged row, next to the kit's own (`listItemDrag`): the app's types
+   * (`defineDragType`), for its drop targets elsewhere. Rows are lifted only with this or
+   * `onReorder`: without both, the list has no drag and drop.
+   */
+  dragData?: (item: Item) => Record<string, unknown>;
 }
 
 export const VirtualList = <Item,>({
@@ -97,19 +109,58 @@ export const VirtualList = <Item,>({
   onEndReached,
   onRangeChange,
   getScrollElement,
+  onReorder,
+  dragData,
 }: VirtualListProps<Item>) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const listId = useId();
+  const messages = useMessages();
 
-  const cursorIndex =
-    cursorKey === undefined
-      ? -1
-      : getKey
-        ? data.findIndex(
-            (item) => item !== undefined && getKey(item) === cursorKey,
-          )
-        : typeof cursorKey === 'number' && data[cursorKey] !== undefined
-          ? cursorKey
-          : -1;
+  /** A loaded row's index by its key (by index without `getKey`); -1 when it is not loaded. */
+  const indexOf = (key: React.Key) =>
+    getKey
+      ? data.findIndex((item) => item !== undefined && getKey(item) === key)
+      : typeof key === 'number' && data[key] !== undefined
+        ? key
+        : -1;
+
+  const keyOf = (index: number) => {
+    const item = data[index];
+
+    return getKey && item !== undefined ? getKey(item) : index;
+  };
+
+  const drag = useListDnd({
+    listId,
+    reorderable: onReorder !== undefined,
+    scrollElement: () => getScrollElement?.() ?? wrapperRef.current,
+    indexOf,
+    reorder: (key, to) => {
+      onReorder?.(key, to);
+      announce(messages.listMoved(to + 1, count));
+    },
+  });
+
+  const controls = useRef<RowControls>(null!);
+
+  useLayoutEffect(() => {
+    controls.current = {
+      dragData: (index) => {
+        const item = data[index] as Item;
+
+        // The app's own types first: the kit's key is never overwritten
+        return { ...dragData?.(item), ...listItemDrag.data({ list: listId, key: keyOf(index), index }) };
+      },
+      canDrop: (source) => onReorder !== undefined && listItemDrag.get(source)?.list === listId,
+      targetData: (index) => ({ [LIST_KEY]: listId, [INDEX_KEY]: index }),
+    };
+  });
+
+  const cursorIndex = cursorKey === undefined ? -1 : indexOf(cursorKey);
+  // A dragged row scrolled out of view stays mounted: its drag ends on it
+  const sourceIndex = drag ? indexOf(drag.sourceKey) : -1;
+  const liftable = onReorder !== undefined || dragData !== undefined;
+  const droppable = onReorder !== undefined;
 
   const virtualizer = useVirtualizer({
     gap,
@@ -131,12 +182,13 @@ export const VirtualList = <Item,>({
     rangeExtractor: (range) => {
       const indexes = defaultRangeExtractor(range);
 
-      if (cursorIndex >= 0 && !indexes.includes(cursorIndex)) {
-        indexes.push(cursorIndex);
-        indexes.sort((a, b) => a - b);
+      for (const pinned of [cursorIndex, sourceIndex]) {
+        if (pinned >= 0 && !indexes.includes(pinned)) {
+          indexes.push(pinned);
+        }
       }
 
-      return indexes;
+      return indexes.sort((a, b) => a - b);
     },
     estimateSize: fixedHeight
       ? () => fixedHeight
@@ -197,15 +249,26 @@ export const VirtualList = <Item,>({
       role={asList ? 'list' : 'rowgroup'}
       ref={virtualizer.containerRef}
       className={cx(styles.listContainer, classNames?.listContainer)}
+      style={{ '--_gap': `${gap ?? 0}px` } as React.CSSProperties}
+      data-dragging={drag ? '' : undefined}
     >
       {virtualizer.getVirtualItems().map((virtualItem) => {
         const item = data[virtualItem.index];
         const isPlaceholder = item === undefined;
 
+        const target = drag?.target;
+
         return (
-          <ItemTag
+          <VirtualListRow
+            as={ItemTag}
             key={virtualItem.key}
-            ref={virtualizer.measureElement}
+            index={virtualItem.index}
+            liftable={liftable && !isPlaceholder}
+            droppable={droppable && !isPlaceholder}
+            dragSource={sourceIndex === virtualItem.index}
+            dropEdge={target?.index === virtualItem.index ? target.edge : undefined}
+            measure={virtualizer.measureElement}
+            controls={controls}
             className={listItemClassName}
             data-index={virtualItem.index}
             role={asList ? undefined : 'none'}
@@ -216,7 +279,7 @@ export const VirtualList = <Item,>({
             {isPlaceholder
               ? renderPlaceholder?.(virtualItem.index)
               : renderItem(item, virtualItem.index)}
-          </ItemTag>
+          </VirtualListRow>
         );
       })}
     </ListTag>

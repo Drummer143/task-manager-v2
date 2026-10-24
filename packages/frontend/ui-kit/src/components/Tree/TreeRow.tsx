@@ -1,12 +1,17 @@
-import React, { memo, useLayoutEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { attachInstruction } from '@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item/attach-instruction';
+import type { Instruction } from '@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item';
+import type { ElementEventPayloadMap } from '@atlaskit/pragmatic-drag-and-drop/adapter/element-adapter';
 import { ChevronDownIcon, ChevronRightIcon, MoreHorizontalIcon, PlusIcon } from '../../icons';
+import { combine, draggable, dropTargetForElements, type DragData } from '../../interaction/dnd';
 import { useMessages } from '../../messages';
+import { raw } from '../../tokens';
 import { LinkBase } from '../Link';
 import { skeletonWidth, Skeleton } from '../States';
 import { tooltipProps } from '../Tooltip';
-import { isExpandable, type TreeRow as Row } from './model';
+import { ROW_ATTR, externalDataOf } from './dnd';
+import { isExpandable, type RowMode, type TreeRow as Row } from './model';
 import type { TreeNode } from './types';
-import { ROW_ATTR } from './useTreeDrag';
 import styles from './Tree.module.scss';
 
 type NodeRow = Extract<Row, { kind: 'node' }>;
@@ -16,13 +21,23 @@ export interface RowControls {
   /** Anything on the row except its buttons and link: the cursor, and opening the node. */
   click(node: TreeNode, event: React.MouseEvent<HTMLElement>): void;
   toggle(id: string): void;
-  pointerDown(event: React.PointerEvent<HTMLElement>, node: TreeNode): void;
   add(id: string): void;
   more(id: string, anchor: HTMLElement): void;
   retry(id: string): void;
   retryLoad(id: string): void;
   /** The end of a rename: the new text, or null (Esc); `byKey` — Enter/Esc, not a blur. */
   renamed(id: string, value: string | null, byKey: boolean): void;
+  /** Drag and drop (spec: Tree · 02): may the row be lifted, what it carries, its ghost. */
+  canDrag(node: TreeNode): boolean;
+  dragData(row: NodeRow): Record<string, unknown>;
+  preview(
+    node: TreeNode,
+    nativeSetDragImage: ElementEventPayloadMap['onGenerateDragPreview']['nativeSetDragImage'],
+  ): void;
+  /** May a drag with this data land on the rows at all; where exactly is the tree's to say. */
+  canDropOn(data: DragData): boolean;
+  /** What the row's drop target tells the tree it is. */
+  targetData(id: string): Record<string, unknown>;
 }
 
 type DropMark = 'into' | 'top' | 'bottom';
@@ -38,6 +53,12 @@ export interface TreeRowProps {
   dropDepth?: number;
   canAdd: boolean;
   hasActions: boolean;
+  /** Drag and drop is opt-in: without either, the row is neither a draggable nor a drop target. */
+  liftable: boolean;
+  droppable: boolean;
+  /** How the hitbox reads the row, and what it must not offer on it (model: rowMode, blockedOn). */
+  dropMode: RowMode;
+  dropBlocked: Instruction['type'][];
   /** Deeper than the indent goes: where the node is, for the tooltip. */
   path?: string;
   controls: React.RefObject<RowControls>;
@@ -118,7 +139,6 @@ const RenameField: React.FC<{
       }}
       onBlur={() => finish(draft, false)}
       onClick={(event) => event.stopPropagation()}
-      onPointerDown={(event) => event.stopPropagation()}
     />
   );
 };
@@ -136,8 +156,75 @@ const NodeLink: React.FC<{ node: TreeNode; children: React.ReactNode }> = ({ nod
  * on hover and on the cursor, the actions.
  */
 export const TreeRow: React.FC<TreeRowProps> = memo(
-  ({ row, domId, cursor, active, renaming, dragSource, drop, dropDepth, canAdd, hasActions, path, controls }) => {
+  ({
+    row,
+    domId,
+    cursor,
+    active,
+    renaming,
+    dragSource,
+    drop,
+    dropDepth,
+    canAdd,
+    hasActions,
+    liftable,
+    droppable,
+    dropMode,
+    dropBlocked,
+    path,
+    controls,
+  }) => {
     const { node, depth, expanded } = row;
+    const rowRef = useRef<HTMLDivElement>(null);
+    // A new array every render of the tree: the registration follows its contents
+    const blockedKey = dropBlocked.join(' ');
+
+    // The row is a draggable and a drop target, each when the tree has a use for it; the tree’s monitor does the rest.
+    useEffect(() => {
+      const element = rowRef.current;
+
+      if (!element) {
+        return undefined;
+      }
+
+      const block = blockedKey === '' ? [] : (blockedKey.split(' ') as Instruction['type'][]);
+      const registrations = [];
+
+      if (liftable) {
+        registrations.push(
+          draggable({
+            element,
+            canDrag: () => controls.current.canDrag(row.node),
+            getInitialData: () => controls.current.dragData(row),
+            // Out of the app (an address bar, another app, a text field): the page's address
+            getInitialDataForExternal: () => externalDataOf(row.node.href),
+            onGenerateDragPreview: ({ nativeSetDragImage }) => controls.current.preview(row.node, nativeSetDragImage),
+          }),
+        );
+      }
+
+      if (droppable) {
+        registrations.push(
+          dropTargetForElements({
+            element,
+            canDrop: ({ source }) => controls.current.canDropOn(source.data),
+            getData: ({ input, element: target }) =>
+              attachInstruction(controls.current.targetData(row.node.id), {
+                element: target,
+                input,
+                currentLevel: row.depth,
+                indentPerLevel: raw['tree-indent'],
+                mode: dropMode,
+                block,
+              }),
+            // Between two rows the last one still holds the drop: the line does not blink
+            getIsSticky: () => true,
+          }),
+        );
+      }
+
+      return combine(...registrations);
+    }, [row, liftable, droppable, dropMode, blockedKey, controls]);
     const expandable = isExpandable(node);
     const locked = node.disabledReason !== undefined;
     const messages = useMessages();
@@ -166,6 +253,7 @@ export const TreeRow: React.FC<TreeRowProps> = memo(
 
     return (
       <div
+        ref={rowRef}
         id={domId}
         // The open page is `aria-current="page"` (spec Tree); there is no selection to report.
         // ARIA 1.2 does not require aria-selected on a treeitem, the rule follows ARIA 1.1
@@ -188,7 +276,6 @@ export const TreeRow: React.FC<TreeRowProps> = memo(
         data-drag-source={dragSource || undefined}
         data-drop={drop === 'into' ? 'into' : undefined}
         onClick={(event) => controls.current.click(node, event)}
-        onPointerDown={(event) => controls.current.pointerDown(event, node)}
         {...rowTooltip}
       >
         <RowButton className={styles.tool} leaf={!expandable} onPress={() => controls.current.toggle(node.id)}>

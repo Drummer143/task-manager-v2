@@ -1,3 +1,4 @@
+import type { Instruction } from '@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item';
 import type { TreeMoveTarget, TreeNode } from './types';
 
 /** Where every known node sits. */
@@ -25,6 +26,8 @@ export type TreeRow =
       expanded: boolean;
     }
   | { kind: 'loading' | 'failed' | 'empty'; parentId: string; depth: number };
+
+type NodeRow = Extract<TreeRow, { kind: 'node' }>;
 
 export const isExpandable = (node: TreeNode) => node.hasChildren && node.disabledReason === undefined;
 
@@ -157,18 +160,31 @@ export const keyboardMove = (
   }
 };
 
-export type DropZone = 'before' | 'after' | 'into';
+/** How the hitbox reads a row (spec: Tree · 02): an open node has no "below", the last child lets the pointer step out left. */
+export type RowMode = 'standard' | 'expanded' | 'last-in-group';
 
-/** Share of the row at the top and at the bottom that means "before" / "after" (spec: Tree · 02). */
-const EDGE_SHARE = 0.25;
-
-/** Where on the row the pointer is: the top quarter, the bottom quarter, the middle (only for a container). */
-export const zoneAt = (fraction: number, container: boolean): DropZone => {
-  if (container) {
-    return fraction < EDGE_SHARE ? 'before' : fraction > 1 - EDGE_SHARE ? 'after' : 'into';
+export const rowMode = (row: NodeRow): RowMode => {
+  if (row.expanded && (row.node.children?.length ?? 0) > 0) {
+    return 'expanded';
   }
 
-  return fraction < 0.5 ? 'before' : 'after';
+  return row.index === row.setSize - 1 ? 'last-in-group' : 'standard';
+};
+
+/** What the hitbox must not offer on a row whatever is dragged: inside a node that holds nothing, next to one whose parent is closed. */
+export const blockedOn = (index: TreeIndex, row: NodeRow): Instruction['type'][] => {
+  const parent = row.parentId === null ? undefined : index.get(row.parentId)?.node;
+  const blocked: Instruction['type'][] = [];
+
+  if (!canContain(row.node)) {
+    blocked.push('make-child');
+  }
+
+  if (parent && !canContain(parent)) {
+    blocked.push('reorder-above', 'reorder-below');
+  }
+
+  return blocked;
 };
 
 export interface DropTarget {
@@ -177,70 +193,96 @@ export interface DropTarget {
   rowId: string;
   /** The insertion line at the row's edge, from the indent of the level the node goes to; none — the row itself lights up. */
   line: { edge: 'top' | 'bottom'; depth: number } | null;
+  /** Dropped on this node's middle: it goes inside. */
+  onto?: string;
 }
 
 /**
- * The drop a pointer over a row means, or null where nothing may go: onto the
- * node itself, inside it or its descendants, into a closed one, or where it
- * already is.
+ * The drop the hitbox's instruction over a row means, or null where nothing may go: onto the
+ * dragged node itself, inside it or its descendants, into a closed one, or where it already is.
+ * `draggedId` — the tree's own node; null for a drag from outside (nothing is taken out first).
  */
 export const dropTarget = (
-  nodes: TreeNode[],
   index: TreeIndex,
-  row: Extract<TreeRow, { kind: 'node' }>,
-  zone: DropZone,
-  draggedId: string,
+  row: NodeRow,
+  instruction: Instruction,
+  draggedId: string | null,
 ): DropTarget | null => {
-  const dragged = index.get(draggedId);
+  if (instruction.type === 'instruction-blocked') {
+    return null;
+  }
 
-  if (!dragged || isWithin(index, row.node.id, draggedId)) {
+  const dragged = draggedId === null ? undefined : index.get(draggedId);
+
+  if (draggedId !== null && (!dragged || isWithin(index, row.node.id, draggedId))) {
     return null;
   }
 
   // Siblings after the dragged one move up by one once it is taken out.
   const at = (parentId: string | null, position: number) =>
-    dragged.parentId === parentId && dragged.index < position ? position - 1 : position;
+    dragged && dragged.parentId === parentId && dragged.index < position ? position - 1 : position;
 
-  const unchanged = (move: TreeMoveTarget) => move.parentId === dragged.parentId && move.index === dragged.index;
+  const holds = (parentId: string | null) => {
+    const parent = parentId === null ? undefined : index.get(parentId)?.node;
 
+    return parentId === null || (parent !== undefined && canContain(parent));
+  };
+
+  const rowId = row.node.id;
   let target: DropTarget;
 
-  if (zone === 'into') {
-    if (!canContain(row.node)) {
-      return null;
+  switch (instruction.type) {
+    case 'make-child': {
+      if (!canContain(row.node)) {
+        return null;
+      }
+
+      const count = row.node.children?.length ?? 0;
+
+      // Right under an open node is its first child's place, not "into" its end (mode 'expanded').
+      target =
+        row.expanded && count > 0
+          ? { move: { parentId: rowId, index: at(rowId, 0) }, rowId, line: { edge: 'bottom', depth: row.depth + 1 } }
+          : { move: { parentId: rowId, index: at(rowId, count) }, rowId, line: null, onto: rowId };
+      break;
     }
+    case 'reorder-above':
+    case 'reorder-below': {
+      if (!holds(row.parentId)) {
+        return null;
+      }
 
-    const count = row.node.children?.length ?? 0;
+      const above = instruction.type === 'reorder-above';
 
-    target = {
-      move: { parentId: row.node.id, index: at(row.node.id, count) },
-      rowId: row.node.id,
-      line: null,
-    };
-  } else if (zone === 'after' && row.expanded && (row.node.children?.length ?? 0) > 0) {
-    // Right under an open node is its first child's place, not its next sibling's.
-    target = {
-      move: { parentId: row.node.id, index: at(row.node.id, 0) },
-      rowId: row.node.id,
-      line: { edge: 'bottom', depth: row.depth + 1 },
-    };
-  } else {
-    const parent = row.parentId === null ? undefined : index.get(row.parentId)?.node;
-
-    if (parent && !canContain(parent)) {
-      return null;
+      target = {
+        move: { parentId: row.parentId, index: at(row.parentId, above ? row.index : row.index + 1) },
+        rowId,
+        line: { edge: above ? 'top' : 'bottom', depth: row.depth },
+      };
+      break;
     }
+    case 'reparent': {
+      // Under the last child, the pointer moved left: right after the ancestor on that level.
+      const ancestorId = ancestorsOf(index, rowId)[instruction.desiredLevel];
+      const ancestor = ancestorId === undefined ? undefined : index.get(ancestorId);
 
-    const position = zone === 'before' ? row.index : row.index + 1;
+      if (!ancestor || !holds(ancestor.parentId)) {
+        return null;
+      }
 
-    target = {
-      move: { parentId: row.parentId, index: at(row.parentId, position) },
-      rowId: row.node.id,
-      line: { edge: zone === 'before' ? 'top' : 'bottom', depth: row.depth },
-    };
+      target = {
+        move: { parentId: ancestor.parentId, index: at(ancestor.parentId, ancestor.index + 1) },
+        rowId,
+        line: { edge: 'bottom', depth: instruction.desiredLevel },
+      };
+      break;
+    }
   }
 
-  return unchanged(target.move) ? null : target;
+  const unchanged =
+    dragged !== undefined && target.move.parentId === dragged.parentId && target.move.index === dragged.index;
+
+  return unchanged ? null : target;
 };
 
 /** The next visible node whose label starts with the letter, after the cursor, round. */

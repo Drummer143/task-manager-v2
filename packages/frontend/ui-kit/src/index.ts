@@ -12,6 +12,7 @@ export {
 } from './interaction/hotkeys';
 export * from './interaction/layers';
 export * from './interaction/undo';
+export * from './interaction/dnd';
 export * from './router';
 export * from './messages';
 
