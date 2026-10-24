@@ -22,10 +22,16 @@ COPY apps/${APP_NAME}/mix.exs apps/${APP_NAME}/
 RUN mix deps.get --only $MIX_ENV
 
 COPY config/config.exs config/${MIX_ENV}.exs config/
-RUN mix deps.compile
+# Only the deps: in an umbrella a plain deps.compile also builds the app itself, before its
+# source is here, into an .app listing no modules. `mix compile` may then keep that .app (its
+# sources are older than it), and the release, which loads only the modules its .app lists,
+# fails to start: "module SocketService.Application is not available"
+RUN mix deps.compile --skip-umbrella-children
 
 COPY apps/${APP_NAME} apps/${APP_NAME}
 RUN mix compile
+# The release starts only with the modules the .app lists: never ship one that lists none
+RUN ! grep -q "{modules,\[\]}" _build/prod/lib/${APP_NAME}/ebin/${APP_NAME}.app
 
 # runtime.exs does not affect compilation
 COPY config/runtime.exs config/
