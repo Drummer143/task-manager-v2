@@ -21,6 +21,29 @@ export const ChevronRightIcon = createIcon(
   <path d="m9 18 6-6-6-6" />,
 );
 
+/* Page types, in the tree, breadcrumbs and links when the page has no icon of its own. */
+export const DocumentIcon = createIcon(
+  'DocumentIcon',
+  <>
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+    <path d="M14 2v4a2 2 0 0 0 2 2h4M16 13H8M16 17H8" />
+  </>,
+  1.5,
+);
+export const BoardIcon = createIcon(
+  'BoardIcon',
+  <>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M8 7v7M12 7v4M16 7v9" />
+  </>,
+  1.5,
+);
+export const GroupIcon = createIcon(
+  'GroupIcon',
+  <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />,
+  1.5,
+);
+
 /* The palette's and a filter's magnifier. */
 export const SearchIcon = createIcon(
   'SearchIcon',

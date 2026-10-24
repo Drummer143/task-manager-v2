@@ -3011,6 +3011,67 @@
                 ]
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "The page has content (text in its body, children, tasks): its type can no longer change.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "PAGE_NOT_EMPTY"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A page cannot be moved under itself or one of its own children.",
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "PAGE_CYCLE"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Pages cannot be nested deeper than this.",
+            "required": [
+              "params",
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "PAGE_TOO_DEEP"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "description": "Pages cannot be nested deeper than this.",
+                "required": [
+                  "max"
+                ],
+                "properties": {
+                  "max": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "Maximum depth; a page at the root is at depth 1.",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
           }
         ],
         "description": "Every error the API can return.\n\nSerialized as `{\"code\": \"FILE_TOO_LARGE\", \"params\": {...}}`; variants without data have no\n`params`. Codes are a public contract: never rename one, only add or deprecate."

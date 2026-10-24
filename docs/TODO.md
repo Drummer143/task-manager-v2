@@ -70,6 +70,64 @@ Frontend:
 Small:
 - [ ] `GET /workspaces/slug-available` takes `?s=`, the spec says `?slug=`
 
+## Pages
+
+Built on 2026-10-24 (backend: `docs/pages-backend.md` "Built"; frontend: the Pages section of the
+sidebar on the kit Tree, `/{ws}/p/{shortId}` with the title edited in place, the crumbs in the
+canvas header, a group's children, the trash state with Restore; e2e `pages.spec.ts`). Left, each
+its own piece, free to pick:
+- [ ] Yjs: socket_service `DocRoom` and the `doc:*` channel, the join token from main, the client
+      provider, cursors, offline (`docs/pages-backend.md` §5)
+- [ ] The RTE in the kit, with Collaboration, and its custom nodes (`pageRef`, `taskRef`,
+      mentions, `boardView`)
+- [ ] Creation as the spec draws it: client-made `id` / `shortId` and no wait for the server, the
+      title in the tree at every keystroke (drafts over the cache), the "new" mark, the type
+      switch under the title (the API has it: `PATCH { set: { type } }`), the empty abandoned
+      page removed with Undo (`DELETE ?if_empty`, not built)
+- [ ] The derive worker (`yrs` → JSON → `plain`, `page_refs`, mentions)
+- [ ] The kit Breadcrumbs (the canvas header has a plain trail), the icon picker, the trash
+      list, Page history, Duplicate, Move to…
+
+Spec: «Verso — страницы», part 1 (the Yjs version). Started on 2026-10-24 with the migration
+(`20261024000000_pages.sql`: `pages`, `page_bodies`, `page_body_updates`, `page_body_revisions`).
+To settle with the designer, then fix in the spec or the code:
+- [ ] `move { parent_id, position }` makes the client compute the fractional key. Better
+      `{ parent_id, index }`, as the kit Tree's `onMove` gives it: the server builds the key and
+      rebalances in the same transaction, the client needs no fractional-index code
+- [ ] Page access levels (Full / Edit / Comment / View, spec §5) need page grants, and the spec has
+      no table for them. Until it does: every member has Full access, and the tree already returns
+      `access` so the frontend does not change when grants come
+- [ ] §4.4: «Phoenix asks Rust for the right». Decided 2026-10-24: main signs a short-lived join
+      token (`{ doc, sub, mode: rw | ro, exp }`, HMAC) in `by-short`; socket_service only verifies
+      it, never evaluates access and never calls main on join. Revocation: main publishes
+      `doc.access_changed` to `doc:page:{id}`, the channel closes with `access_revoked`, the
+      client gets a new token. Ownership: socket_service writes the bytes (log, snapshot, revision
+      snapshots), main the meaning (json, plain, refs, notifications) and serves the body over
+      HTTP. Details: `docs/pages-backend.md` §1, §5
+- [ ] The spec does not say how the derive worker learns of a fold. Decided: `pg_notify('doc_folded')`
+      inside the fold transaction (delivered only on commit), plus a sweep of
+      `page_bodies_underived_idx` at start and every minute (`docs/pages-backend.md` §4.1)
+- [ ] What happens past the 2 MB snapshot limit (§4.2): refuse further updates, or only warn?
+- [ ] `GET …/body` is "snapshot + tail": the server merges them into one update (`yrs`
+      `merge_updates`), the client applies one
+- [ ] One `DocRoom` per document across the cluster: `seq` comes from it. Free on one node; on
+      several, `:global` or Horde. The `(doc_id, seq)` key refuses a second writer
+- [ ] Deviation from §4.2: the body tables carry `workspace_id` (an erased workspace takes its
+      bodies), and the log and revisions hang on `page_bodies` by FK, so deleting a body row
+      deletes all of it. `doc_id` has no FK to pages or tasks (it is either): the trash job
+      deletes the body explicitly
+- [ ] The names `page_body_*` also hold task descriptions (`doc_kind = 'task'`): `doc_*` would
+      read better; rename before the first code that uses them, or keep
+- [ ] Body schema in the derive worker (§4.2): no ProseMirror on the server, one walk of the JSON
+      tree built from the snapshot by `yrs` (`{ type, attrs, content, marks, text }`); node and
+      mark types and attribute types are checked (refs, XSS in `href`), content rules are not.
+      Unknown nodes are kept and logged, not refused. The schema has one source, the kit's RTE: a
+      `generate-rte-schema` target writes `rte-schema.json`, Rust reads it with `include_str!`.
+      Code in a workspace crate (`rich_text`), not a service or an executable; chats in Elixir
+      later take it through a Rustler NIF, or walk their few nodes themselves
+- [ ] Not in the migration yet, by phase: `page_refs` (backlinks, mentions), board tables (§3)
+- [ ] Open questions of the spec (§10): templates, `/board` creating a board, public pages
+
 ## Real notification kinds and `subject`
 
 Only `debug` exists. It has no `subject`, so nothing to open; its rows are not links (decided

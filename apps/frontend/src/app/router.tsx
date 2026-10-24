@@ -11,6 +11,8 @@ const Inbox = lazySuspense(() =>
   import('../pages/Inbox').then((m) => ({ default: m.Inbox })),
 );
 
+const Page = lazySuspense(() => import('../pages/Page').then((m) => ({ default: m.Page })));
+
 /**
  * To the inbox of the space in the path. An absolute path: a relative `to="inbox"` from a `*`
  * route resolves against the unmatched rest and redirects forever (`/ws/x/inbox/inbox/…`).
@@ -41,6 +43,7 @@ export const router = createBrowserRouter([
             Component: Layout,
             children: [
               { path: 'inbox', element: <Inbox /> },
+              { path: 'p/:shortId', element: <Page /> },
               // The space's own start page, and anything unknown inside it
               { index: true, Component: ToSpaceInbox },
               { path: '*', Component: ToSpaceInbox },

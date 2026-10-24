@@ -10,6 +10,7 @@ pub mod config;
 pub mod data_changed;
 pub mod me;
 pub mod notifications;
+pub mod pages;
 pub mod repos;
 pub mod shared;
 pub mod signals;

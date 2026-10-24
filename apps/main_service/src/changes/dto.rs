@@ -9,6 +9,7 @@ use uuid::Uuid;
 pub enum Entity {
     Workspace,
     Role,
+    Page,
 }
 
 /// One field's change, about to be recorded.

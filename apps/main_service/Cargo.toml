@@ -26,6 +26,7 @@ deunicode = "1.6.2"
 error_handlers = { workspace = true, features = ["sqlx", "openapi"] }
 jsonwebtoken.workspace = true
 lapin.workspace = true
+loro_fractional_index = { version = "1.13", features = ["serde"] }
 mimalloc.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -38,7 +39,7 @@ tracing-subscriber.workspace = true
 utoipa.workspace = true
 utoipa-swagger-ui = { workspace = true, features = ["axum", "vendored"] }
 utils.workspace = true
-uuid = { workspace = true, features = ["serde"] }
+uuid = { workspace = true, features = ["serde", "v4"] }
 
 [dev-dependencies]
 tower.workspace = true

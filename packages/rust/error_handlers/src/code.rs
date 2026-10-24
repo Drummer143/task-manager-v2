@@ -113,6 +113,15 @@ pub enum ErrorCode {
     /// The value is not the one it must repeat, e.g. the workspace's name typed to confirm its
     /// deletion. Used in per-field errors.
     Mismatch,
+    /// The page has content (text in its body, children, tasks): its type can no longer change.
+    PageNotEmpty,
+    /// A page cannot be moved under itself or one of its own children.
+    PageCycle,
+    /// Pages cannot be nested deeper than this.
+    PageTooDeep {
+        /// Maximum depth; a page at the root is at depth 1.
+        max: u64,
+    },
 }
 
 /// A field changed by someone else; a param of [`ErrorCode::EditConflict`].
@@ -184,6 +193,9 @@ impl ErrorCode {
                 }],
             },
             Self::Mismatch,
+            Self::PageNotEmpty,
+            Self::PageCycle,
+            Self::PageTooDeep { max: 12 },
         ]
     }
 
@@ -199,13 +211,16 @@ impl ErrorCode {
             | Self::VerificationFailed
             | Self::TooManyItems { .. }
             | Self::EmptyRequestBody
-            | Self::Mismatch => 422,
+            | Self::Mismatch
+            | Self::PageCycle
+            | Self::PageTooDeep { .. } => 422,
             Self::NotFound => 404,
             Self::Conflict
             | Self::UploadWrongStep { .. }
             | Self::UploadIncomplete
             | Self::Taken
-            | Self::EditConflict { .. } => 409,
+            | Self::EditConflict { .. }
+            | Self::PageNotEmpty => 409,
             Self::Unauthorized => 401,
             Self::Forbidden
             | Self::UploadTokenInvalid
@@ -262,6 +277,9 @@ impl ErrorCode {
             Self::EmptyRequestBody => "EMPTY_REQUEST_BODY",
             Self::EditConflict { .. } => "EDIT_CONFLICT",
             Self::Mismatch => "MISMATCH",
+            Self::PageNotEmpty => "PAGE_NOT_EMPTY",
+            Self::PageCycle => "PAGE_CYCLE",
+            Self::PageTooDeep { .. } => "PAGE_TOO_DEEP",
         }
     }
 

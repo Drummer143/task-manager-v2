@@ -385,6 +385,10 @@
   --resize-step: 16px;
   --resize-step-big: 64px;
   --canvas-header-height: 48px;
+  /* A page's column: its title and its body, centred on the canvas (pages spec §6). */
+  --doc-width: 720px;
+  /* A page's own icon over its title. */
+  --page-icon-size: 32px;
   --statusbar-height: 24px;
   --column-width: 288px;
   --column-gap: 12px;

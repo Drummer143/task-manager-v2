@@ -16,7 +16,8 @@ import {
   workspaceMeQuery,
   workspacesQuery,
 } from '../../shared/workspaces';
-import { Sidebar, useSidebarHotkeys, type SidebarUser } from './Sidebar';
+import { PagesSection, Sidebar, useSidebarHotkeys, type SidebarUser } from './Sidebar';
+import { PageCrumbs } from './PageCrumbs';
 
 /** Who is signed in, from the token: the label in the workspace menu. */
 const useSignedInUser = (): SidebarUser => {
@@ -41,6 +42,7 @@ export const Layout: React.FC = () => {
   const user = useSignedInUser();
   const { workspaceSlug = '' } = useParams();
   const onInbox = useMatch(ROUTES.INBOX) !== null;
+  const openShortId = useMatch(ROUTES.PAGE)?.params.shortId;
 
   const resolved = useResolvedWorkspace(workspaceSlug);
   const workspace = resolved.status === 'found' ? resolved.workspace : undefined;
@@ -107,9 +109,25 @@ export const Layout: React.FC = () => {
                 ? (summary.byWorkspace[workspaceId] ?? 0) + summary.accountUnread
                 : undefined,
           }}
+          pages={
+            workspace && (
+              <PagesSection
+                // Expanded nodes are the workspace's own
+                key={workspace.id}
+                workspaceId={workspace.id}
+                workspaceSlug={workspace.slug}
+                canCreateRoot={me?.capabilities['pages.create_root'] ?? false}
+                openShortId={openShortId}
+              />
+            )
+          }
         />
       }
-      header={<div>header</div>}
+      header={
+        workspace && openShortId !== undefined ? (
+          <PageCrumbs workspace={workspace} shortId={openShortId} />
+        ) : null
+      }
     >
       {workspace ? (
         <WorkspaceProvider workspace={workspace}>

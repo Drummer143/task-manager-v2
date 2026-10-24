@@ -29,6 +29,14 @@ use utils::swagger::SecurityAddon;
         crate::workspaces::controllers::stats::get_stats,
         crate::workspaces::controllers::soft_delete_workspace::soft_delete_workspace,
         crate::workspaces::controllers::restore_workspace::restore_workspace,
+
+        crate::pages::controllers::get_tree::get_tree,
+        crate::pages::controllers::create_page::create_page,
+        crate::pages::controllers::get_page_by_short_id::get_page_by_short_id,
+        crate::pages::controllers::patch_page::patch_page,
+        crate::pages::controllers::move_page::move_page,
+        crate::pages::controllers::delete_page::delete_page,
+        crate::pages::controllers::restore_page::restore_page,
     ),
     components(schemas(
         error_handlers::ErrorBody,
