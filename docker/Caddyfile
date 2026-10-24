@@ -47,5 +47,5 @@ auth.{$DOMAIN} {
 }
 
 storybook.ui-kit.dev.{$DOMAIN} {
-    reverse_proxy ui-kit-storybook:6006
+    reverse_proxy ui-kit-storybook:80
 }
