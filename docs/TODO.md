@@ -77,24 +77,25 @@ sidebar on the kit Tree, `/{ws}/p/{shortId}` with the title edited in place, the
 canvas header, a group's children, the trash state with Restore; e2e `pages.spec.ts`). Specs:
 «Verso — страницы» (part 1), «[Страницы] Создание страницы». Not done yet, by area:
 
-Bodies (Yjs) — `docs/pages-backend.md` §3.8, §4, §5:
-- [ ] socket_service: the `doc:{kind}:{id}` channel, `DocRoom` (log written before the
-      broadcast, fold after 2 s / 200 updates, stop 30 s after the last leaves), `read_only` for
-      `ro`, awareness passed through, `pg_notify('doc_folded')` in the fold
-- [ ] main: the join token (`docToken` in `by-short`, HMAC, `DOC_TOKEN_SECRET` in both services'
-      config); `GET …/body` (snapshot + tail merged with `yrs`, ETag = seq, `304`);
-      `GET …/body.json`
-- [ ] Client: the provider over the channel, `y-indexeddb`, connecting only once the body has
-      content (else `has_content` sees an empty page as written), the sync indicator (Syncing… /
-      Offline / Read only), `Y.UndoManager` for one's own edits
-- [ ] Control events to open documents (`doc.deleted`, `doc.access_changed`, `doc.apply`):
-      `allowed_topic?` learns `doc:`, the channel intercepts them
-- [ ] Derive worker: `rich_text` crate (`yrs` snapshot → ProseMirror JSON, `plain`, refs),
-      `page_refs` migration, mention notifications, `page.body_derived`, backlinks endpoint
-- [ ] Revisions: written in the fold (10 min of editing, last leave), `GET …/body/revisions`,
-      Page history in ⋯, restore as an ordinary edit (§4.4)
+Bodies (Yjs on Hocuspocus, decided 2026-10-24) — `docs/pages-backend.md` §3–§5:
+- [ ] collab_service (Node, Hocuspocus): `onAuthenticate` with main's token, `onLoadDocument`
+      (snapshot + log tail), `onChange` (the log), `onStoreDocument` (the fold: snapshot, JSON
+      and `plain` by Tiptap's transformer, `pg_notify('doc_folded')`); image, compose service,
+      `collab.{$DOMAIN}` in Caddy, `DOC_TOKEN_SECRET` in main and collab_service
+- [ ] main: `POST …/pages/{id}/doc-token` (HS256, `mode` from access), `GET …/body.json`
+- [ ] Client `shared/collab`: one Hocuspocus socket made when the first editor mounts and closed
+      30 s after the last one, a provider per editor with the token as a function (asked on every
+      reconnect), `y-indexeddb`, connecting a new page's body only once it has content (else
+      `has_content` sees the page as written), the sync indicator, presence from awareness
+- [ ] `doc_control` (`pg_notify` from main, collab_service listens): `close` on trash and erase,
+      `revoke` on an access change
+- [ ] main's derive: `doc_folded` → `page_refs` (migration), mention notifications,
+      `page.body_derived`, backlinks; the walk of `json` in `rich_text` (no Yjs in Rust)
+- [ ] Revisions in the fold (10 min of editing, the last one leaving), `GET …/body/revisions`,
+      Page history in ⋯, restoring as an ordinary edit (§4.4)
 - [ ] The trash job: erase pages 30 days after their delete with their bodies and refs; drop
       revisions after 90 days
+- [ ] Server-side edits and Duplicate through collab_service's `/internal/docs/…` (§4.6)
 
 Creation (creation spec):
 - [ ] No wait for the server: client-made `id` / `shortId` (the API takes them), the page in the
@@ -150,34 +151,33 @@ To settle with the designer, then fix in the spec or the code:
 - [ ] Page access levels (Full / Edit / Comment / View, spec §5) need page grants, and the spec has
       no table for them. Until it does: every member has Full access, and the tree already returns
       `access` so the frontend does not change when grants come
-- [ ] §4.4: «Phoenix asks Rust for the right». Decided 2026-10-24: main signs a short-lived join
-      token (`{ doc, sub, mode: rw | ro, exp }`, HMAC) in `by-short`; socket_service only verifies
-      it, never evaluates access and never calls main on join. Revocation: main publishes
-      `doc.access_changed` to `doc:page:{id}`, the channel closes with `access_revoked`, the
-      client gets a new token. Ownership: socket_service writes the bytes (log, snapshot, revision
-      snapshots), main the meaning (json, plain, refs, notifications) and serves the body over
-      HTTP. Details: `docs/pages-backend.md` §1, §5
-- [ ] The spec does not say how the derive worker learns of a fold. Decided: `pg_notify('doc_folded')`
-      inside the fold transaction (delivered only on commit), plus a sweep of
-      `page_bodies_underived_idx` at start and every minute (`docs/pages-backend.md` §4.1)
+- [ ] §4.4: «Phoenix asks Rust for the right». Decided 2026-10-24: bodies run on Hocuspocus
+      (collab_service, Node), not Phoenix; main signs a short-lived token
+      (`POST …/pages/{id}/doc-token`, `{ doc, sub, mode: rw | ro, exp }`, HS256), collab_service
+      only verifies it and never evaluates access. Revocation: `doc_control` `revoke` closes the
+      connections, the provider asks for a new token. Ownership: collab_service writes the
+      document (log, snapshot, its JSON and `plain`, revisions), main the meaning (refs,
+      notifications). `docs/pages-backend.md` §1, §4, §5
+- [ ] The spec does not say how main learns of a fold. Decided: `pg_notify('doc_folded')` inside
+      the fold transaction (delivered only on commit), plus a sweep of
+      `page_bodies_underived_idx` at start and every minute
 - [ ] What happens past the 2 MB snapshot limit (§4.2): refuse further updates, or only warn?
-- [ ] `GET …/body` is "snapshot + tail": the server merges them into one update (`yrs`
-      `merge_updates`), the client applies one
-- [ ] One `DocRoom` per document across the cluster: `seq` comes from it. Free on one node; on
-      several, `:global` or Horde. The `(doc_id, seq)` key refuses a second writer
+- [ ] No `GET …/body` with the Yjs state (spec §9): the first frame comes from `y-indexeddb`, else
+      the provider's sync. If pages never opened on a device render too late, collab_service
+      serves the state over HTTP
+- [ ] One Hocuspocus instance per document: `seq` is counted in its memory. Several instances
+      need the Redis extension and a sticky route per document; the `(doc_id, seq)` key refuses
+      a second writer
 - [ ] Deviation from §4.2: the body tables carry `workspace_id` (an erased workspace takes its
       bodies), and the log and revisions hang on `page_bodies` by FK, so deleting a body row
       deletes all of it. `doc_id` has no FK to pages or tasks (it is either): the trash job
       deletes the body explicitly
 - [ ] The names `page_body_*` also hold task descriptions (`doc_kind = 'task'`): `doc_*` would
       read better; rename before the first code that uses them, or keep
-- [ ] Body schema in the derive worker (§4.2): no ProseMirror on the server, one walk of the JSON
-      tree built from the snapshot by `yrs` (`{ type, attrs, content, marks, text }`); node and
-      mark types and attribute types are checked (refs, XSS in `href`), content rules are not.
-      Unknown nodes are kept and logged, not refused. The schema has one source, the kit's RTE: a
-      `generate-rte-schema` target writes `rte-schema.json`, Rust reads it with `include_str!`.
-      Code in a workspace crate (`rich_text`), not a service or an executable; chats in Elixir
-      later take it through a Rustler NIF, or walk their few nodes themselves
+- [ ] Body schema (§4.2): the JSON is made by Tiptap's transformer in collab_service with the
+      kit's extensions; main walks that JSON for refs and checks node and mark types and
+      attribute types (refs, XSS in `href`) against `rte-schema.json` generated from the kit's
+      RTE. Unknown nodes are kept and logged, not refused. No Yjs in Rust
 - [ ] Not in the migration yet, by phase: `page_refs` (backlinks, mentions), board tables (§3)
 - [ ] Open questions of the spec (§10): templates, `/board` creating a board, public pages
 
