@@ -76,3 +76,4 @@ storybook-static
 /doc/
 erl_crash.dump
 *.ez
+.vitest
