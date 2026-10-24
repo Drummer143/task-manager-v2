@@ -40,7 +40,6 @@ services:
             - "443:443/udp"
         environment:
             DOMAIN: ${DOMAIN:?DOMAIN is required}
-            STORYBOOK_DOMAIN: ${STORYBOOK_DOMAIN:-storybook.ui-kit.dev.website}
         volumes:
             - ./Caddyfile:/etc/caddy/Caddyfile:ro
             - caddy_data:/data
