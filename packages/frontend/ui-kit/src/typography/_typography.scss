@@ -22,3 +22,10 @@
     line-height: var(--lh-#{$step});
   }
 }
+
+/// A heading of a step (Typography 02–03): the step and 600, which every heading has. `Text` and
+/// `Heading` use it, and so does the document's h1–h3 in the editor.
+@mixin heading($step) {
+  @include type($step);
+  font-weight: var(--weight-strong);
+}

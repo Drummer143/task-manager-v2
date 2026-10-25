@@ -8,23 +8,19 @@
 }
 
 .display {
-  @include typography.type(display);
-  font-weight: var(--weight-strong);
+  @include typography.heading(display);
 }
 
 .h1 {
-  @include typography.type(h1);
-  font-weight: var(--weight-strong);
+  @include typography.heading(h1);
 }
 
 .h2 {
-  @include typography.type(h2);
-  font-weight: var(--weight-strong);
+  @include typography.heading(h2);
 }
 
 .h3 {
-  @include typography.type(h3);
-  font-weight: var(--weight-strong);
+  @include typography.heading(h3);
 }
 
 .body {
