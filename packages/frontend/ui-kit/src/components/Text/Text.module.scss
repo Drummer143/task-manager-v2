@@ -1,0 +1,95 @@
+@use 'typography/typography';
+
+/* Text and Heading (spec: [UI-kit] Типографика · 08). A step is a size with its line height and
+   its weight; `weight` after it overrides the weight, so the order of the blocks matters. */
+
+.text {
+  margin: 0;
+}
+
+.display {
+  @include typography.type(display);
+  font-weight: var(--weight-strong);
+}
+
+.h1 {
+  @include typography.type(h1);
+  font-weight: var(--weight-strong);
+}
+
+.h2 {
+  @include typography.type(h2);
+  font-weight: var(--weight-strong);
+}
+
+.h3 {
+  @include typography.type(h3);
+  font-weight: var(--weight-strong);
+}
+
+.body {
+  @include typography.type(body);
+  font-weight: var(--weight-normal);
+}
+
+.meta {
+  @include typography.type(meta);
+  font-weight: var(--weight-normal);
+}
+
+.normal {
+  font-weight: var(--weight-normal);
+}
+
+.strong {
+  font-weight: var(--weight-strong);
+}
+
+/* Roles, not shades: the inverse surface redefines them (Typography 04). */
+.primary {
+  color: var(--text-primary);
+}
+
+.secondary {
+  color: var(--text-secondary);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.accent {
+  color: var(--text-accent);
+}
+
+.danger {
+  color: var(--text-danger);
+}
+
+/* Tabular in data: counters, dates, columns (Typography 05). */
+.numeric {
+  font-variant-numeric: var(--num-tabular);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* One line with an ellipsis: a block, so it has a width to run out of (Typography 06). */
+.truncate {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* N lines, then an ellipsis: `--_lines` is set by the component. */
+.clamp {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--_lines);
+  line-clamp: var(--_lines);
+}

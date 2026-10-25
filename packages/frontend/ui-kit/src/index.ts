@@ -65,3 +65,5 @@ export * from './components/Toast';
 export * from './components/VirtualList';
 
 export * from './components/Link';
+
+export * from './components/Text';

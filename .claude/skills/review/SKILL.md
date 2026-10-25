@@ -64,7 +64,10 @@ Severity labels:
    violations sit in the surrounding code the hunk depends on.
 2. **Automated guards.** Run and report failures as findings; do not re-derive what they
    already check:
-   - `pnpm run check:ds` — token sync and the literal guard.
+   - `pnpm run check:ds` — token sync, the literal guard (colors, sizes, times, z-index, and the
+     typography rules: a step through the `type()` mixin, weights and line heights from tokens,
+     no tracking, caps or italic, no inline font styles) and the copy guard (’ “” … — · in UI
+     strings).
    - `pnpm nx run-many -t lint typecheck test -p <affected projects>` when code changed.
      Coverage thresholds live in each `vite.config.mts`; a drop below them fails `test --coverage`.
      A `react-hooks/*` lint error means the React Compiler skips that function: report it as a

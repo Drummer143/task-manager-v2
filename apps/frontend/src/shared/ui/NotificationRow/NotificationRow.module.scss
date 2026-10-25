@@ -1,3 +1,5 @@
+@use 'typography/typography';
+
 /* NotificationRow (spec: Inbox · 02, 11). No cards: rows on the canvas, a subtle line between them. */
 
 .row {
@@ -127,8 +129,7 @@
 
 .title {
   color: var(--text-secondary);
-  font-size: var(--type-body);
-  line-height: var(--lh-body);
+  @include typography.type(body);
   font-weight: var(--weight-medium);
 
   .row[data-unread] & {
@@ -144,8 +145,7 @@
 
 .context {
   color: var(--text-muted);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
 
   .row[data-gone] & {
     text-decoration-line: line-through;
@@ -176,13 +176,13 @@
   border: var(--border-width) solid var(--border-hairline);
   border-radius: var(--radius-full);
   color: var(--text-muted);
-  font-size: var(--type-meta);
+  @include typography.type(meta);
   font-variant-numeric: var(--num-tabular);
 }
 
 .time {
   color: var(--text-muted);
-  font-size: var(--type-meta);
+  @include typography.type(meta);
   font-variant-numeric: var(--num-tabular);
   white-space: nowrap;
 }

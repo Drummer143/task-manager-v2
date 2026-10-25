@@ -217,6 +217,12 @@ Inbox (spec sections in brackets):
 
 ## Waiting on design
 
+- [ ] Typography (asked 2026-10-25): `--weight-medium` 500 for a read notification's line
+      (Inbox · 02) against "400 and 600 only" (Typography 03); `--kbd-font-size` 11 px against
+      "Kbd is meta, 12 px; 11 does not exist" (Typography 02); `--font-ui` is defined twice with
+      different stacks (Roboto in one); where `Text`'s default color should come from — `primary`
+      as §08 says, or the surrounding text's
+
 - [ ] Line heights 14/20 and 12/18 in the Inbox spec; the kit's `--lh-body` / `--lh-meta` give
       21 / 16.8
 - [ ] Inbox row action icons on the inverse surface: the mock has `--text-muted`, built as

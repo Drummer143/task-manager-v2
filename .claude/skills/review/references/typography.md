@@ -108,6 +108,16 @@ Text changes and numbers change instantly — no cross-fade, no counting up. An 
 no gradient mask. The color of text in interactive elements belongs to the component's state
 transition, not to typography.
 
+## What the guards already check
+
+`pnpm run check:ds` fails on: a bare `font-size: var(--type-…)` (use the `type()` mixin), a size,
+weight or line height that is not a token (`line-height: 1` is allowed for one line centred in a
+box — the mixin's `$single-line`), any tracking that is not a token, `uppercase` / `capitalize`,
+italic, `fontSize` / `fontWeight` / `lineHeight` / `letterSpacing` in TSX, and the wrong
+apostrophe, quotes, ellipsis, dash or separator in UI strings (`tools/check-copy.mjs`). Report a
+guard failure as a finding; review by eye what they cannot see: the step chosen for a place, the
+role of a color, tabular digits, truncation without a way to the full text.
+
 ## API (Typography 08)
 
 - **Kit components take `size` from the scale, never `fontSize`** or a style with a size.

@@ -718,3 +718,18 @@ body {
 ::selection {
   background: var(--bg-selected);
 }
+
+/* Wrapping (spec: Typography 06): paragraphs avoid a lone last word, headings even out their
+   lines. Hyphens only in a page's long text, by the editor. */
+p {
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+}

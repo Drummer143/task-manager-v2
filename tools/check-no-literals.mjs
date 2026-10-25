@@ -36,11 +36,47 @@ const SKIP_DIR = new Set([
 // Files that are never scanned: generated output and tests/stories.
 const SKIP_FILE = /\.(generated|spec|test|stories)\./;
 
+const STYLES = new Set(['.css', '.scss']);
+const SCRIPTS = new Set(['.ts', '.tsx']);
+
+// `only`: the extensions a rule applies to (all when absent); `skip`: files it leaves out.
 const RULES = [
   { name: 'hex-color', re: /#[0-9a-fA-F]{3,8}\b/ },
   { name: 'px', re: /(?<![\w-])-?\d*\.?\d+px\b/ },
   { name: 'ms', re: /(?<![\w-])-?\d*\.?\d+ms\b/ },
   { name: 'z-index', re: /z-index\s*:\s*-?\d+/ },
+
+  // Typography (spec: [UI-kit] Типографика). A step is its size and its line height together:
+  // `@include typography.type(step)`, never the size alone
+  {
+    name: 'type-step',
+    re: /font-size\s*:\s*var\(--type-/,
+    only: STYLES,
+    skip: /_typography\.scss$/,
+    hint: 'use `@include typography.type(step)`: the size with its line height',
+  },
+  { name: 'font-size', re: /font-size\s*:(?!\s*(?:var\(|inherit))/, only: STYLES },
+  { name: 'font-weight', re: /font-weight\s*:(?!\s*(?:var\(--weight-|inherit))/, only: STYLES },
+  {
+    name: 'line-height',
+    re: /line-height\s*:(?!\s*(?:var\(--lh-|1;|inherit|normal))/,
+    only: STYLES,
+    hint: 'the line height comes with the step; `1` only for one line centred in a box',
+  },
+  { name: 'tracking', re: /letter-spacing\s*:(?!\s*var\()/, only: STYLES, hint: 'tracking is 0' },
+  { name: 'caps', re: /text-transform\s*:\s*(uppercase|capitalize)/, only: STYLES, hint: 'no caps' },
+  {
+    name: 'italic',
+    re: /font-style\s*:\s*italic/,
+    only: STYLES,
+    hint: 'the interface never writes in italic',
+  },
+  {
+    name: 'inline-type',
+    re: /\b(fontSize|fontWeight|lineHeight|letterSpacing)\s*:/,
+    only: SCRIPTS,
+    hint: 'use `Text` / `Heading`, or the step in module CSS',
+  },
 ];
 
 // Lines that must not be treated as a violation (css imports, comments).
@@ -74,12 +110,15 @@ for (const file of files) {
   lines.forEach((line, i) => {
     if (IGNORE_LINE.some((re) => re.test(line))) return;
     for (const rule of RULES) {
+      if (rule.only && !rule.only.has(extname(file))) continue;
+      if (rule.skip?.test(file)) continue;
       if (rule.re.test(line)) {
         violations.push({
           file: relative(repoRoot, file).replace(/\\/g, '/'),
           line: i + 1,
           rule: rule.name,
           text: line.trim().slice(0, 80),
+          hint: rule.hint,
         });
       }
     }
@@ -89,7 +128,7 @@ for (const file of files) {
 if (violations.length) {
   console.error(`x found literals instead of tokens (${violations.length}):\n`);
   for (const v of violations) {
-    console.error(`  ${v.file}:${v.line}  [${v.rule}]  ${v.text}`);
+    console.error(`  ${v.file}:${v.line}  [${v.rule}]  ${v.text}${v.hint ? `  — ${v.hint}` : ''}`);
   }
   console.error(
     '\n  Replace the value with a layer 2/3 token, or add a token to tokens.css.',

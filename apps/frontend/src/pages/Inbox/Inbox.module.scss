@@ -1,3 +1,5 @@
+@use 'typography/typography';
+
 .wrapper {
   height: 100%;
 
@@ -43,7 +45,7 @@
   padding-inline-start: var(--inbox-text-start);
 
   color: var(--text-muted);
-  font-size: var(--type-meta);
+  @include typography.type(meta);
 }
 
 // A failed part of the list, inside the grid: a row with one cell (a grid holds rows only).
@@ -74,6 +76,5 @@
   padding-inline-start: var(--inbox-text-start);
 
   color: var(--text-muted);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
 }

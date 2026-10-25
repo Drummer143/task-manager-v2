@@ -1,3 +1,5 @@
+@use 'typography/typography';
+
 /* WorkspaceSwitcher (spec: Sidebar · 01): a ghost button with the mark, the name and a chevron. */
 
 .trigger {
@@ -33,7 +35,7 @@
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
-  font-size: var(--type-body);
+  @include typography.type(body);
   font-weight: var(--weight-strong);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -113,10 +115,10 @@
 
 .userName {
   color: var(--text-primary);
-  font-size: var(--type-body);
+  @include typography.type(body);
 }
 
 .email {
   color: var(--text-muted);
-  font-size: var(--type-meta);
+  @include typography.type(meta);
 }

@@ -1,3 +1,5 @@
+@use 'typography/typography';
+
 /* Tag (spec 08). Static by nature; only a clickable one reacts, like a ghost button. */
 
 .tag {
@@ -16,9 +18,8 @@
   border: var(--border-width) solid transparent;
   border-radius: var(--radius-xs);
   font-family: var(--font-ui);
-  font-size: var(--type-meta);
+  @include typography.type(meta);
   // Not 1: the text clips its overflow (ellipsis), and descenders would go with it.
-  line-height: var(--lh-meta);
   white-space: nowrap;
 }
 

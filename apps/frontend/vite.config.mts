@@ -48,6 +48,13 @@ export default defineConfig(() => ({
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md']),
   ],
+  // The kit's Sass helpers (`@use 'typography/typography'`), for the app's stylesheets and for the
+  // kit's own, which come in through the path alias
+  css: {
+    preprocessorOptions: {
+      scss: { loadPaths: [join(import.meta.dirname, '../../packages/frontend/ui-kit/src')] },
+    },
+  },
   // The upload worker (@task-manager-v2/uploader) imports workspace libs, and workers are bundled
   // separately, so they need the path aliases too
   worker: {

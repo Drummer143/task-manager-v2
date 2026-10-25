@@ -1,5 +1,6 @@
 @use '../../overlay/overlay';
 
+@use 'typography/typography';
 .content {
   @include overlay.panel;
   @include overlay.motion(--popover-enter, --popover-exit);
@@ -28,8 +29,7 @@
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: var(--type-body);
-  line-height: var(--lh-body);
+  @include typography.type(body);
   font-weight: var(--weight-strong);
 }
 
@@ -43,7 +43,7 @@
 .body {
   padding: var(--sp-3) var(--sp-4) var(--sp-4);
   color: var(--text-secondary);
-  font-size: var(--type-body);
+  @include typography.type(body);
 
   .untitled > & {
     padding-top: var(--sp-4);

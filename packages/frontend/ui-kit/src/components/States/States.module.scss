@@ -1,3 +1,5 @@
+@use 'typography/typography';
+
 /*
  * EmptyState and ErrorState (spec: States · 02–04): one layout in three
  * scales, a tone apart. They appear at once — no animation.
@@ -38,15 +40,13 @@
   outline: none;
 
   > .title {
-    font-size: var(--type-h3);
+    @include typography.type(h3);
     font-weight: var(--weight-strong);
-    line-height: var(--lh-h3);
   }
 
   > .description {
     max-width: var(--empty-measure);
-    font-size: var(--type-body);
-    line-height: var(--lh-body);
+    @include typography.type(body);
   }
 
   &:focus-visible {
@@ -83,8 +83,7 @@
 
 .block {
   padding: var(--sp-3) var(--sp-4);
-  font-size: var(--type-body);
-  line-height: var(--lh-body);
+  @include typography.type(body);
 
   &[data-state-tone='neutral'] {
     background-color: var(--bg-sunken);
@@ -94,8 +93,7 @@
 .row {
   min-height: var(--row-height);
   padding: 0 var(--sp-4);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
 
   // An empty place, not a missing one: a dashed outline, muted words.
   &[data-state-tone='neutral'] {

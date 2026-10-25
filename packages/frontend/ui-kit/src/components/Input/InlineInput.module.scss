@@ -1,3 +1,5 @@
+@use 'typography/typography';
+
 /*
  * In-place editing (spec 04). Every frame is an inset shadow, so rest, hover,
  * cursor and edit share one geometry — the table never shifts.
@@ -66,23 +68,20 @@
 .body {
   min-height: var(--row-height);
   padding-inline: var(--cell-padding-x);
-  font-size: var(--type-body);
-  line-height: var(--lh-body);
+  @include typography.type(body);
 }
 
 .title {
   padding-block: var(--sp-2);
   padding-inline: var(--sp-3);
-  font-size: var(--type-h1);
-  line-height: var(--lh-h1);
+  @include typography.type(h1);
   font-weight: var(--weight-strong);
 }
 
 .label {
   min-height: var(--control-height-sm);
   padding-inline: var(--sp-2);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
   font-weight: var(--weight-strong);
 }
 
@@ -179,8 +178,7 @@
   background: transparent;
   color: var(--text-danger);
   font-family: inherit;
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
   font-weight: var(--weight-normal);
   cursor: pointer;
 
@@ -192,8 +190,7 @@
 .problem {
   flex: none;
   color: var(--text-danger);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
   font-weight: var(--weight-normal);
   font-variant-numeric: var(--num-tabular);
 }

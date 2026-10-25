@@ -1,3 +1,5 @@
+@use 'typography/typography';
+
 /*
  * The shell every overlay shares (spec: Popover · the overlay family):
  * always the default surface, a hairline frame, the overlay shadow; grows in
@@ -11,8 +13,7 @@
   box-shadow: var(--shadow-overlay);
   color: var(--text-primary);
   font-family: var(--font-ui);
-  font-size: var(--type-body);
-  line-height: var(--lh-body);
+  @include typography.type(body);
 }
 
 /* $enter / $exit — the component's own motion tokens (tokens doc, 07b). */

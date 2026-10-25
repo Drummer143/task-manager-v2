@@ -1,3 +1,5 @@
+@use 'typography/typography';
+
 /* Segmented (spec 07). One frame, hairline dividers; the chosen segment is an inner outline. */
 
 .group {
@@ -35,8 +37,7 @@
   background-color: transparent;
   color: var(--text-secondary);
   font-family: var(--font-ui);
-  font-size: var(--type-meta);
-  line-height: 1;
+  @include typography.type(meta, $single-line: true);
   white-space: nowrap;
   cursor: pointer;
 

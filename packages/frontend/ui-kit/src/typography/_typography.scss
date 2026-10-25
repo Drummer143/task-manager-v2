@@ -1,0 +1,20 @@
+/*
+ * Typography (spec: [UI-kit] Типографика · 02). A step of the scale is a pair: its size and its
+ * line height together, so a size never runs with another step's leading. Use it instead of
+ * `font-size: var(--type-…)`; the literal guard refuses the bare size.
+ *
+ *   @use '…/typography/typography';
+ *   .title { @include typography.type(h2); }
+ */
+///
+/// `$single-line`: a control whose one line sits centred in a fixed height (a button, a segment,
+/// an avatar's letters). Its line box is the glyph's own, `line-height: 1`, so the text centres
+/// the same at every step and density.
+@mixin type($step, $single-line: false) {
+  font-size: var(--type-#{$step});
+  @if $single-line {
+    line-height: 1;
+  } @else {
+    line-height: var(--lh-#{$step});
+  }
+}

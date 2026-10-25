@@ -46,7 +46,6 @@ export const PageTitle: React.FC<PageTitleProps> = ({ title, autoFocus, onSave }
       value={draft}
       maxLength={200}
       // The page opened by its creation: the title is the first thing to type
-      // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       onChange={(event) => setDraft(event.target.value)}
       onBlur={save}
