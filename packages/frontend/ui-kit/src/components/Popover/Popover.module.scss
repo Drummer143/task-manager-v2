@@ -1,6 +1,6 @@
 @use '../../overlay/overlay';
 
-@use 'typography/typography';
+@use '../../typography/typography';
 .content {
   @include overlay.panel;
   @include overlay.motion(--popover-enter, --popover-exit);

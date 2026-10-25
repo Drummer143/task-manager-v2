@@ -29,12 +29,6 @@ export default defineConfig(() => ({
       pathsToAliases: false,
     }),
   ],
-  // `@use 'typography/typography'` from any stylesheet, the kit's and the app's alike
-  css: {
-    preprocessorOptions: {
-      scss: { loadPaths: [path.join(import.meta.dirname, 'src')] },
-    },
-  },
   // Uncomment this if you are using workers.
   // worker: {
   //   plugins: () => [ nxViteTsPaths() ],

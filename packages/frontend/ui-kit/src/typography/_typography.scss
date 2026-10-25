@@ -3,8 +3,12 @@
  * line height together, so a size never runs with another step's leading. Use it instead of
  * `font-size: var(--type-…)`; the literal guard refuses the bare size.
  *
- *   @use '…/typography/typography';
+ *   @use '../../typography/typography';            in the kit
+ *   @use '../../shared/styles/typography';         in the app (it forwards this file)
  *   .title { @include typography.type(h2); }
+ *
+ * The path is relative on purpose: the editor's CSS-modules plugin compiles each file with no
+ * Vite config, and only a relative path resolves for both.
  */
 ///
 /// `$single-line`: a control whose one line sits centred in a fixed height (a button, a segment,

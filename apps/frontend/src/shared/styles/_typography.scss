@@ -1,0 +1,3 @@
+// The kit's typography helpers for the app's stylesheets: `@use '…/shared/styles/typography'`.
+// A relative path, so the editor's CSS-modules plugin compiles it as Vite does
+@forward '../../../../../packages/frontend/ui-kit/src/typography/typography';
