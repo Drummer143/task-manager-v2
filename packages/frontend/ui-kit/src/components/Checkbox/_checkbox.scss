@@ -1,0 +1,71 @@
+/*
+ * The kit's checkbox square (spec: Checkbox 05), for anything that draws one: the Checkbox
+ * component, a task item in the editor. One look in one place; each caller wires the states to
+ * its own selectors (the component's row, a native `:checked`).
+ *
+ *   @use '…/components/Checkbox/checkbox';
+ *   .box { @include checkbox.box; &:hover { @include checkbox.box-hover; } … }
+ */
+
+/// The square, off: a hairline-strong outline on the raised base, the mark in the accent text color.
+@mixin box {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
+
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-xs);
+  background-color: var(--bg-raised);
+  color: var(--text-accent);
+
+  transition:
+    background-color var(--checkbox-state),
+    border-color var(--checkbox-state);
+}
+
+@mixin box-hover {
+  border-color: var(--text-muted);
+}
+
+@mixin box-active {
+  background-color: var(--bg-active);
+}
+
+/// On (and mixed): an accent outline on a soft base — never a filled square.
+@mixin box-on {
+  border-color: var(--border-accent);
+  background-color: var(--bg-accent-soft);
+}
+
+@mixin box-on-hover {
+  border-color: var(--border-accent-strong);
+}
+
+@mixin box-on-active {
+  background-color: var(--bg-accent-active);
+}
+
+@mixin box-invalid {
+  border-color: var(--border-danger);
+}
+
+/// The ring is on the square, and instant.
+@mixin box-focus {
+  outline: var(--border-width-strong) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/// The check mark where there is no icon element (a pseudo-element): the kit's CheckIcon as a
+/// mask, painted in the current color, so it follows the surface like the component's mark.
+@mixin mark {
+  content: '';
+  width: var(--checkbox-glyph-size);
+  height: var(--checkbox-glyph-size);
+  background-color: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}

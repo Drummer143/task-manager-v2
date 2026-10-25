@@ -1,4 +1,5 @@
 @use '../../typography/typography';
+@use 'checkbox';
 
 /* Checkbox (spec 05). The row is the hit zone; the box keeps its size in every density. */
 
@@ -34,24 +35,9 @@
 }
 
 .box {
-  position: relative;
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: var(--checkbox-size);
-  height: var(--checkbox-size);
+  @include checkbox.box;
   // Centred on the first text line.
   margin-block-start: calc((var(--type-body) * var(--lh-body) - var(--checkbox-size)) / 2);
-
-  border: var(--border-width) solid var(--border-strong);
-  border-radius: var(--radius-xs);
-  background-color: var(--bg-raised);
-  color: var(--text-accent);
-
-  transition:
-    background-color var(--checkbox-state),
-    border-color var(--checkbox-state);
 
   .bare > & {
     margin-block-start: 0;
@@ -59,35 +45,33 @@
 
   // Hover and press come from the whole row, not only the square.
   .root:not([data-disabled]):hover > & {
-    border-color: var(--text-muted);
+    @include checkbox.box-hover;
   }
 
   .root:not([data-disabled]):active > & {
-    background-color: var(--bg-active);
+    @include checkbox.box-active;
   }
 
   // On and mixed: an accent outline on a soft base, the mark in the accent text color.
   .root:not([data-checked='false']) > & {
-    border-color: var(--border-accent);
-    background-color: var(--bg-accent-soft);
+    @include checkbox.box-on;
   }
 
   .root:not([data-checked='false'], [data-disabled]):hover > & {
-    border-color: var(--border-accent-strong);
+    @include checkbox.box-on-hover;
   }
 
   .root:not([data-checked='false'], [data-disabled]):active > & {
-    background-color: var(--bg-accent-active);
+    @include checkbox.box-on-active;
   }
 
   .root[data-invalid] > & {
-    border-color: var(--border-danger);
+    @include checkbox.box-invalid;
   }
 
   // The ring is on the square (spec 05), and instant.
   &:has(> .input:focus-visible) {
-    outline: var(--border-width-strong) solid var(--focus-ring);
-    outline-offset: var(--focus-offset);
+    @include checkbox.box-focus;
   }
 }
 
