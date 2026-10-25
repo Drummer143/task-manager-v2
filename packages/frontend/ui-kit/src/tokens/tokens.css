@@ -270,7 +270,7 @@
   --inbox-divider: var(--border-subtle);
   --inbox-unread: var(--border-accent);
 
-  /* RTE: the light values' roles on a dark surface, as the text roles do (300 steps, n-400) */
+  /* RTE (spec: RTE 1a §07, §10): the code colors and inline code's fill on a dark surface */
   --doc-code-inline: color-mix(in srgb, var(--c-n-50) 8%, transparent);
   --code-keyword: var(--c-accent-300);
   --code-string: var(--c-success-300);
