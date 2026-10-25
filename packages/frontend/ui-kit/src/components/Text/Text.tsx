@@ -10,7 +10,10 @@ export type TextTone = 'primary' | 'secondary' | 'muted' | 'accent' | 'danger';
 export type TextWeight = 'normal' | 'strong';
 
 export interface TextStyleProps {
-  /** Default `primary`. */
+  /**
+   * Left out: the color around it — an error banner's, a primary button's, an inverse surface's.
+   * Plain text is primary all the same: the app's root sets `--text-primary` (Typography 08).
+   */
   tone?: TextTone;
   /** The step's own weight by default: 600 for headings, 400 for body and meta. */
   weight?: TextWeight;
@@ -42,7 +45,7 @@ type ClampStyle = React.CSSProperties & { '--_lines'?: number };
 /** The classes, style and tooltip of a text of `size`: shared by Text and Heading. */
 export const textAttributes = (
   size: TextSize,
-  { tone = 'primary', weight, numeric, mono, truncate }: TextStyleProps,
+  { tone, weight, numeric, mono, truncate }: TextStyleProps,
   className?: string,
   style?: React.CSSProperties,
 ) => {
@@ -54,7 +57,7 @@ export const textAttributes = (
       styles.text,
       styles[size],
       weight && styles[weight],
-      styles[tone],
+      tone && styles[tone],
       numeric && styles.numeric,
       mono && styles.mono,
       lines === 1 && styles.truncate,

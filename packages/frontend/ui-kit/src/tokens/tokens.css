@@ -46,11 +46,6 @@
   --c-info-300: #a6b8c9;
   --c-info-500: #4f6d8a;
   --c-info-700: #2f4a63;
-
-  --font-ui:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono:
-    ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -298,8 +293,6 @@
 
   --weight-normal: 400;
   --weight-strong: 600;
-  /* A read notification's line: between body and strong (spec: Inbox · 02). */
-  --weight-medium: 500;
   /* The Verso wordmark on the sign-in screens: set a touch wider than body text. */
   --wordmark-tracking: 0.01em;
   --line-clamp-title: 2;
@@ -419,7 +412,6 @@
 
   /* Kbd keycap. Its colors (--kbd-bg/-border/-fg) live in the semantic sets above. */
   --kbd-size: 18px;
-  --kbd-font-size: 11px;
 
   /* Visually hidden text for screen readers: a 1 px box, the smallest one every
 	   reader still announces (0 is skipped by some). */

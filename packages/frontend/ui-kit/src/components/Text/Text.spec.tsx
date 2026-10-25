@@ -7,12 +7,13 @@ import styles from './Text.module.scss';
 const has = (element: Element, ...classes: string[]) => classes.every((name) => element.classList.contains(name));
 
 describe('Text', () => {
-  it('is body text of the primary role in a span by default', () => {
+  it('is body text in a span by default, in the color around it', () => {
     render(<Text>Move task</Text>);
     const text = screen.getByText('Move task');
 
     expect(text.tagName).toBe('SPAN');
-    expect(has(text, styles.text, styles.body, styles.primary)).toBe(true);
+    expect(has(text, styles.text, styles.body)).toBe(true);
+    expect(['primary', 'secondary', 'muted', 'accent', 'danger'].some((tone) => has(text, styles[tone]))).toBe(false);
   });
 
   it.each(['display', 'h1', 'h2', 'h3', 'body', 'meta'] as const)('takes the %s step', (size) => {

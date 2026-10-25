@@ -128,9 +128,10 @@
 }
 
 .title {
+  // Read: 400 and secondary; unread: 600 and primary (spec: Inbox · 02, Typography 03)
   color: var(--text-secondary);
   @include typography.type(body);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-normal);
 
   .row[data-unread] & {
     color: var(--text-primary);

@@ -41,7 +41,8 @@ hard rule, as for colors). An off-scale step, a lost meaning (truncated message,
 
 ## Weight and emphasis (Typography 03)
 
-- **400 and 600, nothing else** (`--weight-normal`, `--weight-strong`). 600: headings of every
+- **400 and 600, nothing else** (`--weight-normal`, `--weight-strong`); 500 exists nowhere, not
+  even for a "slightly stronger" line — a read row is 400 secondary, an unread one 600 primary. 600: headings of every
   step, the selected value in a list, the match in search, the number of a signal counter.
 - **Bold inside text is meaning, not decoration.** Italic only in the user's text and quotes —
   the interface never writes in italic. Underline only for links in text.
@@ -121,6 +122,11 @@ role of a color, tabular digits, truncation without a way to the full text.
 ## API (Typography 08)
 
 - **Kit components take `size` from the scale, never `fontSize`** or a style with a size.
+- **`Text` without `tone` takes the color around it** (an error banner's, a primary button's,
+  an inverse surface's); plain text is primary because the app's root sets `--text-primary`.
+  Setting `tone="primary"` inside a colored block, where the block's color was meant, is a
+  finding.
+- **The current page in a header is 400**, set apart by color only, as in Breadcrumbs.
 - **`Heading level` ties the tag and the step**: `level={2}` is both `<h2>` and the h2 size.
   Another size for the same level, or a heading level chosen for its size, is a finding (it also
   breaks the outline, see accessibility).

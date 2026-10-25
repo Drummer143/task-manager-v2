@@ -45,7 +45,8 @@
   font-weight: var(--weight-strong);
 }
 
-/* Roles, not shades: the inverse surface redefines them (Typography 04). */
+/* Roles, not shades: the inverse surface redefines them (Typography 04). No tone: the color
+   around it. */
 .primary {
   color: var(--text-primary);
 }

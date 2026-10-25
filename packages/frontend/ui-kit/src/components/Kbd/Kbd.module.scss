@@ -1,3 +1,5 @@
+@use 'typography/typography';
+
 /* Kbd — shows a key notation. Reads semantic and its own component tokens only,
    so an inverse surface recolors it without a prop. */
 
@@ -25,8 +27,8 @@
 	background: var(--kbd-bg);
 	color: var(--kbd-fg);
 	font-family: var(--font-mono);
-	font-size: var(--kbd-font-size);
-	line-height: 1;
+	/* meta, as every hotkey (spec: Typography 02) */
+	@include typography.type(meta, $single-line: true);
 }
 
 .then {
@@ -37,7 +39,7 @@
 /* ─── inline: plain muted text (inside a button, menu item, field) ─── */
 .inline {
 	color: var(--text-muted);
-	font-size: var(--kbd-font-size);
+	@include typography.type(meta, $single-line: true);
 	font-variant-numeric: var(--num-tabular);
 }
 
