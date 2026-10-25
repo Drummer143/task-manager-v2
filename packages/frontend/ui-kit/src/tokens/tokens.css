@@ -178,6 +178,12 @@
   /* Inbox (spec: Inbox · 11) */
   --inbox-divider: var(--border-subtle);
   --inbox-unread: var(--border-accent);
+
+  /* RTE (spec: RTE 1 §07): inline code's fill and syntax highlighting */
+  --doc-code-inline: color-mix(in srgb, var(--c-n-1000) 6%, transparent);
+  --code-keyword: var(--c-accent-700);
+  --code-string: var(--c-success-700);
+  --code-comment: var(--c-n-600);
 }
 
 /* DARK set. Today: inverse surfaces. Tomorrow: also the dark theme (see above). */
@@ -263,6 +269,12 @@
   /* Inbox (spec: Inbox · 11) */
   --inbox-divider: var(--border-subtle);
   --inbox-unread: var(--border-accent);
+
+  /* RTE: the light values' roles on a dark surface, as the text roles do (300 steps, n-400) */
+  --doc-code-inline: color-mix(in srgb, var(--c-n-50) 8%, transparent);
+  --code-keyword: var(--c-accent-300);
+  --code-string: var(--c-success-300);
+  --code-comment: var(--c-n-400);
 }
 
 /* A surface paints itself. :where() keeps specificity at zero, so a place's own
@@ -580,6 +592,67 @@
   --inbox-group-height: 32px;
   /* A row whose change is still on its way dims only after this: a quick answer shows nothing. */
   --inbox-pending-delay: 1000ms;
+
+  /* RTE (spec: RTE 1 §07, RTE 1a §15). Values of the description; a page and a comment
+     override some of them by context (`data-doc-context`, below). Colors that change with the
+     surface are in the light and dark sets. */
+  --doc-marker: var(--text-muted);
+  --doc-hover: var(--bg-hover);
+
+  /* Body text: body size with the document's own leading, at a readable measure */
+  --lh-doc: 1.6;
+  --doc-font: var(--type-body) / var(--lh-doc) var(--font-ui);
+  --doc-measure: 680px;
+  --doc-page-pad: 40px 48px;
+
+  /* Rhythm: between blocks, before headings, after a heading, around a rule */
+  --doc-gap: 8px;
+  --doc-gap-h1: 28px;
+  --doc-gap-h2: 24px;
+  --doc-gap-h3: 16px;
+  --doc-gap-after-h: 4px;
+  --doc-gap-hr: 24px;
+
+  /* Lists */
+  --doc-indent: 24px;
+  --doc-indent-ol: 28px;
+  --doc-gap-item: 4px;
+  --doc-max-depth: 4;
+
+  /* Blocks */
+  --doc-quote-pad: 12px;
+  --doc-code-pad: 8px 12px;
+  --doc-hover-inset: 6px;
+
+  /* Time */
+  --doc-hover-state: var(--dur-state) var(--ease-out);
+  /* Read by JS: how long after the last keystroke a document saves */
+  --doc-save-debounce: 1000ms;
+}
+
+/* ─── RTE contexts ─── */
+/* A page: more air, longer leading (RTE 1 §07). On the editor's root, as density is. */
+[data-doc-context='page'] {
+  --lh-doc: 1.65;
+  --doc-gap: 10px;
+  --doc-gap-h2: 28px;
+  --doc-gap-h3: 20px;
+  --doc-gap-hr: 32px;
+}
+
+/* A comment: tight. */
+[data-doc-context='comment'] {
+  --doc-gap: 4px;
+  --doc-indent: 20px;
+  --doc-indent-ol: 24px;
+  --doc-gap-item: 2px;
+}
+
+/* A narrow screen: the page's padding shrinks. */
+@media (max-width: 640px) {
+  :root {
+    --doc-page-pad: 16px 24px;
+  }
 }
 
 /* ─── Density ─── */
