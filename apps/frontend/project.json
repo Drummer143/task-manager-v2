@@ -6,6 +6,21 @@
   "tags": [],
   "// targets": "to see all targets run: nx show project frontend --web",
   "targets": {
+    "typecheck": {
+      "// command": "type checking only: an app emits no declarations, and TS 6 refuses `tsc --build --emitDeclarationOnly` on configs with `declaration: false`",
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "commands": [
+          "tsc --noEmit -p tsconfig.app.json",
+          "tsc --noEmit -p tsconfig.spec.json",
+          "tsc --noEmit -p tsconfig.storybook.json"
+        ],
+        "parallel": false
+      },
+      "cache": true,
+      "inputs": ["default", "^default"]
+    },
     "storybook": {
       "options": {
         "args": ["--port=6007", "--no-open"]

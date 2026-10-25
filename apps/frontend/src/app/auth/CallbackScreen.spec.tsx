@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { ErrorResponse, type User } from 'oidc-client-ts';
 
 import { type CallbackDeps, CallbackScreen, ME_RETRY_DELAYS_MS, TIMEOUT_MS } from './CallbackScreen';
+import type { MeResponse } from '@task-manager-v2/api/main/schemas';
 import { MeError } from './me';
 
 const user = (overrides: Partial<User> = {}) =>
@@ -15,7 +16,18 @@ const user = (overrides: Partial<User> = {}) =>
     ...overrides,
   }) as unknown as User;
 
-const me = { user: { id: 'u1', username: 'alex', picture: null, isActive: true }, workspaces: [], pendingInvites: [] };
+const me: MeResponse = {
+  user: {
+    id: 'u1',
+    username: 'alex',
+    picture: null,
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+  workspaces: [],
+  pendingInvites: [],
+};
 
 function deps(overrides: Partial<CallbackDeps> = {}): CallbackDeps {
   return {
