@@ -1,6 +1,8 @@
 {
     "cSpell.words": [
         "authentik",
+        "dropcursor",
+        "gapcursor",
         "utoipa"
     ],
     "typescript.tsdk": "node_modules\\typescript\\lib"

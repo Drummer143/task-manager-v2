@@ -74,6 +74,17 @@ export interface KitMessages {
   linkOpensNewTab: string;
   /** "+N" of a tag list or an avatar stack: what readers hear. */
   more(count: number): string;
+
+  // RTE placeHolders
+  descriptionPlaceholder: string;
+  commentPlaceholder: string;
+  pagePlaceholder: string;
+  heading1Placeholder: string;
+  heading2Placeholder: string;
+  heading3Placeholder: string;
+  todoPlaceholder: string;
+  listPlaceholder: string;
+  quotePlaceholder: string;
 }
 
 export const DEFAULT_MESSAGES: KitMessages = {
@@ -127,6 +138,17 @@ export const DEFAULT_MESSAGES: KitMessages = {
   menuFilter: 'Filter',
   menuFilterEmpty: 'Nothing found',
   more: (count) => `${count} more`,
+  
+  // placeHolder
+  pagePlaceholder: 'Start writing, or press / for blocks',
+  descriptionPlaceholder: 'Add a description…',
+  commentPlaceholder: 'Write a comment…',
+  heading1Placeholder: 'Heading 1',
+  heading2Placeholder: 'Heading 2',
+  heading3Placeholder: 'Heading 3',
+  todoPlaceholder: 'To-do',
+  listPlaceholder: 'List',
+  quotePlaceholder: 'Quote',
 };
 
 export const MessagesContext = createContext<KitMessages>(DEFAULT_MESSAGES);

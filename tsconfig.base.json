@@ -20,6 +20,7 @@
     "plugins": [{ "name": "typescript-plugin-css-modules" }],
     "paths": {
       "@task-manager-v2/ui-kit": ["./packages/frontend/ui-kit/src/index.ts"],
+      "@task-manager-v2/ui-kit/rte": ["./packages/frontend/ui-kit/src/rte/index.ts"],
       "@task-manager-v2/ui-kit/icons": ["./packages/frontend/ui-kit/src/icons/index.ts"],
       "@task-manager-v2/ui-kit/tokens.css": ["./packages/frontend/ui-kit/src/tokens/tokens.css"],
       "@task-manager-v2/ui-kit/testing": ["./packages/frontend/ui-kit/src/testing/jsdom.ts"],
