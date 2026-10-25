@@ -1,6 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    // Without its own outDir, `tsc --build` wrote the declarations next to the sources
+    "outDir": "../../../dist/out-tsc/storybook",
+    "rootDir": ".",
     "module": "esnext",
     "moduleResolution": "bundler"
   },

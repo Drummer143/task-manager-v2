@@ -1,3 +1,5 @@
+@use '../../typography/typography';
+
 .button {
   position: relative;
   display: inline-flex;
@@ -113,7 +115,7 @@
 
     padding-inline: var(--button-pad-x);
 
-    font-size: var(--type-body);
+    @include typography.type(body, $single-line: true);
   }
 
   &.sm {
@@ -123,7 +125,7 @@
 
     padding-inline: var(--button-pad-x-sm);
 
-    font-size: var(--type-meta);
+    @include typography.type(meta, $single-line: true);
   }
 
   // IconButton: a square of the control's own side (spec). After the sizes, in

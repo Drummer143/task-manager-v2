@@ -1,3 +1,5 @@
+@use '../../shared/styles/typography';
+
 // Sign-in screens (design: Callback §02). One column in the middle of the page, no card: the
 // page background is the surface.
 
@@ -36,7 +38,7 @@
 }
 
 .wordmark {
-  font-size: var(--type-h2);
+  @include typography.type(h2);
   font-weight: var(--weight-strong);
   letter-spacing: var(--wordmark-tracking);
 }
@@ -49,7 +51,7 @@
   justify-content: center;
   border: var(--border-width) solid currentColor;
   border-radius: var(--radius-md);
-  font-size: var(--type-body);
+  @include typography.type(body);
   font-weight: var(--weight-strong);
 }
 
@@ -67,10 +69,9 @@
 
 .title {
   margin: 0;
-  font-size: var(--type-h2);
+  @include typography.type(h2);
   font-weight: var(--weight-strong);
-  line-height: 1.2;
-  text-wrap: pretty;
+  text-wrap: balance;
 
   &:focus {
     outline: none;
@@ -79,8 +80,7 @@
 
 .text {
   margin: 0;
-  font-size: var(--type-body);
-  line-height: 1.55;
+  @include typography.type(body);
   color: var(--text-secondary);
   text-wrap: pretty;
 
@@ -95,7 +95,7 @@
   align-items: center;
   gap: var(--sp-4);
   min-height: var(--spinner-size-md);
-  font-size: var(--type-body);
+  @include typography.type(body);
   color: var(--text-secondary);
 }
 
@@ -114,7 +114,7 @@
   padding-top: var(--sp-4);
   border-top: var(--border-width) solid var(--border-hairline);
   font-family: var(--font-mono);
-  font-size: var(--type-meta);
+  @include typography.type(meta);
   color: var(--text-muted);
 }
 

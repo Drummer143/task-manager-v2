@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHotkeysStore } from './store';
 import { parseEventToHotkey } from './helpers';
-import { HotkeyConfig } from './types';
+import { HotkeyHandlerConfig } from './types';
 
-const makeConfig = (description: string): HotkeyConfig => ({
+const makeConfig = (description: string): HotkeyHandlerConfig => ({
   description,
   callback: vi.fn(),
   key: 'k',

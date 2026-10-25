@@ -2,7 +2,7 @@ import type { ComponentPropsWithRef } from 'react';
 import React, { Fragment, useMemo, useState } from 'react';
 import { cx, detectPlatform } from '../../utils';
 import { formatKeys, toInlineText, toSpokenText } from './formatKeys';
-import styles from './Kbd.module.css';
+import styles from './Kbd.module.scss';
 
 /**
  * `key` — keycaps with a border: cheat sheet, tooltip, palette, prose.

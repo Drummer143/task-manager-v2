@@ -1,3 +1,5 @@
+@use '../../shared/styles/typography';
+
 /* A page's canvas (pages spec §6): one column, centred, the title above what the type holds. */
 
 .canvas {
@@ -28,7 +30,7 @@
   background: transparent;
   color: var(--text-primary);
   font: inherit;
-  font-size: var(--type-display);
+  @include typography.type(display);
   font-weight: var(--weight-strong);
 
   &::placeholder {

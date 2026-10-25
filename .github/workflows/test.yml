@@ -124,6 +124,11 @@ jobs:
       - name: Lint
         run: pnpm nx run-many -t lint -p frontend,frontend-e2e,ui-kit,uploader,api
 
+      # The writing rules of UI strings (typography spec §07); needs typescript, so not in the
+      # dependency-free design-system workflow
+      - name: UI strings
+        run: node tools/check-copy.mjs
+
       - name: Generated API client is up to date
         run: |
           pnpm nx run api:generate

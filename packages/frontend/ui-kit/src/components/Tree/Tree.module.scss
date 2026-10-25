@@ -1,3 +1,5 @@
+@use '../../typography/typography';
+
 /* Tree (spec: Tree). A row is --tree-row high, each level indents by --tree-indent. */
 
 .tree {
@@ -8,8 +10,7 @@
   border-radius: var(--radius-sm);
   background-color: var(--bg-sunken);
   font-family: var(--font-ui);
-  font-size: var(--type-body);
-  line-height: var(--lh-body);
+  @include typography.type(body);
   user-select: none;
 
   // The cursor frame is the focus indicator; the ring is for a tree with no rows.
@@ -120,7 +121,7 @@
 .meta {
   flex: none;
   color: var(--text-placeholder);
-  font-size: var(--type-meta);
+  @include typography.type(meta);
   font-weight: var(--weight-normal);
   font-variant-numeric: var(--num-tabular);
 }
@@ -200,7 +201,7 @@
   background-color: transparent;
   color: var(--text-danger);
   font: inherit;
-  font-size: var(--type-meta);
+  @include typography.type(meta);
   font-weight: var(--weight-normal);
   cursor: pointer;
 
@@ -278,7 +279,7 @@
     )
     var(--sp-2);
   color: var(--text-placeholder);
-  font-size: var(--type-meta);
+  @include typography.type(meta);
   cursor: default;
 
   > span:only-child {
@@ -307,6 +308,6 @@
   box-shadow: var(--shadow-overlay);
   color: var(--text-primary);
   font-family: var(--font-ui);
-  font-size: var(--type-body);
+  @include typography.type(body);
   pointer-events: none;
 }

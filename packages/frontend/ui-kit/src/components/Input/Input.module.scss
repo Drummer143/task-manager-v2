@@ -1,3 +1,5 @@
+@use '../../typography/typography';
+
 /* Field and Textarea: one frame, one set of tokens (spec 04). */
 
 .fieldRoot {
@@ -19,8 +21,7 @@
   background-color: var(--bg-raised);
   color: var(--text-primary);
   font-family: var(--font-ui);
-  font-size: var(--type-body);
-  line-height: var(--lh-body);
+  @include typography.type(body);
 
   transition: border-color var(--input-state);
   cursor: text;
@@ -106,6 +107,5 @@
 .error {
   margin-top: var(--sp-2);
   color: var(--text-danger);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
 }

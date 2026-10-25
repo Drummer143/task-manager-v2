@@ -1,3 +1,5 @@
+@use '../../typography/typography';
+
 /* Switch (spec 06). The row is the hit zone; the track keeps its size in every density. */
 
 .root {
@@ -9,8 +11,7 @@
 
   color: var(--text-primary);
   font-family: var(--font-ui);
-  font-size: var(--type-body);
-  line-height: var(--lh-body);
+  @include typography.type(body);
 
   // A settings row: label on the left, switch at the right edge.
   &[data-position='start'] {
@@ -148,14 +149,12 @@
 .description {
   margin-top: var(--sp-1);
   color: var(--text-muted);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
 }
 
 .error {
   color: var(--text-danger);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
 }
 
 .retry {

@@ -1,3 +1,5 @@
+@use '../../../shared/styles/typography';
+
 /* The Pages section of the sidebar (spec: Sidebar · 03): its title with + at the right, the tree. */
 
 .section {
@@ -18,7 +20,7 @@
   flex: 1;
   min-width: 0;
   color: var(--text-muted);
-  font-size: var(--type-meta);
+  @include typography.type(meta);
   font-weight: var(--weight-strong);
 }
 

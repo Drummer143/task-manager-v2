@@ -1,3 +1,5 @@
+@use '../../shared/styles/typography';
+
 /* The trail in the canvas header: one line, "/" between the steps. */
 
 .crumbs {
@@ -17,7 +19,7 @@
   padding: 0;
   list-style: none;
   color: var(--text-muted);
-  font-size: var(--type-meta);
+  @include typography.type(meta);
 }
 
 .item {

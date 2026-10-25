@@ -1,3 +1,5 @@
+@use '../../typography/typography';
+
 /* Avatar (spec 08). Static: no hover of its own, no fade when the photo arrives. */
 
 .avatar {
@@ -14,9 +16,8 @@
   background-color: var(--avatar-bg-1);
   color: var(--avatar-fg);
   font-family: var(--font-ui);
-  font-size: var(--type-meta);
+  @include typography.type(meta, $single-line: true);
   font-weight: var(--weight-strong);
-  line-height: 1;
 
   &[data-tone='2'] {
     background-color: var(--avatar-bg-2);

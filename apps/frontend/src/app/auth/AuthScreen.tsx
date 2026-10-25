@@ -3,8 +3,7 @@ import { forwardRef } from 'react';
 
 import type { MarkTone } from './auth-errors';
 import styles from './AuthScreen.module.scss';
-
-const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
+import { cx } from '@task-manager-v2/ui-kit';
 
 export interface AuthFrameProps {
   /** Centre the content (waiting) instead of aligning it to the start (errors). */

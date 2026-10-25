@@ -1,3 +1,5 @@
+@use '../../typography/typography';
+
 /* Checkbox (spec 05). The row is the hit zone; the box keeps its size in every density. */
 
 .root {
@@ -14,8 +16,7 @@
 
   color: var(--text-primary);
   font-family: var(--font-ui);
-  font-size: var(--type-body);
-  line-height: var(--lh-body);
+  @include typography.type(body);
   cursor: pointer;
 
   &[data-disabled] {
@@ -124,13 +125,11 @@
 .description {
   margin-top: var(--sp-1);
   color: var(--text-muted);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
 }
 
 .error {
   margin-top: var(--sp-1);
   color: var(--text-danger);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
 }

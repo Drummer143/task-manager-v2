@@ -10,6 +10,10 @@ import type { PluginOption } from 'vite';
  */
 const LIBRARY_ONLY = new Set(['vite:dts', 'nx-copy-assets-plugin']);
 
+/** Vite takes nested arrays of plugins: flatten them to look at each one. */
+const flatten = (plugins: PluginOption[]): PluginOption[] =>
+  plugins.flatMap((plugin) => (Array.isArray(plugin) ? flatten(plugin) : [plugin]));
+
 const isLibraryOnly = (plugin: PluginOption) =>
   typeof plugin === 'object' && plugin !== null && 'name' in plugin && LIBRARY_ONLY.has(plugin.name);
 
@@ -18,7 +22,7 @@ const config: StorybookConfig = {
   addons: [],
   viteFinal: (config) => ({
     ...config,
-    plugins: (config.plugins ?? []).flat(Infinity).filter((plugin) => !isLibraryOnly(plugin as PluginOption)),
+    plugins: flatten(config.plugins ?? []).filter((plugin) => !isLibraryOnly(plugin)),
   }),
   framework: {
     name: getAbsolutePath('@storybook/react-vite'),

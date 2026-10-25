@@ -1,5 +1,6 @@
 @use '../../overlay/overlay';
 
+@use '../../typography/typography';
 /* Menu (spec 09). Always the default surface; the cursor is instant — it must not lag behind the keys. */
 
 .content {
@@ -29,16 +30,14 @@
   min-height: var(--control-height-sm);
   padding-inline: var(--sp-3);
   color: var(--text-muted);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
 }
 
 /* A rich group label (who is signed in): body-sized, the content's own colours. */
 .groupLabelContent {
   padding-block: var(--sp-2);
   color: var(--text-primary);
-  font-size: var(--type-body);
-  line-height: var(--lh-body);
+  @include typography.type(body);
 }
 
 /* The filter of a long choice: looks like the palette's field, compact. */
@@ -183,15 +182,13 @@
 
 .description {
   color: var(--text-muted);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
   white-space: normal;
 }
 
 .error {
   color: var(--text-danger);
-  font-size: var(--type-meta);
-  line-height: var(--lh-meta);
+  @include typography.type(meta);
   white-space: normal;
 }
 

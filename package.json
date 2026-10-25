@@ -6,7 +6,8 @@
     "tokens:build": "node packages/frontend/ui-kit/tools/generate-tokens.mjs",
     "check:tokens": "node packages/frontend/ui-kit/tools/generate-tokens.mjs --check",
     "check:literals": "node tools/check-no-literals.mjs",
-    "check:ds": "pnpm run check:tokens && pnpm run check:literals"
+    "check:copy": "node tools/check-copy.mjs",
+    "check:ds": "pnpm run check:tokens && pnpm run check:literals && pnpm run check:copy"
   },
   "private": true,
   "dependencies": {
