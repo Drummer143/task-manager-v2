@@ -11,11 +11,13 @@ budget or line of code is a slogan — do not raise it.
 
 ## Sources of truth
 
-The rules below are distilled from three sources. Cite them by chapter so the author can look
+The rules below are distilled from four sources. Cite them by chapter so the author can look
 the rule up:
 
 - **Philosophy** — the UI-kit philosophy document (chapters 00–19). Cite as `Philosophy 03`.
 - **Primitives** — the primitives component spec (sections 00–11). Cite as `Primitives 02`.
+- **Typography** — the typography spec «[UI-kit] Типографика» (sections 01–08). Cite as
+  `Typography 02`.
 - **Repo** — conventions established in this codebase. Cite as `Repo`.
 
 Details live in the reference files; load the one you need, not all of them:
@@ -27,6 +29,7 @@ Details live in the reference files; load the one you need, not all of them:
 | `references/accessibility.md` | Any markup, interactive element, focus, ARIA, composite widget or announcement |
 | `references/philosophy.md` | Screens, interaction, keyboard, states, motion, a11y, text |
 | `references/repo-conventions.md` | Always — tokens, surfaces, file layout, tests, stories |
+| `references/typography.md` | Any style with text in it, a text component, or a UI string (copy, `MessagesContext`) |
 
 If the original docs are available (the user may attach them, usually from `~/Downloads`),
 they win over these summaries when the two disagree. Say so when you notice a divergence.
@@ -71,7 +74,10 @@ Severity labels:
    frame, what never gets cleaned up — and whether each changed component and hook is compiled.
 4. **Accessibility pass** using `references/accessibility.md` for every changed piece of markup:
    name, role, keyboard path, focus on every exit path, state attributes, announcements.
-5. **Canon pass** using the other references, only for the areas the diff touches.
+5. **Canon pass** using the other references, only for the areas the diff touches. Typography
+   is part of it whenever the diff sets a font property or adds a UI string: grep the changed
+   styles for `font-size`, `font-weight`, `line-height`, `letter-spacing`, `text-transform`,
+   and the changed strings for `'`, `"`, `...`, ` - ` and Title Case.
 6. **Verify before reporting.** For each finding, confirm the failure path in the code: name
    the input or interaction that produces it. Drop anything you cannot confirm, or mark it
    explicitly as a question. Fewer, correct findings beat a long list.
