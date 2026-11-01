@@ -23,7 +23,7 @@
     "axios": "^1.20.0",
     "oidc-client-ts": "^3.5.0",
     "phoenix": "^1.8.15",
-    "react": "19.3.0",
+    "react": "19.3.1",
     "react-dom": "19.3.0",
     "react-oidc-context": "^3.3.1",
     "react-router-dom": "7.18.4",
